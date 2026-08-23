@@ -31,9 +31,10 @@ export async function startServer(
       return response;
     },
   });
-  log(`server started on port ${server.port}`);
+  const port = server.port ?? options.port;
+  log(`server started on port ${port}`);
   return {
-    port: server.port,
+    port,
     stop() {
       log("server stopped");
       server.stop(true);

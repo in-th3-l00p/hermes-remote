@@ -21,9 +21,16 @@
   "files": [
     "dist"
   ],
-  "keywords": ["hermes", "hermes-agent", "nous-research", "react", "hooks", "agent"],
+  "keywords": [
+    "hermes",
+    "hermes-agent",
+    "nous-research",
+    "react",
+    "hooks",
+    "agent"
+  ],
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target node --external react --external hermes.ts && tsc -p tsconfig.json",
+    "build": "bun build src/index.ts --outdir dist --target node --external react --external hermes.ts && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
