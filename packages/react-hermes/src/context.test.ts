@@ -1,7 +1,11 @@
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 GlobalRegistrator.register();
 
-import { describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
+
+afterAll(async () => {
+  await GlobalRegistrator.unregister();
+});
 import { createElement } from "react";
 import { renderHook } from "@testing-library/react";
 import { HermesClient } from "hermes.ts";

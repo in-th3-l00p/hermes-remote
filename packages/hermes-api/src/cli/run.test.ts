@@ -1,24 +1,252 @@
 import { describe, expect, test } from "bun:test";
-import { runCli } from "./run.ts";
+import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { runCli, type CliContext, type ServeRequest } from "./run.ts";
 
-describe("runCli", () => {
-  test("no args prints usage and fails", () => {
-    const result = runCli([]);
-    expect(result.exitCode).toBe(1);
-    expect(result.output).toContain("hermes-api <command>");
+async function makeCtx(): Promise<{
+  ctx: CliContext;
+  serveCalls: ServeRequest[];
+}> {
+  const homeDir = await mkdtemp(join(tmpdir(), "hermes-api-cli-"));
+  const serveCalls: ServeRequest[] = [];
+  const ctx: CliContext = {
+    homeDir,
+    now: () => new Date("2026-08-23T00:00:00Z"),
+    serve: async (request) => {
+      serveCalls.push(request);
+      return { port: request.port === 0 ? 12345 : request.port };
+    },
+  };
+  return { ctx, serveCalls };
+}
+
+async function createKey(ctx: CliContext, extra: string[] = []): Promise<string> {
+  const result = await runCli(
+    ["keys", "create", "--name", "ci", "--scope", "chat:invoke", ...extra],
+    ctx,
+  );
+  expect(result.exitCode).toBe(0);
+  return (result.output.match(/^([0-9a-f]+) /m) ??
+    result.output.match(/created key ([0-9a-f]+)/))?.[1] as string;
+}
+
+describe("usage", () => {
+  test("no args fails with usage; help succeeds", async () => {
+    const { ctx } = await makeCtx();
+    expect(await runCli([], ctx)).toMatchObject({ exitCode: 1 });
+    expect(await runCli(["help"], ctx)).toMatchObject({ exitCode: 0 });
+    expect((await runCli(["--help"], ctx)).output).toContain("Commands:");
   });
 
-  test("help prints usage and succeeds", () => {
-    for (const flag of ["help", "--help"]) {
-      const result = runCli([flag]);
-      expect(result.exitCode).toBe(0);
-      expect(result.output).toContain("Commands:");
-    }
-  });
-
-  test("unknown command fails with message", () => {
-    const result = runCli(["bogus"]);
+  test("unknown command fails", async () => {
+    const { ctx } = await makeCtx();
+    const result = await runCli(["bogus"], ctx);
     expect(result.exitCode).toBe(1);
     expect(result.output).toContain("unknown command: bogus");
+  });
+});
+
+describe("keys create", () => {
+  test("creates a key and prints the token once", async () => {
+    const { ctx } = await makeCtx();
+    const result = await runCli(
+      [
+        "keys", "create", "--name", "ci",
+        "--scope", "chat:invoke", "--scope", "sessions:read",
+        "--user-grantable", "chat:invoke,sessions:read",
+        "--expires", "90d",
+      ],
+      ctx,
+    );
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toContain("hk_");
+    expect(result.output).toContain("cannot be shown again");
+  });
+
+  test("requires name and scope", async () => {
+    const { ctx } = await makeCtx();
+    expect(
+      (await runCli(["keys", "create", "--scope", "chat:invoke"], ctx)).output,
+    ).toContain("requires --name");
+    expect(
+      (await runCli(["keys", "create", "--name", "x"], ctx)).output,
+    ).toContain("at least one --scope");
+  });
+
+  test("rejects unknown scopes", async () => {
+    const { ctx } = await makeCtx();
+    const result = await runCli(
+      ["keys", "create", "--name", "x", "--scope", "nope:nope"],
+      ctx,
+    );
+    expect(result.output).toContain("unknown scope: nope:nope");
+  });
+
+  test("dangerous scopes require --dangerous", async () => {
+    const { ctx } = await makeCtx();
+    const denied = await runCli(
+      ["keys", "create", "--name", "x", "--scope", "config:write"],
+      ctx,
+    );
+    expect(denied.exitCode).toBe(1);
+    expect(denied.output).toContain("require --dangerous");
+    const allowed = await runCli(
+      ["keys", "create", "--name", "x", "--scope", "config:write", "--dangerous"],
+      ctx,
+    );
+    expect(allowed.exitCode).toBe(0);
+  });
+
+  test("user-grantable accepts tier-1 only", async () => {
+    const { ctx } = await makeCtx();
+    const result = await runCli(
+      [
+        "keys", "create", "--name", "x",
+        "--scope", "chat:invoke", "--user-grantable", "memory:write",
+      ],
+      ctx,
+    );
+    expect(result.output).toContain("tier-1 scopes only: memory:write");
+  });
+
+  test("rejects invalid --expires", async () => {
+    const { ctx } = await makeCtx();
+    const result = await runCli(
+      ["keys", "create", "--name", "x", "--scope", "chat:invoke", "--expires", "soon"],
+      ctx,
+    );
+    expect(result.output).toContain("invalid --expires value: soon");
+  });
+});
+
+describe("keys management", () => {
+  test("list is empty then shows keys", async () => {
+    const { ctx } = await makeCtx();
+    expect((await runCli(["keys", "list"], ctx)).output).toBe("no API keys");
+    await createKey(ctx);
+    const result = await runCli(["keys", "list"], ctx);
+    expect(result.output).toContain("ci  active  scopes=chat:invoke");
+  });
+
+  test("show redacts the hash", async () => {
+    const { ctx } = await makeCtx();
+    const id = await createKey(ctx);
+    const result = await runCli(["keys", "show", id], ctx);
+    expect(result.output).toContain('"hash": "(redacted)"');
+    expect((await runCli(["keys", "show", "ffffff"], ctx)).exitCode).toBe(1);
+  });
+
+  test("revoke", async () => {
+    const { ctx } = await makeCtx();
+    const id = await createKey(ctx);
+    expect((await runCli(["keys", "revoke", id], ctx)).output).toBe(
+      `revoked key ${id}`,
+    );
+    expect((await runCli(["keys", "revoke", "ffffff"], ctx)).exitCode).toBe(1);
+    expect((await runCli(["keys", "revoke"], ctx)).output).toContain(
+      "requires a key id",
+    );
+  });
+
+  test("grant and ungrant scopes", async () => {
+    const { ctx } = await makeCtx();
+    const id = await createKey(ctx);
+    const granted = await runCli(
+      ["keys", "grant", id, "--scope", "sessions:read"],
+      ctx,
+    );
+    expect(granted.output).toContain("scopes=chat:invoke,sessions:read");
+    const ungranted = await runCli(
+      ["keys", "ungrant", id, "--scope", "chat:invoke"],
+      ctx,
+    );
+    expect(ungranted.output).toContain("scopes=sessions:read");
+  });
+
+  test("grant validations", async () => {
+    const { ctx } = await makeCtx();
+    const id = await createKey(ctx);
+    expect((await runCli(["keys", "grant", id], ctx)).output).toContain(
+      "at least one --scope",
+    );
+    expect(
+      (await runCli(["keys", "grant", id, "--scope", "bad"], ctx)).output,
+    ).toContain("unknown scope: bad");
+    expect(
+      (await runCli(["keys", "grant", id, "--scope", "mcp:manage"], ctx)).output,
+    ).toContain("require --dangerous");
+    expect(
+      (
+        await runCli(
+          ["keys", "grant", id, "--scope", "mcp:manage", "--dangerous"],
+          ctx,
+        )
+      ).exitCode,
+    ).toBe(0);
+    expect(
+      (await runCli(["keys", "grant", "ffffff", "--scope", "chat:invoke"], ctx))
+        .exitCode,
+    ).toBe(1);
+    expect(
+      (
+        await runCli(
+          ["keys", "ungrant", "ffffff", "--scope", "chat:invoke"],
+          ctx,
+        )
+      ).exitCode,
+    ).toBe(1);
+  });
+
+  test("unknown keys action", async () => {
+    const { ctx } = await makeCtx();
+    expect((await runCli(["keys"], ctx)).output).toContain(
+      "unknown keys action: (none)",
+    );
+    expect((await runCli(["keys", "explode"], ctx)).output).toContain(
+      "unknown keys action: explode",
+    );
+  });
+});
+
+describe("serve", () => {
+  test("starts the server through the context", async () => {
+    const { ctx, serveCalls } = await makeCtx();
+    const result = await runCli(["serve", "--port", "0"], ctx);
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toContain("listening on port 12345");
+    expect(serveCalls[0]?.logPath).toContain("server.log");
+  });
+
+  test("defaults to port 8643 and validates --port", async () => {
+    const { ctx, serveCalls } = await makeCtx();
+    await runCli(["serve"], ctx);
+    expect(serveCalls[0]?.port).toBe(8643);
+    expect((await runCli(["serve", "--port", "hi"], ctx)).output).toContain(
+      "invalid --port: hi",
+    );
+  });
+});
+
+describe("logs", () => {
+  test("reports when there are no logs", async () => {
+    const { ctx } = await makeCtx();
+    expect((await runCli(["logs"], ctx)).output).toBe("no logs yet");
+  });
+
+  test("tails the log file", async () => {
+    const { ctx } = await makeCtx();
+    await mkdir(join(ctx.homeDir, "logs"), { recursive: true });
+    await writeFile(
+      join(ctx.homeDir, "logs", "server.log"),
+      "one\ntwo\nthree\n",
+    );
+    expect((await runCli(["logs"], ctx)).output).toBe("one\ntwo\nthree");
+    expect((await runCli(["logs", "--tail", "2"], ctx)).output).toBe(
+      "two\nthree",
+    );
+    expect((await runCli(["logs", "--tail", "-1"], ctx)).output).toContain(
+      "invalid --tail: -1",
+    );
   });
 });
