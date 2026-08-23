@@ -34,7 +34,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "hermes.ts": "workspace:*"
+    "hermes.ts": "^0.1.0"
   },
   "peerDependencies": {
     "react": ">=18"
