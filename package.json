@@ -8,7 +8,7 @@
     "test": "bun test",
     "test:unit": "bun test --test-name-pattern '' --coverage",
     "test:integration": "HERMES_INTEGRATION=1 bun test integration",
-    "typecheck": "tsc --build packages/hermes-api packages/hermes-ts packages/react-hermes"
+    "typecheck": "bun run --filter '*' typecheck"
   },
   "devDependencies": {
     "@types/bun": "^1.2.0",

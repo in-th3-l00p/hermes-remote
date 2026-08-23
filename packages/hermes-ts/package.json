@@ -29,7 +29,7 @@
     "agent"
   ],
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target node && tsc -p tsconfig.build.json",
+    "build": "rm -rf dist && bun build src/index.ts --outdir dist --target node && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit"
   }
 }
