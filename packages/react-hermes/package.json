@@ -1,11 +1,28 @@
 {
-  "name": "react-hermes",
-  "version": "0.0.1",
+  "name": "hermes-web-react",
+  "version": "0.1.0",
+  "description": "React hooks for the hermes-web API",
+  "license": "MIT",
+  "author": "Tisca Catalin",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/in-th3-l00p/hermes-web.git",
+    "directory": "packages/react-hermes"
+  },
+  "homepage": "https://github.com/in-th3-l00p/hermes-web",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
   },
+  "files": [
+    "dist"
+  ],
+  "keywords": ["hermes", "hermes-agent", "nous-research", "react", "hooks", "agent"],
   "scripts": {
+    "build": "bun build src/index.ts --outdir dist --target node --external react --external hermes.ts && tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

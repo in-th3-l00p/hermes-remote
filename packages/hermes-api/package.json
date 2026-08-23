@@ -1,6 +1,15 @@
 {
-  "name": "hermes-api",
-  "version": "0.0.1",
+  "name": "hermes-web-api",
+  "version": "0.1.0",
+  "description": "Authenticated web API and management CLI for a local Hermes agent instance",
+  "license": "MIT",
+  "author": "Tisca Catalin",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/in-th3-l00p/hermes-web.git",
+    "directory": "packages/hermes-api"
+  },
+  "homepage": "https://github.com/in-th3-l00p/hermes-web",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
@@ -8,6 +17,14 @@
   "bin": {
     "hermes-api": "./src/cli.ts"
   },
+  "files": [
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "engines": {
+    "bun": ">=1.1.0"
+  },
+  "keywords": ["hermes", "hermes-agent", "nous-research", "api", "agent"],
   "scripts": {
     "typecheck": "tsc --noEmit"
   }
