@@ -1,0 +1,17 @@
+{
+  "name": "hermes-web",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "bun test",
+    "test:unit": "bun test --test-name-pattern '' --coverage",
+    "test:integration": "HERMES_INTEGRATION=1 bun test integration",
+    "typecheck": "tsc --build packages/hermes-api packages/hermes-ts packages/react-hermes"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.0",
+    "typescript": "^5.7.0"
+  }
+}
