@@ -101,7 +101,7 @@ Done when: every public API symbol appears in the reference, every snippet is ex
 2. Changelog generation from commit history into `CHANGELOG.md`, GitHub release with notes and tarballs (automated by the release workflow from M2).
 3. Final npm publish to GitHub Packages under the new names; deprecation release of the 0.x names with a README pointing at the new packages.
 4. Repo polish: README rewritten around the new branding with the banner, a 60 second quick start, and the architecture diagram; add `SECURITY.md` (reporting contact plus the threat model summary from docs 3.2) and `CONTRIBUTING.md` (setup, test gate, PR rules).
-5. Hosted demo decision: either deploy apps/chat publicly wired to the DemoAgent (safe, no real agent exposed) so the announcement has a clickable link, or ship only the recording. Recommendation: deploy the DemoAgent backed demo at `demo.hermes-remote.tiscacatalin.com`.
+5. Hosted demo decision: either deploy apps/chat publicly wired to the DemoAgent (safe, no real agent exposed) so the announcement has a clickable link, or ship only the recording. Decision taken at execution time: ship the recording (the demo would need a Bun server host; revisit post launch if demand shows).
 
 Done when: `v1.0.0` tag exists, CI published it, a clean machine can follow the README quick start successfully.
 
