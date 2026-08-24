@@ -79,7 +79,7 @@ describe("HermesAgent", () => {
           "data: [DONE]\n\n",
           chunk("never"),
         ]);
-      }) as typeof fetch,
+      }) as unknown as typeof fetch,
     });
     const text = await collect(
       agent.stream([
@@ -114,7 +114,7 @@ describe("HermesAgent", () => {
       fetch: (async (_url: string | URL | Request, init?: RequestInit) => {
         captured = String(init?.body);
         return sseResponse([chunk("ok")]);
-      }) as typeof fetch,
+      }) as unknown as typeof fetch,
     });
     expect(await collect(agent.stream(userTurn("hi")))).toBe("ok");
     const body = JSON.parse(captured) as {
@@ -131,7 +131,7 @@ describe("HermesAgent", () => {
       baseUrl: "http://upstream",
       apiKey: "k",
       fetch: (async () =>
-        sseResponse([full.slice(0, 10), full.slice(10)])) as typeof fetch,
+        sseResponse([full.slice(0, 10), full.slice(10)])) as unknown as typeof fetch,
     });
     expect(await collect(agent.stream(userTurn("x")))).toBe("abcd");
   });
@@ -140,7 +140,7 @@ describe("HermesAgent", () => {
     const agent = new HermesAgent({
       baseUrl: "http://upstream",
       apiKey: "k",
-      fetch: (async () => new Response("no", { status: 502 })) as typeof fetch,
+      fetch: (async () => new Response("no", { status: 502 })) as unknown as typeof fetch,
     });
     const err = (await collect(agent.stream(userTurn("x"))).catch(
       (e: unknown) => e,
@@ -153,7 +153,7 @@ describe("HermesAgent", () => {
     const agent = new HermesAgent({
       baseUrl: "http://upstream",
       apiKey: "k",
-      fetch: (async () => new Response(null, { status: 200 })) as typeof fetch,
+      fetch: (async () => new Response(null, { status: 200 })) as unknown as typeof fetch,
     });
     await expect(collect(agent.stream(userTurn("x")))).rejects.toBeInstanceOf(
       HermesUpstreamError,

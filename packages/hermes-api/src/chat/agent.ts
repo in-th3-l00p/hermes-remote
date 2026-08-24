@@ -76,10 +76,12 @@ export class HermesAgent implements AgentBackend {
             ? m.content
             : ([
                 { type: "text", text: m.content },
-                ...m.attachments.map((a) => ({
-                  type: "image_url",
-                  image_url: { url: a.dataUrl },
-                })),
+                ...m.attachments.map(
+                  (a): UpstreamPart => ({
+                    type: "image_url",
+                    image_url: { url: a.dataUrl },
+                  }),
+                ),
               ] satisfies UpstreamPart[]),
       })),
     };
