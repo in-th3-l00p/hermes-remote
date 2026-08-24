@@ -40,9 +40,11 @@ describe("verifySupabaseJwt", () => {
     });
   });
 
-  test("omits optional claims when absent", () => {
+  test("omits optional claims when absent or empty", () => {
     const token = sign({ sub: "u", exp: valid.exp });
     expect(verifySupabaseJwt(token, SECRET, NOW)).toEqual({ sub: "u" });
+    const emptyEmail = sign({ sub: "u", email: "", exp: valid.exp });
+    expect(verifySupabaseJwt(emptyEmail, SECRET, NOW)).toEqual({ sub: "u" });
   });
 
   test("rejects malformed tokens", () => {

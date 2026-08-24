@@ -51,7 +51,9 @@ function toUser(payload: JwtPayload, now: Date): SupabaseUser | null {
   }
   return {
     sub: payload.sub,
-    ...(typeof payload.email === "string" ? { email: payload.email } : {}),
+    ...(typeof payload.email === "string" && payload.email !== ""
+      ? { email: payload.email }
+      : {}),
     ...(typeof payload.is_anonymous === "boolean"
       ? { is_anonymous: payload.is_anonymous }
       : {}),

@@ -7,6 +7,13 @@ import type {
   ChatMessage,
   ChatSessionMeta,
 } from "@in-th3-l00p/hermes-web-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 const API_URL =
   (import.meta.env["VITE_HERMES_API_URL"] as string | undefined) ??
@@ -26,7 +33,9 @@ const REACTION_CHOICES = ["👍", "❤️", "😂", "🔥", "🤔"];
 
 function localSessionIds(): string[] {
   try {
-    return JSON.parse(localStorage.getItem(LOCAL_SESSIONS_KEY) ?? "[]") as string[];
+    return JSON.parse(
+      localStorage.getItem(LOCAL_SESSIONS_KEY) ?? "[]",
+    ) as string[];
   } catch {
     return [];
   }
@@ -43,14 +52,21 @@ function readFileAsDataUrl(file: File): Promise<Attachment> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () =>
-      resolve({ name: file.name, type: file.type, dataUrl: String(reader.result) });
+      resolve({
+        name: file.name,
+        type: file.type,
+        dataUrl: String(reader.result),
+      });
     reader.onerror = () => reject(new Error("could not read file"));
     reader.readAsDataURL(file);
   });
 }
 
 function time(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function Bubble({
@@ -67,46 +83,92 @@ function Bubble({
   const mine = message.role === "user";
   const reactions = Object.keys(message.reactions);
   return (
-    <div className={`row ${mine ? "mine" : "theirs"}`}>
-      <div className="bubble">
+    <div className={cn("flex", mine ? "justify-end" : "justify-start")}>
+      <div
+        className={cn(
+          "group relative max-w-[80%] rounded-xl border px-3.5 py-2.5 text-sm",
+          mine
+            ? "bg-primary text-primary-foreground border-transparent"
+            : "bg-card text-card-foreground",
+        )}
+      >
         {message.attachments.length > 0 && (
-          <div className="attachments">
+          <div className="mb-2 flex flex-wrap gap-2">
             {message.attachments.map((a) => (
-              <img key={a.name} src={a.dataUrl} alt={a.name} />
+              <img
+                key={a.name}
+                src={a.dataUrl}
+                alt={a.name}
+                className="max-h-44 max-w-60 rounded-lg"
+              />
             ))}
           </div>
         )}
-        <div className="content">
+        <div
+          className={cn(
+            "space-y-2 break-words",
+            "[&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:p-3 [&_pre]:font-mono [&_pre]:text-xs",
+            "[&_code]:font-mono [&_code]:text-xs",
+            "[&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5",
+            "[&_h1]:text-base [&_h1]:font-semibold [&_h2]:text-sm [&_h2]:font-semibold",
+            mine
+              ? "[&_pre]:bg-primary-foreground/10"
+              : "[&_pre]:bg-muted [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground",
+          )}
+        >
           <ReactMarkdown>{message.content}</ReactMarkdown>
-          {message.status === "streaming" && <span className="cursor">▍</span>}
+          {message.status === "streaming" && (
+            <span className="animate-pulse">▍</span>
+          )}
           {message.status === "error" && (
-            <span className="failed">failed to generate</span>
+            <Badge variant="destructive">failed to generate</Badge>
           )}
         </div>
-        <div className="meta">
+        <div
+          className={cn(
+            "mt-1 flex justify-end gap-1.5 text-[10px]",
+            mine ? "text-primary-foreground/60" : "text-muted-foreground",
+          )}
+        >
           {message.editedAt !== null && <span>edited</span>}
           <span>{time(message.createdAt)}</span>
         </div>
         {reactions.length > 0 && (
-          <div className="reactions">
+          <div className="mt-1 flex gap-1">
             {reactions.map((emoji) => (
-              <button key={emoji} onClick={() => onReact(emoji)}>
+              <Badge
+                key={emoji}
+                variant="secondary"
+                className="cursor-pointer"
+                onClick={() => onReact(emoji)}
+              >
                 {emoji} 1
-              </button>
+              </Badge>
             ))}
           </div>
         )}
         {!streaming && (
-          <div className="actions">
+          <div className="bg-popover absolute -top-9 right-0 hidden items-center gap-0.5 rounded-full border p-0.5 shadow-md group-hover:flex">
             {REACTION_CHOICES.map((emoji) => (
-              <button key={emoji} title="react" onClick={() => onReact(emoji)}>
+              <Button
+                key={emoji}
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-sm"
+                onClick={() => onReact(emoji)}
+              >
                 {emoji}
-              </button>
+              </Button>
             ))}
             {onEdit !== null && (
-              <button title="edit" onClick={onEdit}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-sm"
+                onClick={onEdit}
+              >
                 ✏️
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -130,9 +192,7 @@ export function App() {
       }
       const { data: after } = await supabase.auth.getSession();
       const user = after.session?.user;
-      setIdentity(
-        user?.email ?? `anonymous · ${(user?.id ?? "").slice(0, 8)}`,
-      );
+      setIdentity(user?.email ?? `anonymous · ${(user?.id ?? "").slice(0, 8)}`);
       setAuthReady(true);
     })();
   }, []);
@@ -211,12 +271,14 @@ export function App() {
   };
 
   return (
-    <div className="shell">
-      <aside className="sidebar">
-        <div className="sidebar-head">
-          <span>Chats</span>
-          <button
-            className="new-chat"
+    <div className="bg-background text-foreground mx-auto flex h-dvh max-w-5xl border-x">
+      <aside className="bg-sidebar text-sidebar-foreground hidden w-72 flex-col border-r sm:flex">
+        <div className="flex items-center justify-between p-4">
+          <span className="text-sm font-semibold">Chats</span>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
             title="new chat"
             onClick={() => {
               chat.reset();
@@ -225,41 +287,56 @@ export function App() {
             }}
           >
             ＋
-          </button>
+          </Button>
         </div>
-        <div className="session-list">
-          {sessions.length === 0 && (
-            <div className="session-empty">no conversations yet</div>
-          )}
-          {sessions.map((s) => (
-            <button
-              key={s.id}
-              className={`session ${s.id === chat.sessionId ? "active" : ""}`}
-              onClick={() => void chat.open(s.id)}
-            >
-              <span className="session-title">{s.title ?? "New chat"}</span>
-              <span className="session-time">{time(s.updatedAt)}</span>
-            </button>
-          ))}
-        </div>
-        <div className="sidebar-foot">{identity}</div>
+        <Separator />
+        <ScrollArea className="flex-1">
+          <div className="flex flex-col gap-1 p-2">
+            {sessions.length === 0 && (
+              <p className="text-muted-foreground p-4 text-center text-xs">
+                No conversations yet
+              </p>
+            )}
+            {sessions.map((s) => (
+              <Button
+                key={s.id}
+                variant={s.id === chat.sessionId ? "secondary" : "ghost"}
+                className="h-auto w-full justify-between gap-2 px-3 py-2"
+                onClick={() => void chat.open(s.id)}
+              >
+                <span className="truncate text-sm font-normal">
+                  {s.title ?? "New chat"}
+                </span>
+                <span className="text-muted-foreground shrink-0 text-[10px]">
+                  {time(s.updatedAt)}
+                </span>
+              </Button>
+            ))}
+          </div>
+        </ScrollArea>
+        <Separator />
+        <p className="text-muted-foreground truncate p-4 font-mono text-xs">
+          {identity}
+        </p>
       </aside>
 
-      <div className="app">
-        <header>
-          <div className="avatar">H</div>
-          <div>
-            <div className="name">Hermes Agent</div>
-            <div className="presence">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex items-center gap-3 border-b p-3">
+          <Avatar className="h-9 w-9">
+            <AvatarFallback>H</AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">Hermes Agent</p>
+            <p className="text-muted-foreground text-xs">
               {chat.streaming ? "typing…" : "online · conversations persist"}
-            </div>
+            </p>
           </div>
         </header>
 
-        <div className="list" ref={listRef}>
+        <div ref={listRef} className="flex-1 space-y-2 overflow-y-auto p-4">
           {chat.messages.length === 0 && (
-            <div className="empty">
-              <p>✧</p>
+            <div className="text-muted-foreground mx-auto flex h-full max-w-sm flex-col items-center justify-center gap-2 text-center text-sm">
+              <span className="text-2xl">✧</span>
               <p>
                 Say hi to your Hermes agent. Markdown, image attachments,
                 reactions and edits all work — and conversations are saved in
@@ -283,47 +360,62 @@ export function App() {
               }
             />
           ))}
-          {chat.error !== null && <div className="error">{chat.error}</div>}
+          {chat.error !== null && (
+            <div className="flex justify-center">
+              <Badge variant="destructive">{chat.error}</Badge>
+            </div>
+          )}
         </div>
 
-        <footer>
+        <footer className="border-t p-3">
           {editing !== null && (
-            <div className="editing">
+            <div className="text-muted-foreground mb-2 flex items-center gap-2 text-xs">
               ✏️ editing message
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs"
                 onClick={() => {
                   setEditing(null);
                   setDraft("");
                 }}
               >
                 cancel
-              </button>
+              </Button>
             </div>
           )}
           {attachments.length > 0 && (
-            <div className="previews">
+            <div className="mb-2 flex gap-2">
               {attachments.map((a) => (
-                <div key={a.name} className="preview">
-                  <img src={a.dataUrl} alt={a.name} />
-                  <button
+                <div key={a.name} className="relative">
+                  <img
+                    src={a.dataUrl}
+                    alt={a.name}
+                    className="h-16 w-16 rounded-md object-cover"
+                  />
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="absolute -top-2 -right-2 h-5 w-5 rounded-full text-xs"
                     onClick={() =>
                       setAttachments((prev) => prev.filter((x) => x !== a))
                     }
                   >
                     ×
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>
           )}
-          <div className="composer">
-            <button
-              className="icon"
+          <div className="flex items-end gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
               title="attach image"
               onClick={() => fileRef.current?.click()}
             >
               📎
-            </button>
+            </Button>
             <input
               ref={fileRef}
               type="file"
@@ -335,11 +427,12 @@ export function App() {
                 e.target.value = "";
               }}
             />
-            <textarea
+            <Textarea
               placeholder={authReady ? "Message" : "Signing in…"}
               value={draft}
               rows={1}
               disabled={!authReady}
+              className="max-h-36 min-h-9 resize-none"
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -348,13 +441,13 @@ export function App() {
                 }
               }}
             />
-            <button
-              className="send"
+            <Button
+              size="icon"
               onClick={() => void submit()}
               disabled={chat.streaming || !authReady}
             >
               ➤
-            </button>
+            </Button>
           </div>
         </footer>
       </div>
