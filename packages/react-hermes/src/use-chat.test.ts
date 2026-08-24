@@ -1,0 +1,176 @@
+import { GlobalRegistrator } from "@happy-dom/global-registrator";
+GlobalRegistrator.register();
+
+import { afterAll, describe, expect, test } from "bun:test";
+
+afterAll(async () => {
+  await GlobalRegistrator.unregister();
+});
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { useChat, type ChatClientLike } from "./index.ts";
+import type { ChatEvent, ChatMessage } from "@in-th3-l00p/hermes-web-ts";
+
+const msg = (id: string, role: "user" | "assistant", content: string): ChatMessage => ({
+  id,
+  role,
+  content,
+  attachments: [],
+  reactions: {},
+  createdAt: "2026-08-24T00:00:00.000Z",
+  editedAt: null,
+  status: "done",
+});
+
+async function* eventsOf(events: ChatEvent[]): AsyncIterable<ChatEvent> {
+  for (const event of events) {
+    yield event;
+  }
+}
+
+function fakeClient(overrides: Partial<ChatClientLike> = {}): ChatClientLike {
+  return {
+    createSession: async () => ({
+      id: "s1",
+      createdAt: "t",
+      messages: [],
+    }),
+    sendMessage: () =>
+      eventsOf([
+        { event: "user", data: msg("u1", "user", "hello") },
+        { event: "assistant", data: { id: "a1" } },
+        { event: "delta", data: { id: "a1", text: "h" } },
+        { event: "delta", data: { id: "a1", text: "i" } },
+        { event: "done", data: msg("a1", "assistant", "hi") },
+      ]),
+    editMessage: () =>
+      eventsOf([
+        { event: "user", data: msg("u1b", "user", "edited") },
+        { event: "assistant", data: { id: "a2" } },
+        { event: "done", data: msg("a2", "assistant", "re-reply") },
+      ]),
+    react: async (_s, messageId, emoji) => ({
+      ...msg(messageId, "user", "hello"),
+      reactions: { [emoji]: 1 },
+    }),
+    ...overrides,
+  };
+}
+
+describe("useChat", () => {
+  test("sends a message, creates a session, streams the reply", async () => {
+    const client = fakeClient();
+    const { result } = renderHook(() => useChat({ client }));
+    expect(result.current.sessionId).toBeNull();
+    await act(async () => {
+      await result.current.send("hello");
+    });
+    expect(result.current.sessionId).toBe("s1");
+    expect(result.current.streaming).toBe(false);
+    expect(result.current.messages.map((m) => [m.role, m.content])).toEqual([
+      ["user", "hello"],
+      ["assistant", "hi"],
+    ]);
+  });
+
+  test("reuses an existing sessionId", async () => {
+    let created = 0;
+    const client = fakeClient({
+      createSession: async () => {
+        created += 1;
+        return { id: "s9", createdAt: "t", messages: [] };
+      },
+    });
+    const { result } = renderHook(() =>
+      useChat({ client, sessionId: "given" }),
+    );
+    await act(async () => {
+      await result.current.send("x");
+    });
+    expect(created).toBe(0);
+    expect(result.current.sessionId).toBe("given");
+  });
+
+  test("edit truncates from the edited message", async () => {
+    const client = fakeClient();
+    const { result } = renderHook(() => useChat({ client }));
+    await act(async () => {
+      await result.current.send("hello");
+    });
+    await act(async () => {
+      await result.current.edit("u1", "edited");
+    });
+    expect(result.current.messages.map((m) => m.content)).toEqual([
+      "edited",
+      "re-reply",
+    ]);
+  });
+
+  test("react replaces the message", async () => {
+    const client = fakeClient();
+    const { result } = renderHook(() => useChat({ client }));
+    await act(async () => {
+      await result.current.send("hello");
+    });
+    await act(async () => {
+      await result.current.react("u1", "🔥");
+    });
+    expect(result.current.messages[0]?.reactions).toEqual({ "🔥": 1 });
+  });
+
+  test("error events mark the message and surface the error", async () => {
+    const client = fakeClient({
+      sendMessage: () =>
+        eventsOf([
+          { event: "user", data: msg("u1", "user", "x") },
+          { event: "assistant", data: { id: "a1" } },
+          { event: "error", data: { id: "a1", message: "agent down" } },
+        ]),
+    });
+    const { result } = renderHook(() => useChat({ client }));
+    await act(async () => {
+      await result.current.send("x");
+    });
+    expect(result.current.error).toBe("agent down");
+    expect(result.current.messages.at(-1)?.status).toBe("error");
+  });
+
+  test("thrown stream errors are caught", async () => {
+    const client = fakeClient({
+      // eslint-disable-next-line require-yield
+      sendMessage: async function* () {
+        throw new Error("network gone");
+      },
+    });
+    const { result } = renderHook(() => useChat({ client }));
+    await act(async () => {
+      await result.current.send("x");
+    });
+    expect(result.current.error).toBe("network gone");
+    expect(result.current.streaming).toBe(false);
+  });
+
+  test("streaming flag is true mid-stream", async () => {
+    let release: (() => void) | null = null;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const client = fakeClient({
+      sendMessage: async function* () {
+        yield { event: "user", data: msg("u1", "user", "x") } as ChatEvent;
+        await gate;
+        yield { event: "done", data: msg("a1", "assistant", "ok") } as ChatEvent;
+      },
+    });
+    const { result } = renderHook(() => useChat({ client }));
+    let pending: Promise<void> = Promise.resolve();
+    act(() => {
+      pending = result.current.send("x");
+    });
+    await waitFor(() => expect(result.current.streaming).toBe(true));
+    (release as unknown as () => void)();
+    await act(async () => {
+      await pending;
+    });
+    expect(result.current.streaming).toBe(false);
+  });
+});
