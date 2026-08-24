@@ -129,6 +129,22 @@ describe("HermesClient", () => {
     expect(calls[1]?.url).toBe("http://x/v1/sessions/s1/messages");
   });
 
+  test("lists and deletes sessions", async () => {
+    const { calls, fetch } = mockFetch((url, init) =>
+      init.method === "DELETE"
+        ? Response.json({ deleted: true })
+        : Response.json({ sessions: [{ id: "s1" }] }),
+    );
+    const client = new HermesClient({ baseUrl: "http://x", fetch });
+    expect(await client.listSessions()).toEqual([{ id: "s1" } as never]);
+    expect(await client.listSessions([])).toEqual([{ id: "s1" } as never]);
+    await client.listSessions(["a", "b"]);
+    expect(calls[2]?.url).toBe("http://x/v1/sessions?ids=a,b");
+    await client.deleteSession("s1");
+    expect(calls[3]?.init.method).toBe("DELETE");
+    expect(calls[3]?.url).toBe("http://x/v1/sessions/s1");
+  });
+
   test("sendMessage streams chat events", async () => {
     const { calls, fetch } = mockFetch(() =>
       sseBody([

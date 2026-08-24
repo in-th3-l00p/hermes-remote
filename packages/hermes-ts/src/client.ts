@@ -4,6 +4,7 @@ import type {
   ChatEvent,
   ChatMessage,
   ChatSession,
+  ChatSessionMeta,
 } from "./types.ts";
 
 export type TokenProvider = () => string | Promise<string>;
@@ -103,6 +104,22 @@ export class HermesClient {
 
   createSession(): Promise<ChatSession> {
     return this.request("POST", "/v1/sessions", {});
+  }
+
+  async listSessions(ids?: string[]): Promise<ChatSessionMeta[]> {
+    const query =
+      ids === undefined || ids.length === 0
+        ? ""
+        : `?ids=${ids.map(encodeURIComponent).join(",")}`;
+    const res = await this.request<{ sessions: ChatSessionMeta[] }>(
+      "GET",
+      `/v1/sessions${query}`,
+    );
+    return res.sessions;
+  }
+
+  async deleteSession(sessionId: string): Promise<void> {
+    await this.request("DELETE", `/v1/sessions/${sessionId}`);
   }
 
   async listMessages(sessionId: string): Promise<ChatMessage[]> {

@@ -10,6 +10,7 @@ import type {
 /** Structural subset of HermesClient used by useChat (easy to fake in tests). */
 export interface ChatClientLike {
   createSession(): Promise<ChatSession>;
+  listMessages(sessionId: string): Promise<ChatMessage[]>;
   sendMessage(
     sessionId: string,
     input: SendMessageInput,
@@ -39,6 +40,10 @@ export interface UseChat {
   send(content: string, attachments?: Attachment[]): Promise<void>;
   edit(messageId: string, content: string): Promise<void>;
   react(messageId: string, emoji: string): Promise<void>;
+  /** Loads an existing session's history and makes it active. */
+  open(sessionId: string): Promise<void>;
+  /** Clears state so the next send starts a fresh session. */
+  reset(): void;
 }
 
 function placeholder(id: string): ChatMessage {
@@ -150,5 +155,23 @@ export function useChat(options: UseChatOptions): UseChat {
     [client, ensureSession],
   );
 
-  return { sessionId, messages, streaming, error, send, edit, react };
+  const open = useCallback(
+    async (id: string) => {
+      const history = await client.listMessages(id);
+      sessionRef.current = id;
+      setSessionId(id);
+      setMessages(history);
+      setError(null);
+    },
+    [client],
+  );
+
+  const reset = useCallback(() => {
+    sessionRef.current = null;
+    setSessionId(null);
+    setMessages([]);
+    setError(null);
+  }, []);
+
+  return { sessionId, messages, streaming, error, send, edit, react, open, reset };
 }

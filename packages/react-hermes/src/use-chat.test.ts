@@ -31,9 +31,13 @@ function fakeClient(overrides: Partial<ChatClientLike> = {}): ChatClientLike {
   return {
     createSession: async () => ({
       id: "s1",
+      userId: null,
+      title: null,
       createdAt: "t",
+      updatedAt: "t",
       messages: [],
     }),
+    listMessages: async () => [msg("h1", "user", "old")],
     sendMessage: () =>
       eventsOf([
         { event: "user", data: msg("u1", "user", "hello") },
@@ -77,7 +81,14 @@ describe("useChat", () => {
     const client = fakeClient({
       createSession: async () => {
         created += 1;
-        return { id: "s9", createdAt: "t", messages: [] };
+        return {
+          id: "s9",
+          userId: null,
+          title: null,
+          createdAt: "t",
+          updatedAt: "t",
+          messages: [],
+        };
       },
     });
     const { result } = renderHook(() =>
@@ -115,6 +126,25 @@ describe("useChat", () => {
       await result.current.react("u1", "🔥");
     });
     expect(result.current.messages[0]?.reactions).toEqual({ "🔥": 1 });
+  });
+
+  test("open loads history and reset clears it", async () => {
+    const client = fakeClient();
+    const { result } = renderHook(() => useChat({ client }));
+    await act(async () => {
+      await result.current.open("existing");
+    });
+    expect(result.current.sessionId).toBe("existing");
+    expect(result.current.messages.map((m) => m.content)).toEqual(["old"]);
+    await act(async () => {
+      await result.current.send("more");
+    });
+    expect(result.current.messages).toHaveLength(3);
+    act(() => {
+      result.current.reset();
+    });
+    expect(result.current.sessionId).toBeNull();
+    expect(result.current.messages).toEqual([]);
   });
 
   test("error events mark the message and surface the error", async () => {

@@ -11,4 +11,5 @@ export type {
   ChatEvent,
   ChatMessage,
   ChatSession,
+  ChatSessionMeta,
 } from "./types.ts";

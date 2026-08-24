@@ -15,9 +15,15 @@ export interface ChatMessage {
   status: "streaming" | "done" | "error";
 }
 
-export interface ChatSession {
+export interface ChatSessionMeta {
   id: string;
+  userId: string | null;
+  title: string | null;
   createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChatSession extends ChatSessionMeta {
   messages: ChatMessage[];
 }
 
