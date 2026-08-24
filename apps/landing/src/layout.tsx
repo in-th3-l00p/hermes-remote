@@ -33,6 +33,12 @@ export function SiteNav() {
         </a>
         <div className="flex items-center gap-5 text-sm">
           <a
+            href="/docs/"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            Docs
+          </a>
+          <a
             href="/examples/"
             className="text-muted-foreground hover:text-foreground"
           >

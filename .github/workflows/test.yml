@@ -16,3 +16,4 @@ jobs:
       - run: bun run --cwd packages/react-hermes build
       - run: bun run typecheck
       - run: bun test packages
+      - run: bun scripts/check-snippets.ts
