@@ -10,6 +10,14 @@ import type {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
@@ -177,24 +185,148 @@ function Bubble({
   );
 }
 
+type AuthState = "loading" | "signedOut" | "signedIn";
+
+function AuthGate({ onError }: { onError: (message: string) => void }) {
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const run = async (action: () => Promise<{ error: { message: string } | null }>) => {
+    setBusy(true);
+    const { error } = await action();
+    setBusy(false);
+    if (error !== null) {
+      onError(error.message);
+    }
+  };
+
+  return (
+    <div className="bg-background flex h-dvh items-center justify-center p-4">
+      <Card className="w-full max-w-sm">
+        <CardHeader className="text-center">
+          <p className="text-muted-foreground text-xl">✧</p>
+          <CardTitle>Sign in to hermes chat</CardTitle>
+          <CardDescription>
+            The agent requires an identity — sign in with your email, or
+            continue as an anonymous guest.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          {!codeSent ? (
+            <>
+              <Input
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <Button
+                disabled={busy || !email.includes("@")}
+                onClick={() =>
+                  void run(async () => {
+                    const res = await (supabase as NonNullable<typeof supabase>)
+                      .auth.signInWithOtp({ email });
+                    if (res.error === null) {
+                      setCodeSent(true);
+                    }
+                    return res;
+                  })
+                }
+              >
+                Send code
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className="text-muted-foreground text-sm">
+                We emailed a 6-digit code to{" "}
+                <span className="text-foreground font-medium">{email}</span>.
+              </p>
+              <Input
+                inputMode="numeric"
+                placeholder="123456"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+              />
+              <Button
+                disabled={busy || code.length < 6}
+                onClick={() =>
+                  void run(() =>
+                    (supabase as NonNullable<typeof supabase>).auth.verifyOtp({
+                      email,
+                      token: code,
+                      type: "email",
+                    }),
+                  )
+                }
+              >
+                Verify
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCodeSent(false)}
+              >
+                use a different email
+              </Button>
+            </>
+          )}
+          <div className="flex items-center gap-3">
+            <Separator className="flex-1" />
+            <span className="text-muted-foreground text-xs">or</span>
+            <Separator className="flex-1" />
+          </div>
+          <Button
+            variant="outline"
+            disabled={busy}
+            onClick={() =>
+              void run(() =>
+                (supabase as NonNullable<typeof supabase>).auth
+                  .signInAnonymously(),
+              )
+            }
+          >
+            Continue as guest
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export function App() {
-  const [authReady, setAuthReady] = useState(supabase === null);
+  const [authState, setAuthState] = useState<AuthState>(
+    supabase === null ? "signedIn" : "loading",
+  );
   const [identity, setIdentity] = useState("anonymous");
+  const [authError, setAuthError] = useState<string | null>(null);
+  const authReady = authState === "signedIn";
 
   useEffect(() => {
     if (supabase === null) {
       return;
     }
-    void (async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session === null) {
-        await supabase.auth.signInAnonymously();
+    const apply = (session: { user: { id: string; email?: string | undefined; is_anonymous?: boolean | undefined } } | null) => {
+      if (session === null) {
+        setAuthState("signedOut");
+        setIdentity("anonymous");
+        return;
       }
-      const { data: after } = await supabase.auth.getSession();
-      const user = after.session?.user;
-      setIdentity(user?.email ?? `anonymous · ${(user?.id ?? "").slice(0, 8)}`);
-      setAuthReady(true);
-    })();
+      const { user } = session;
+      setIdentity(
+        user.email !== undefined && user.email !== ""
+          ? user.email
+          : `guest · ${user.id.slice(0, 8)}`,
+      );
+      setAuthState("signedIn");
+    };
+    void supabase.auth.getSession().then(({ data }) => apply(data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) =>
+      apply(session),
+    );
+    return () => sub.subscription.unsubscribe();
   }, []);
 
   const client = useMemo(
@@ -270,6 +402,27 @@ export function App() {
     setAttachments((prev) => [...prev, ...loaded]);
   };
 
+  if (supabase !== null && authState === "loading") {
+    return (
+      <div className="bg-background text-muted-foreground flex h-dvh items-center justify-center text-sm">
+        ✧ loading…
+      </div>
+    );
+  }
+
+  if (supabase !== null && authState === "signedOut") {
+    return (
+      <>
+        <AuthGate onError={setAuthError} />
+        {authError !== null && (
+          <div className="fixed bottom-4 left-1/2 -translate-x-1/2">
+            <Badge variant="destructive">{authError}</Badge>
+          </div>
+        )}
+      </>
+    );
+  }
+
   return (
     <div className="bg-background text-foreground mx-auto flex h-dvh max-w-5xl border-x">
       <aside className="bg-sidebar text-sidebar-foreground hidden w-72 flex-col border-r sm:flex">
@@ -315,9 +468,25 @@ export function App() {
           </div>
         </ScrollArea>
         <Separator />
-        <p className="text-muted-foreground truncate p-4 font-mono text-xs">
-          {identity}
-        </p>
+        <div className="flex items-center justify-between gap-2 p-4">
+          <p className="text-muted-foreground truncate font-mono text-xs">
+            {identity}
+          </p>
+          {supabase !== null && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 shrink-0 px-2 text-xs"
+              onClick={() => {
+                chat.reset();
+                setSessions([]);
+                void supabase.auth.signOut();
+              }}
+            >
+              sign out
+            </Button>
+          )}
+        </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">

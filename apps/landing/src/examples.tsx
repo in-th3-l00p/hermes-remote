@@ -111,11 +111,11 @@ export function Examples() {
       <Block
         title="Run the API next to your agent"
         tag="hermes-api"
-        description="The server proxies your local Hermes agent to the web, with CORS, anonymous mode for demos, and Supabase user tokens for real products."
+        description="The server proxies your local Hermes agent to the web. Every request requires authorization — Supabase user tokens or scoped API keys — and each turn tells the agent exactly who it is speaking with."
       >
         <CodeCard title="terminal">
           npm i -g @in-th3-l00p/hermes-web-api{"\n\n"}
-          {"hermes-api serve --anonymous \\\n"}
+          {"hermes-api serve \\\n"}
           {"  --cors http://localhost:5173 \\\n"}
           {"  --upstream http://127.0.0.1:8642 \\\n"}
           {"  --upstream-key $API_SERVER_KEY \\\n"}

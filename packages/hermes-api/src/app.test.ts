@@ -165,6 +165,71 @@ describe("createApp", () => {
     expect(viaKey.status).toBe(200);
   });
 
+  test("the agent is told who it is speaking with", async () => {
+    const seen: string[] = [];
+    const capturingAgent: AgentBackend = {
+      async *stream(messages) {
+        seen.push(
+          messages[0]?.role === "system" ? (messages[0]?.content ?? "") : "",
+        );
+        yield "ok";
+      },
+    };
+    const send = (app: ReturnType<typeof createApp>, token?: string) =>
+      (async () => {
+        const created = await app.fetch(
+          new Request("http://x/v1/sessions", {
+            method: "POST",
+            headers:
+              token === undefined
+                ? {}
+                : { authorization: `Bearer ${token}` },
+          }),
+        );
+        const { id } = (await created.json()) as { id: string };
+        const res = await app.fetch(
+          new Request(`http://x/v1/sessions/${id}/messages`, {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              ...(token === undefined
+                ? {}
+                : { authorization: `Bearer ${token}` }),
+            },
+            body: JSON.stringify({ content: "who am I?" }),
+          }),
+        );
+        await res.text();
+      })();
+
+    const userApp = createApp({
+      chat: { store: new ChatStore(), agent: capturingAgent },
+      userVerifier: hs256Verifier(SECRET),
+      store,
+      anonymous: true,
+    });
+    await send(userApp, supabaseToken("u-42"));
+    expect(seen[0]).toContain("user id: u-42");
+    expect(seen[0]).toContain("email: u-42@x.io");
+    await send(userApp, "hk_good");
+    expect(seen[1]).toContain('API key "test"');
+    await send(userApp);
+    expect(seen[2]).toContain("unauthenticated guest");
+
+    const anonToken = (() => {
+      const enc = (o: unknown) =>
+        Buffer.from(JSON.stringify(o)).toString("base64url");
+      const head = enc({ alg: "HS256", typ: "JWT" });
+      const body = enc({ sub: "guest-7", exp: Date.now() / 1000 + 600 });
+      const sig = createHmac("sha256", SECRET)
+        .update(`${head}.${body}`)
+        .digest("base64url");
+      return `${head}.${body}.${sig}`;
+    })();
+    await send(userApp, anonToken);
+    expect(seen[3]).toContain("anonymous guest (stable user id: guest-7)");
+  });
+
   test("CORS preflight and response headers", async () => {
     const app = createApp({ corsOrigin: "http://localhost:5173" });
     const preflight = await app.fetch(

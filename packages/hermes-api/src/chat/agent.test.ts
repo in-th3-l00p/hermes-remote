@@ -28,6 +28,16 @@ describe("DemoAgent", () => {
     }
   });
 
+  test("echoes the system identity when present", async () => {
+    const text = await collect(
+      new DemoAgent().stream([
+        { role: "system", content: "you speak with u-1", attachments: [] },
+        { role: "user", content: "hi", attachments: [] },
+      ]),
+    );
+    expect(text).toContain("> you speak with u-1");
+  });
+
   test("mentions attachments and handles empty history", async () => {
     const agent = new DemoAgent();
     const withAttachment = await collect(

@@ -1,7 +1,7 @@
 import type { Attachment } from "./store.ts";
 
 export interface AgentTurnMessage {
-  role: "user" | "assistant";
+  role: "system" | "user" | "assistant";
   content: string;
   attachments: Attachment[];
 }
@@ -17,8 +17,10 @@ export class DemoAgent implements AgentBackend {
   constructor() {}
 
   async *stream(messages: AgentTurnMessage[]): AsyncIterable<string> {
+    const system = messages.find((m) => m.role === "system");
     const last = messages.at(-1);
     const reply =
+      (system === undefined ? "" : `> ${system.content}\n\n`) +
       `You said: *${last?.content ?? ""}*` +
       (last !== undefined && last.attachments.length > 0
         ? `\n\n(and sent ${last.attachments.length} attachment(s))`

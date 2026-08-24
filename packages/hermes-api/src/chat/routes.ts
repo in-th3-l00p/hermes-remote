@@ -22,21 +22,49 @@ function error(status: number, code: string, message: string): Response {
   return json(status, { error: { code, message } });
 }
 
-function history(store: ChatStore, sessionId: string): AgentTurnMessage[] {
+/** Tells the agent who it is speaking with, without leaking platform data. */
+function identityTurn(principal: Principal): AgentTurnMessage {
+  let identity: string;
+  if (principal.type === "user") {
+    identity =
+      principal.email === undefined
+        ? `an authenticated anonymous guest (stable user id: ${principal.userId})`
+        : `an authenticated user (user id: ${principal.userId}, email: ${principal.email})`;
+  } else if (principal.type === "api_key") {
+    identity = `a backend service using the API key "${principal.record.name}"`;
+  } else {
+    identity = "an unauthenticated guest";
+  }
+  return {
+    role: "system",
+    content:
+      `<user-context>You are chatting through hermes-web with ${identity}. ` +
+      "Address them accordingly and never attribute this conversation to anyone else.</user-context>",
+    attachments: [],
+  };
+}
+
+function history(
+  store: ChatStore,
+  sessionId: string,
+  principal: Principal,
+): AgentTurnMessage[] {
   const session = store.getSession(sessionId);
-  return (session?.messages ?? [])
+  const turns: AgentTurnMessage[] = (session?.messages ?? [])
     .filter((m) => m.status === "done")
     .map((m) => ({
       role: m.role,
       content: m.content,
       attachments: m.attachments,
     }));
+  return [identityTurn(principal), ...turns];
 }
 
 function streamTurn(
   options: ChatOptions,
   sessionId: string,
   userMessage: ChatMessage,
+  principal: Principal,
 ): Response {
   const { store, agent } = options;
   const encoder = new TextEncoder();
@@ -55,7 +83,9 @@ function streamTurn(
       }) as ChatMessage;
       emit("assistant", { id: assistant.id });
       try {
-        for await (const text of agent.stream(history(store, sessionId))) {
+        for await (const text of agent.stream(
+          history(store, sessionId, principal),
+        )) {
           store.appendContent(sessionId, assistant.id, text);
           emit("delta", { id: assistant.id, text });
         }
@@ -178,7 +208,7 @@ export async function handleChatRoute(
         content: body.content,
         attachments,
       }) as ChatMessage;
-      return streamTurn(options, sessionId, userMessage);
+      return streamTurn(options, sessionId, userMessage, principal);
     }
     return null;
   }
@@ -204,7 +234,7 @@ export async function handleChatRoute(
     if (edited === null) {
       return error(404, "message_not_found", "Unknown editable user message");
     }
-    return streamTurn(options, sessionId, edited);
+    return streamTurn(options, sessionId, edited, principal);
   }
 
   const reactionMatch =
