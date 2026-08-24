@@ -10,21 +10,21 @@
       },
     },
     "packages/hermes-api": {
-      "name": "hermes-web-api",
+      "name": "@in-th3-l00p/hermes-web-api",
       "version": "0.1.0",
       "bin": {
         "hermes-api": "./src/cli.ts",
       },
     },
     "packages/hermes-ts": {
-      "name": "hermes-web-ts",
+      "name": "@in-th3-l00p/hermes-web-ts",
       "version": "0.1.0",
     },
     "packages/react-hermes": {
-      "name": "hermes-web-react",
+      "name": "@in-th3-l00p/hermes-web-react",
       "version": "0.1.0",
       "dependencies": {
-        "hermes-web-ts": "^0.1.0",
+        "@in-th3-l00p/hermes-web-ts": "^0.1.0",
       },
       "devDependencies": {
         "@happy-dom/global-registrator": "^15.11.0",
@@ -46,6 +46,12 @@
     "@babel/runtime": ["@babel/runtime@7.29.7", "", {}, "sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw=="],
 
     "@happy-dom/global-registrator": ["@happy-dom/global-registrator@15.11.7", "", { "dependencies": { "happy-dom": "^15.11.7" } }, "sha512-mfOoUlIw8VBiJYPrl5RZfMzkXC/z7gbSpi2ecycrj/gRWLq2CMV+Q+0G+JPjeOmuNFgg0skEIzkVFzVYFP6URw=="],
+
+    "@in-th3-l00p/hermes-web-api": ["@in-th3-l00p/hermes-web-api@workspace:packages/hermes-api"],
+
+    "@in-th3-l00p/hermes-web-react": ["@in-th3-l00p/hermes-web-react@workspace:packages/react-hermes"],
+
+    "@in-th3-l00p/hermes-web-ts": ["@in-th3-l00p/hermes-web-ts@workspace:packages/hermes-ts"],
 
     "@testing-library/dom": ["@testing-library/dom@10.4.1", "", { "dependencies": { "@babel/code-frame": "^7.10.4", "@babel/runtime": "^7.12.5", "@types/aria-query": "^5.0.1", "aria-query": "5.3.0", "dom-accessibility-api": "^0.5.9", "lz-string": "^1.5.0", "picocolors": "1.1.1", "pretty-format": "^27.0.2" } }, "sha512-o4PXJQidqJl82ckFaXUeoAW+XysPLauYI43Abki5hABd853iMhitooc6znOnczgbTYmEP6U6/y1ZyKAIsvMKGg=="],
 
@@ -76,12 +82,6 @@
     "entities": ["entities@4.5.0", "", {}, "sha512-V0hjH4dGPh9Ao5p0MoRY6BVqtwCjhz6vI5LT8AJ55H+4g9/4vbHx1I54fS0XuclLhDHArPQCiMjDxjaL8fPxhw=="],
 
     "happy-dom": ["happy-dom@15.11.7", "", { "dependencies": { "entities": "^4.5.0", "webidl-conversions": "^7.0.0", "whatwg-mimetype": "^3.0.0" } }, "sha512-KyrFvnl+J9US63TEzwoiJOQzZBJY7KgBushJA8X61DMbNsH+2ONkDuLDnCnwUiPTF42tLoEmrPyoqbenVA5zrg=="],
-
-    "hermes-web-api": ["hermes-web-api@workspace:packages/hermes-api"],
-
-    "hermes-web-react": ["hermes-web-react@workspace:packages/react-hermes"],
-
-    "hermes-web-ts": ["hermes-web-ts@workspace:packages/hermes-ts"],
 
     "js-tokens": ["js-tokens@4.0.0", "", {}, "sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ=="],
 

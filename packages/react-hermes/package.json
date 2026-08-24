@@ -1,5 +1,5 @@
 {
-  "name": "hermes-web-react",
+  "name": "@in-th3-l00p/hermes-web-react",
   "version": "0.1.0",
   "description": "React hooks for the hermes-web API",
   "license": "MIT",
@@ -30,11 +30,11 @@
     "agent"
   ],
   "scripts": {
-    "build": "rm -rf dist && bun build src/index.ts --outdir dist --target node --external react --external hermes-web-ts && tsc -p tsconfig.build.json",
+    "build": "rm -rf dist && bun build src/index.ts --outdir dist --target node --external react --external @in-th3-l00p/hermes-web-ts && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "hermes-web-ts": "^0.1.0"
+    "@in-th3-l00p/hermes-web-ts": "^0.1.0"
   },
   "peerDependencies": {
     "react": ">=18"
@@ -45,5 +45,8 @@
     "@types/react": "^19.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   }
 }

@@ -99,20 +99,23 @@
 
   <h2>packages</h2>
   <ul>
-    <li><a href="https://www.npmjs.com/package/hermes-web-api">hermes-web-api</a> <span class="d">— authenticated API server &amp; management CLI</span></li>
-    <li><a href="https://www.npmjs.com/package/hermes-web-ts">hermes-web-ts</a> <span class="d">— TypeScript client</span></li>
-    <li><a href="https://www.npmjs.com/package/hermes-web-react">hermes-web-react</a> <span class="d">— React hooks</span></li>
+    <li><a href="https://github.com/in-th3-l00p/hermes-web/packages">@in-th3-l00p/hermes-web-api</a> <span class="d">— authenticated API server &amp; management CLI</span></li>
+    <li><a href="https://github.com/in-th3-l00p/hermes-web/packages">@in-th3-l00p/hermes-web-ts</a> <span class="d">— TypeScript client</span></li>
+    <li><a href="https://github.com/in-th3-l00p/hermes-web/packages">@in-th3-l00p/hermes-web-react</a> <span class="d">— React hooks</span></li>
   </ul>
 
   <h2>quick start</h2>
-  <pre class="code"><span class="c"># on the machine running your Hermes agent</span>
-npm i -g hermes-web-api
+  <pre class="code"><span class="c"># packages live on GitHub Packages — point the scope at it once</span>
+echo "@in-th3-l00p:registry=https://npm.pkg.github.com" &gt;&gt; ~/.npmrc
+
+<span class="c"># on the machine running your Hermes agent</span>
+npm i -g @in-th3-l00p/hermes-web-api
 hermes-api keys create --name my-app \
   --scope chat:invoke --scope sessions:read
 hermes-api serve
 
 <span class="c"># in your app</span>
-npm i hermes-web-ts hermes-web-react</pre>
+npm i @in-th3-l00p/hermes-web-ts @in-th3-l00p/hermes-web-react</pre>
 
   <h2>what it does</h2>
   <ul>

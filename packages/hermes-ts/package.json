@@ -1,5 +1,5 @@
 {
-  "name": "hermes-web-ts",
+  "name": "@in-th3-l00p/hermes-web-ts",
   "version": "0.1.0",
   "description": "TypeScript client for the hermes-web API",
   "license": "MIT",
@@ -31,5 +31,8 @@
   "scripts": {
     "build": "rm -rf dist && bun build src/index.ts --outdir dist --target node && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "hermes-web-api",
+  "name": "@in-th3-l00p/hermes-web-api",
   "version": "0.1.0",
   "description": "Authenticated web API and management CLI for a local Hermes agent instance",
   "license": "MIT",
@@ -24,8 +24,17 @@
   "engines": {
     "bun": ">=1.1.0"
   },
-  "keywords": ["hermes", "hermes-agent", "nous-research", "api", "agent"],
+  "keywords": [
+    "hermes",
+    "hermes-agent",
+    "nous-research",
+    "api",
+    "agent"
+  ],
   "scripts": {
     "typecheck": "tsc --noEmit"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   }
 }

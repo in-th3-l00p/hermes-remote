@@ -1,4 +1,4 @@
-# hermes-web-api
+# @in-th3-l00p/hermes-web-api
 
 Authenticated web API and management CLI for a local [Hermes agent](https://hermes-agent.nousresearch.com) instance. Part of [hermes-web](https://github.com/in-th3-l00p/hermes-web).
 
@@ -6,8 +6,15 @@ Requires the [Bun](https://bun.sh) runtime.
 
 ## Install
 
+Packages are published to GitHub Packages. Point the `@in-th3-l00p` scope at it once (a GitHub token with `read:packages` is required):
+
 ```
-npm i -g hermes-web-api
+echo "@in-th3-l00p:registry=https://npm.pkg.github.com" >> ~/.npmrc
+echo "//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN" >> ~/.npmrc
+```
+
+```
+npm i -g @in-th3-l00p/hermes-web-api
 ```
 
 ## Usage
@@ -28,4 +35,4 @@ State lives in `~/.hermes-api/` (override with `HERMES_API_HOME`).
 
 ## Client
 
-Use [`hermes-web-ts`](https://www.npmjs.com/package/hermes-web-ts) or [`hermes-web-react`](https://www.npmjs.com/package/hermes-web-react) to consume the API.
+Use [`@in-th3-l00p/hermes-web-ts`](https://github.com/in-th3-l00p/hermes-web/packages) or [`@in-th3-l00p/hermes-web-react`](https://github.com/in-th3-l00p/hermes-web/packages) to consume the API.
