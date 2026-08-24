@@ -11,6 +11,7 @@
   "dependencies": {
     "@in-th3-l00p/hermes-web-react": "workspace:*",
     "@in-th3-l00p/hermes-web-ts": "workspace:*",
+    "@supabase/supabase-js": "^2.112.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^9.0.0"
