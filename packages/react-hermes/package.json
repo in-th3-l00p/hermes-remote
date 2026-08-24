@@ -30,11 +30,11 @@
     "agent"
   ],
   "scripts": {
-    "build": "rm -rf dist && bun build src/index.ts --outdir dist --target node --external react --external hermes.ts && tsc -p tsconfig.build.json",
+    "build": "rm -rf dist && bun build src/index.ts --outdir dist --target node --external react --external hermes-web-ts && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "hermes.ts": "^0.1.0"
+    "hermes-web-ts": "^0.1.0"
   },
   "peerDependencies": {
     "react": ">=18"

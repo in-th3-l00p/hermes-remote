@@ -17,14 +17,14 @@
       },
     },
     "packages/hermes-ts": {
-      "name": "hermes.ts",
+      "name": "hermes-web-ts",
       "version": "0.1.0",
     },
     "packages/react-hermes": {
       "name": "hermes-web-react",
       "version": "0.1.0",
       "dependencies": {
-        "hermes.ts": "workspace:*",
+        "hermes-web-ts": "^0.1.0",
       },
       "devDependencies": {
         "@happy-dom/global-registrator": "^15.11.0",
@@ -81,7 +81,7 @@
 
     "hermes-web-react": ["hermes-web-react@workspace:packages/react-hermes"],
 
-    "hermes.ts": ["hermes.ts@workspace:packages/hermes-ts"],
+    "hermes-web-ts": ["hermes-web-ts@workspace:packages/hermes-ts"],
 
     "js-tokens": ["js-tokens@4.0.0", "", {}, "sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ=="],
 

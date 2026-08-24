@@ -28,4 +28,4 @@ State lives in `~/.hermes-api/` (override with `HERMES_API_HOME`).
 
 ## Client
 
-Use [`hermes.ts`](https://www.npmjs.com/package/hermes.ts) or [`hermes-web-react`](https://www.npmjs.com/package/hermes-web-react) to consume the API.
+Use [`hermes-web-ts`](https://www.npmjs.com/package/hermes-web-ts) or [`hermes-web-react`](https://www.npmjs.com/package/hermes-web-react) to consume the API.

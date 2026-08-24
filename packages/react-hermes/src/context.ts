@@ -5,7 +5,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
-import type { HermesClient } from "hermes.ts";
+import type { HermesClient } from "hermes-web-ts";
 
 const HermesContext = createContext<HermesClient | null>(null);
 

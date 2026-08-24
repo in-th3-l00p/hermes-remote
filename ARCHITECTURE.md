@@ -8,7 +8,7 @@ hermes-web exposes a local Hermes agent instance to the web, securely. It is a B
 hermes-web/
 ├── packages/
 │   ├── hermes-api/       # Bun HTTP server — authenticated facade over a local Hermes instance
-│   ├── hermes-ts/        # "hermes.ts" — typed TypeScript client for the hermes-api
+│   ├── hermes-ts/        # "hermes.ts" — typed TypeScript client (npm: hermes-web-ts)
 │   └── react-hermes/     # React hooks built on hermes-ts
 ├── CLAUDE.md             # Hermes feature reference + project conventions
 └── ARCHITECTURE.md       # This file

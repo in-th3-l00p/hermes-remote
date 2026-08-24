@@ -1,17 +1,17 @@
-# hermes.ts
+# hermes-web-ts
 
 TypeScript client for the [hermes-web](https://github.com/in-th3-l00p/hermes-web) API — put your [Hermes agent](https://hermes-agent.nousresearch.com) on the web.
 
 ## Install
 
 ```
-npm i hermes.ts
+npm i hermes-web-ts
 ```
 
 ## Usage
 
 ```ts
-import { HermesClient } from "hermes.ts";
+import { HermesClient } from "hermes-web-ts";
 
 const client = new HermesClient({
   baseUrl: "https://agent.example.com",

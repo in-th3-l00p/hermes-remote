@@ -5,7 +5,7 @@ React hooks for the [hermes-web](https://github.com/in-th3-l00p/hermes-web) API 
 ## Install
 
 ```
-npm i hermes-web-react hermes.ts
+npm i hermes-web-react hermes-web-ts
 ```
 
 ## Usage
