@@ -214,6 +214,34 @@ function AuthGate({ onError }: { onError: (message: string) => void }) {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
+          <div className="flex gap-2">
+            {(["google", "github"] as const).map((provider) => (
+              <Button
+                key={provider}
+                variant="outline"
+                className="flex-1"
+                disabled={busy}
+                onClick={() =>
+                  void run(() =>
+                    (supabase as NonNullable<typeof supabase>).auth
+                      .signInWithOAuth({
+                        provider,
+                        options: { redirectTo: window.location.origin },
+                      }),
+                  )
+                }
+              >
+                {provider === "google" ? "Google" : "GitHub"}
+              </Button>
+            ))}
+          </div>
+          <div className="flex items-center gap-3">
+            <Separator className="flex-1" />
+            <span className="text-muted-foreground text-xs">
+              or with email
+            </span>
+            <Separator className="flex-1" />
+          </div>
           {!codeSent ? (
             <>
               <Input
