@@ -2,6 +2,14 @@ export { createApp } from "./app.ts";
 export type { App, AppOptions, KeyVerifier } from "./app.ts";
 export { startServer } from "./server.ts";
 export type { RunningServer, StartServerOptions } from "./server.ts";
+export { ChatStore } from "./chat/store.ts";
+export type { Attachment, ChatMessage, ChatSession } from "./chat/store.ts";
+export { DemoAgent, HermesAgent, HermesUpstreamError } from "./chat/agent.ts";
+export type {
+  AgentBackend,
+  AgentTurnMessage,
+  HermesAgentOptions,
+} from "./chat/agent.ts";
 export { KeyStore } from "./store/keys.ts";
 export type { ApiKeyRecord, CreateKeyInput } from "./store/keys.ts";
 export {

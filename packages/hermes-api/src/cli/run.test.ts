@@ -13,6 +13,7 @@ async function makeCtx(): Promise<{
   const ctx: CliContext = {
     homeDir,
     now: () => new Date("2026-08-23T00:00:00Z"),
+    env: {},
     serve: async (request) => {
       serveCalls.push(request);
       return { port: request.port === 0 ? 12345 : request.port };
@@ -216,6 +217,52 @@ describe("serve", () => {
     expect(result.exitCode).toBe(0);
     expect(result.output).toContain("listening on port 12345");
     expect(serveCalls[0]?.logPath).toContain("server.log");
+  });
+
+  test("passes anonymous, cors, and upstream flags", async () => {
+    const { ctx, serveCalls } = await makeCtx();
+    await runCli(
+      [
+        "serve", "--port", "0", "--anonymous", "--cors", "http://localhost:5173",
+        "--upstream", "http://127.0.0.1:8642", "--upstream-key", "k", "--model", "m",
+      ],
+      ctx,
+    );
+    expect(serveCalls[0]).toMatchObject({
+      anonymous: true,
+      corsOrigin: "http://localhost:5173",
+      upstream: { baseUrl: "http://127.0.0.1:8642", apiKey: "k", model: "m" },
+    });
+  });
+
+  test("reads upstream from the environment", async () => {
+    const { ctx, serveCalls } = await makeCtx();
+    ctx.env["HERMES_UPSTREAM_URL"] = "http://env-upstream";
+    ctx.env["HERMES_UPSTREAM_KEY"] = "env-key";
+    const result = await runCli(["serve", "--port", "0"], ctx);
+    expect(result.output).toContain("agent: http://env-upstream");
+    expect(serveCalls[0]?.upstream).toEqual({
+      baseUrl: "http://env-upstream",
+      apiKey: "env-key",
+    });
+    expect(serveCalls[0]?.anonymous).toBe(false);
+    expect(serveCalls[0]?.corsOrigin).toBeUndefined();
+  });
+
+  test("upstream without a key fails", async () => {
+    const { ctx } = await makeCtx();
+    const result = await runCli(
+      ["serve", "--upstream", "http://x"],
+      ctx,
+    );
+    expect(result.exitCode).toBe(1);
+    expect(result.output).toContain("requires a key");
+  });
+
+  test("no upstream reports demo agent", async () => {
+    const { ctx } = await makeCtx();
+    const result = await runCli(["serve", "--port", "0"], ctx);
+    expect(result.output).toContain("demo (no upstream configured)");
   });
 
   test("defaults to port 8643 and validates --port", async () => {

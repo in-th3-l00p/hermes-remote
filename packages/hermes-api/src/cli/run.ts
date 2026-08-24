@@ -12,18 +12,23 @@ export interface ServeRequest {
   port: number;
   store: KeyStore;
   logPath: string;
+  anonymous: boolean;
+  corsOrigin: string | undefined;
+  upstream: { baseUrl: string; apiKey: string; model?: string } | null;
 }
 
 export interface CliContext {
   homeDir: string;
   now(): Date;
+  env: Record<string, string | undefined>;
   serve(request: ServeRequest): Promise<{ port: number }>;
 }
 
 const USAGE = `hermes-api <command>
 
 Commands:
-  serve [--port 8643]                     run the API server
+  serve [--port 8643] [--anonymous]       run the API server
+       [--cors <origin>] [--upstream <url>] [--upstream-key <key>] [--model <m>]
   keys create --name <name> --scope <s>   create an API key
        [--scope <s> ...] [--user-grantable <s,s>] [--expires 90d] [--dangerous]
   keys list                               list API keys
@@ -187,8 +192,37 @@ export async function runCli(
     if (!Number.isInteger(port) || port < 0 || port > 65535) {
       return fail(`invalid --port: ${flag(parsed, "port") as string}`);
     }
-    const running = await ctx.serve({ port, store, logPath });
-    return ok(`hermes-api listening on port ${running.port}\nlogs: ${logPath}`);
+    const upstreamUrl =
+      flag(parsed, "upstream") ?? ctx.env["HERMES_UPSTREAM_URL"];
+    const upstreamKey =
+      flag(parsed, "upstream-key") ?? ctx.env["HERMES_UPSTREAM_KEY"];
+    let upstream: ServeRequest["upstream"] = null;
+    if (upstreamUrl !== undefined) {
+      if (upstreamKey === undefined) {
+        return fail(
+          "an upstream requires a key: pass --upstream-key or set HERMES_UPSTREAM_KEY",
+        );
+      }
+      const model = flag(parsed, "model") ?? ctx.env["HERMES_UPSTREAM_MODEL"];
+      upstream = {
+        baseUrl: upstreamUrl,
+        apiKey: upstreamKey,
+        ...(model === undefined ? {} : { model }),
+      };
+    }
+    const running = await ctx.serve({
+      port,
+      store,
+      logPath,
+      anonymous: flag(parsed, "anonymous") === "true",
+      corsOrigin: flag(parsed, "cors"),
+      upstream,
+    });
+    return ok(
+      `hermes-api listening on port ${running.port}\n` +
+        `agent: ${upstream === null ? "demo (no upstream configured)" : upstream.baseUrl}\n` +
+        `logs: ${logPath}`,
+    );
   }
 
   if (command === "logs") {

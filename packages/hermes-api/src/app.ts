@@ -1,3 +1,4 @@
+import { handleChatRoute, type ChatOptions } from "./chat/routes.ts";
 import type { ApiKeyRecord } from "./store/keys.ts";
 
 export interface KeyVerifier {
@@ -7,6 +8,11 @@ export interface KeyVerifier {
 export interface AppOptions {
   version?: string;
   store?: KeyVerifier;
+  chat?: ChatOptions;
+  /** Allow unauthenticated access to chat routes (demo / anonymous mode). */
+  anonymous?: boolean;
+  /** Origin allowed for browser calls; enables CORS handling. */
+  corsOrigin?: string;
 }
 
 export interface App {
@@ -39,25 +45,60 @@ export function createApp(options: AppOptions = {}): App {
     return record;
   }
 
-  return {
-    async fetch(request: Request): Promise<Response> {
-      const url = new URL(request.url);
-      if (url.pathname === "/v1/status" && request.method === "GET") {
-        return Response.json({ ok: true, version });
+  async function route(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+
+    if (url.pathname === "/v1/status" && request.method === "GET") {
+      return Response.json({ ok: true, version });
+    }
+
+    if (url.pathname === "/v1/auth/whoami" && request.method === "GET") {
+      const principal = await authenticate(request);
+      if (principal instanceof Response) {
+        return principal;
       }
-      if (url.pathname === "/v1/auth/whoami" && request.method === "GET") {
+      return Response.json({
+        type: "api_key",
+        id: principal.id,
+        name: principal.name,
+        scopes: principal.scopes,
+      });
+    }
+
+    if (options.chat !== undefined) {
+      if (options.anonymous !== true) {
         const principal = await authenticate(request);
         if (principal instanceof Response) {
           return principal;
         }
-        return Response.json({
-          type: "api_key",
-          id: principal.id,
-          name: principal.name,
-          scopes: principal.scopes,
+      }
+      const handled = await handleChatRoute(request, url, options.chat);
+      if (handled !== null) {
+        return handled;
+      }
+    }
+
+    return error(404, "not_found", "Unknown route");
+  }
+
+  return {
+    async fetch(request: Request): Promise<Response> {
+      const origin = options.corsOrigin;
+      if (origin !== undefined && request.method === "OPTIONS") {
+        return new Response(null, {
+          status: 204,
+          headers: {
+            "access-control-allow-origin": origin,
+            "access-control-allow-methods": "GET,POST,PATCH,DELETE,OPTIONS",
+            "access-control-allow-headers": "authorization,content-type",
+          },
         });
       }
-      return error(404, "not_found", "Unknown route");
+      const response = await route(request);
+      if (origin !== undefined) {
+        response.headers.set("access-control-allow-origin", origin);
+      }
+      return response;
     },
   };
 }

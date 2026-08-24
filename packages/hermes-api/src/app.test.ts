@@ -73,6 +73,53 @@ describe("createApp", () => {
     expect(res.status).toBe(401);
   });
 
+  test("chat routes require auth unless anonymous", async () => {
+    const { ChatStore } = await import("./chat/store.ts");
+    const chat = {
+      store: new ChatStore(),
+      agent: {
+        async *stream() {
+          yield "ok";
+        },
+      },
+    };
+    const app = createApp({ store, chat });
+    const denied = await app.fetch(
+      new Request("http://x/v1/sessions", { method: "POST" }),
+    );
+    expect(denied.status).toBe(401);
+    const allowed = await app.fetch(
+      new Request("http://x/v1/sessions", {
+        method: "POST",
+        headers: { authorization: "Bearer good" },
+      }),
+    );
+    expect(allowed.status).toBe(201);
+    const anonymous = createApp({ chat, anonymous: true });
+    const open = await anonymous.fetch(
+      new Request("http://x/v1/sessions", { method: "POST" }),
+    );
+    expect(open.status).toBe(201);
+  });
+
+  test("CORS preflight and response headers", async () => {
+    const app = createApp({ corsOrigin: "http://localhost:5173" });
+    const preflight = await app.fetch(
+      new Request("http://x/v1/status", { method: "OPTIONS" }),
+    );
+    expect(preflight.status).toBe(204);
+    expect(preflight.headers.get("access-control-allow-origin")).toBe(
+      "http://localhost:5173",
+    );
+    const res = await app.fetch(new Request("http://x/v1/status"));
+    expect(res.headers.get("access-control-allow-origin")).toBe(
+      "http://localhost:5173",
+    );
+    const noCors = createApp();
+    const plain = await noCors.fetch(new Request("http://x/v1/status"));
+    expect(plain.headers.get("access-control-allow-origin")).toBeNull();
+  });
+
   test("whoami with valid token returns the principal", async () => {
     const app = createApp({ store });
     const res = await app.fetch(
