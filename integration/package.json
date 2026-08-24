@@ -1,0 +1,8 @@
+{
+  "name": "hermes-remote-integration",
+  "private": true,
+  "version": "0.0.0",
+  "dependencies": {
+    "@in-th3-l00p/hermes-remote-client": "workspace:*"
+  }
+}

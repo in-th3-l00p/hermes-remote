@@ -63,6 +63,13 @@
         "vite": "^6.0.0",
       },
     },
+    "integration": {
+      "name": "hermes-remote-integration",
+      "version": "0.0.0",
+      "dependencies": {
+        "@in-th3-l00p/hermes-remote-client": "workspace:*",
+      },
+    },
     "packages/hermes-api": {
       "name": "@in-th3-l00p/hermes-remote",
       "version": "0.2.0",
@@ -637,6 +644,8 @@
     "hast-util-whitespace": ["hast-util-whitespace@3.0.0", "", { "dependencies": { "@types/hast": "^3.0.0" } }, "sha512-88JUN06ipLwsnv+dVn+OIYOvAuvBMy/Qoi6O7mQHxdPXpjy+Cd6xRkWwux7DKO+4sYILtLBRIKgsdpS2gQc7qw=="],
 
     "hermes-chat-example": ["hermes-chat-example@workspace:apps/chat"],
+
+    "hermes-remote-integration": ["hermes-remote-integration@workspace:integration"],
 
     "hermes-web-landing": ["hermes-web-landing@workspace:apps/landing"],
 
