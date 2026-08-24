@@ -6,9 +6,8 @@
     "apps/*"
   ],
   "scripts": {
-    "test": "bun test",
-    "test:unit": "bun test --test-name-pattern '' --coverage",
-    "test:integration": "HERMES_INTEGRATION=1 bun test integration",
+    "test": "bun test packages",
+    "test:integration": "cd integration && HERMES_INTEGRATION=1 bun test",
     "typecheck": "bun run --filter '*' typecheck"
   },
   "devDependencies": {

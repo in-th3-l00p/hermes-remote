@@ -1,0 +1,38 @@
+name: release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+  packages: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun test packages
+      - run: bun run --cwd packages/hermes-ts build
+      - run: bun run --cwd packages/react-hermes build
+      - name: publish to GitHub Packages
+        run: |
+          echo "@in-th3-l00p:registry=https://npm.pkg.github.com" > ~/.npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
+          for p in hermes-ts react-hermes hermes-api; do
+            (cd packages/$p && npm publish --registry https://npm.pkg.github.com || true)
+          done
+      - name: pack tarballs
+        run: |
+          mkdir -p /tmp/packs
+          for p in hermes-ts react-hermes hermes-api; do
+            (cd packages/$p && npm pack --pack-destination /tmp/packs)
+          done
+      - name: create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" /tmp/packs/*.tgz \
+            --title "${GITHUB_REF_NAME}" --generate-notes
