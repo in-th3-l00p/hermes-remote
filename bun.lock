@@ -15,8 +15,8 @@
       "dependencies": {
         "@base-ui/react": "^1.7.0",
         "@fontsource-variable/geist": "^5.3.0",
-        "@in-th3-l00p/hermes-web-react": "workspace:*",
-        "@in-th3-l00p/hermes-web-ts": "workspace:*",
+        "@in-th3-l00p/hermes-remote-client": "workspace:*",
+        "@in-th3-l00p/hermes-remote-react": "workspace:*",
         "@supabase/supabase-js": "^2.112.3",
         "@tailwindcss/vite": "^4.3.3",
         "class-variance-authority": "^0.7.1",
@@ -64,21 +64,22 @@
       },
     },
     "packages/hermes-api": {
-      "name": "@in-th3-l00p/hermes-web-api",
-      "version": "0.1.0",
+      "name": "@in-th3-l00p/hermes-remote",
+      "version": "0.2.0",
       "bin": {
+        "hermes-remote": "./src/cli.ts",
         "hermes-api": "./src/cli.ts",
       },
     },
     "packages/hermes-ts": {
-      "name": "@in-th3-l00p/hermes-web-ts",
-      "version": "0.1.0",
+      "name": "@in-th3-l00p/hermes-remote-client",
+      "version": "0.2.0",
     },
     "packages/react-hermes": {
-      "name": "@in-th3-l00p/hermes-web-react",
-      "version": "0.1.0",
+      "name": "@in-th3-l00p/hermes-remote-react",
+      "version": "0.2.0",
       "dependencies": {
-        "@in-th3-l00p/hermes-web-ts": "^0.1.0",
+        "@in-th3-l00p/hermes-remote-client": "workspace:*",
       },
       "devDependencies": {
         "@happy-dom/global-registrator": "^15.11.0",
@@ -229,11 +230,11 @@
 
     "@hono/node-server": ["@hono/node-server@2.1.1", "", { "peerDependencies": { "hono": "^4" } }, "sha512-ELuehkj5VCBdgEw9zs+ivkKwyzzUCSQuE96YmiPvn1ECBoZCczbFXJLeEGMTYjphP6gydh4pHMqEYPVMYUVgQg=="],
 
-    "@in-th3-l00p/hermes-web-api": ["@in-th3-l00p/hermes-web-api@workspace:packages/hermes-api"],
+    "@in-th3-l00p/hermes-remote": ["@in-th3-l00p/hermes-remote@workspace:packages/hermes-api"],
 
-    "@in-th3-l00p/hermes-web-react": ["@in-th3-l00p/hermes-web-react@workspace:packages/react-hermes"],
+    "@in-th3-l00p/hermes-remote-client": ["@in-th3-l00p/hermes-remote-client@workspace:packages/hermes-ts"],
 
-    "@in-th3-l00p/hermes-web-ts": ["@in-th3-l00p/hermes-web-ts@workspace:packages/hermes-ts"],
+    "@in-th3-l00p/hermes-remote-react": ["@in-th3-l00p/hermes-remote-react@workspace:packages/react-hermes"],
 
     "@jridgewell/gen-mapping": ["@jridgewell/gen-mapping@0.3.13", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.0", "@jridgewell/trace-mapping": "^0.3.24" } }, "sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA=="],
 

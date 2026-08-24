@@ -78,7 +78,7 @@ export function Examples() {
         <p className="text-muted-foreground mt-2 max-w-2xl">
           Building blocks for putting a Hermes agent in front of users — each
           one runs against a real agent through{" "}
-          <code className="font-mono text-sm">hermes-api</code>.
+          <code className="font-mono text-sm">hermes-remote</code>.
         </p>
       </header>
 
@@ -89,7 +89,7 @@ export function Examples() {
         preview={<ChatPreview />}
       >
         <CodeCard title="chat.tsx">
-          {'import { HermesClient, useChat } from "@in-th3-l00p/hermes-web-react";\n\n'}
+          {'import { HermesClient, useChat } from "@in-th3-l00p/hermes-remote-react";\n\n'}
           {'const client = new HermesClient({ baseUrl: "http://localhost:8643" });\n\n'}
           {"function Chat() {\n"}
           {"  const { messages, streaming, send, edit, react, open, reset } =\n"}
@@ -110,12 +110,12 @@ export function Examples() {
 
       <Block
         title="Run the API next to your agent"
-        tag="hermes-api"
+        tag="hermes-remote"
         description="The server proxies your local Hermes agent to the web. Every request requires authorization — Supabase user tokens or scoped API keys — and each turn tells the agent exactly who it is speaking with."
       >
         <CodeCard title="terminal">
-          npm i -g @in-th3-l00p/hermes-web-api{"\n\n"}
-          {"hermes-api serve \\\n"}
+          npm i -g @in-th3-l00p/hermes-remote{"\n\n"}
+          {"hermes-remote serve \\\n"}
           {"  --cors http://localhost:5173 \\\n"}
           {"  --upstream http://127.0.0.1:8642 \\\n"}
           {"  --upstream-key $API_SERVER_KEY \\\n"}
@@ -150,7 +150,7 @@ export function Examples() {
         description="Stream straight from the typed client anywhere fetch runs."
       >
         <CodeCard title="stream.ts">
-          {'import { HermesClient } from "@in-th3-l00p/hermes-web-ts";\n\n'}
+          {'import { HermesClient } from "@in-th3-l00p/hermes-remote-client";\n\n'}
           {'const client = new HermesClient({ baseUrl: "http://localhost:8643" });\n'}
           {"const session = await client.createSession();\n\n"}
           {"for await (const event of client.sendMessage(session.id, {\n"}

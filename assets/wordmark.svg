@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 64" width="420" height="64">
+  <title>hermes remote</title>
+  <path fill="currentColor" d="M32 6 C34 22 44 32 60 34 C44 36 34 46 32 62 C30 46 20 36 4 34 C20 32 30 22 32 6 Z"/>
+  <text x="76" y="43" font-family="ui-sans-serif, -apple-system, 'Segoe UI', sans-serif" font-size="30" font-weight="600" fill="currentColor">hermes <tspan opacity="0.55">remote</tspan></text>
+</svg>

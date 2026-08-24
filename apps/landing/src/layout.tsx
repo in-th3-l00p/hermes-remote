@@ -29,7 +29,7 @@ export function SiteNav() {
     <div className="border-b">
       <nav className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
         <a href="/" className="text-sm font-semibold">
-          ✧ hermes<span className="text-muted-foreground">web</span>
+          ✧ hermes<span className="text-muted-foreground">remote</span>
         </a>
         <div className="flex items-center gap-5 text-sm">
           <a
@@ -39,7 +39,7 @@ export function SiteNav() {
             Examples
           </a>
           <a
-            href="https://github.com/in-th3-l00p/hermes-web"
+            href="https://github.com/in-th3-l00p/hermes-remote"
             className="text-muted-foreground hover:text-foreground"
           >
             GitHub

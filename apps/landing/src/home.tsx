@@ -32,23 +32,23 @@ const FEATURES = [
 
 const PACKAGES = [
   {
-    name: "@in-th3-l00p/hermes-web-api",
-    href: "https://github.com/in-th3-l00p/hermes-web/packages",
+    name: "@in-th3-l00p/hermes-remote",
+    href: "https://github.com/in-th3-l00p/hermes-remote/packages",
     description: "API server & management CLI — keys, permissions, logs, serve.",
   },
   {
-    name: "@in-th3-l00p/hermes-web-ts",
-    href: "https://github.com/in-th3-l00p/hermes-web/packages",
+    name: "@in-th3-l00p/hermes-remote-client",
+    href: "https://github.com/in-th3-l00p/hermes-remote/packages",
     description: "Isomorphic TypeScript client with SSE streaming.",
   },
   {
-    name: "@in-th3-l00p/hermes-web-react",
-    href: "https://github.com/in-th3-l00p/hermes-web/packages",
+    name: "@in-th3-l00p/hermes-remote-react",
+    href: "https://github.com/in-th3-l00p/hermes-remote/packages",
     description: "React hooks — a full chat is one useChat().",
   },
   {
     name: "releases →",
-    href: "https://github.com/in-th3-l00p/hermes-web/releases",
+    href: "https://github.com/in-th3-l00p/hermes-remote/releases",
     description: "Tarballs attached to every GitHub release for registry-free installs.",
   },
 ];
@@ -59,9 +59,9 @@ export function Home() {
       <section className="py-20 text-center">
         <p className="text-muted-foreground mb-4 text-xl tracking-[0.4em]">✧</p>
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-          Put your Hermes agent
+          Your Hermes agent,
           <br />
-          on the web.
+          anywhere.
         </h1>
         <p className="text-muted-foreground mx-auto mt-4 max-w-xl text-lg">
           An authenticated API, a typed TypeScript client, and React hooks that
@@ -72,7 +72,7 @@ export function Home() {
             <a href="/examples/">View examples</a>
           </Button>
           <Button variant="outline" asChild>
-            <a href="https://github.com/in-th3-l00p/hermes-web">GitHub</a>
+            <a href="https://github.com/in-th3-l00p/hermes-remote">GitHub</a>
           </Button>
         </div>
       </section>
@@ -130,10 +130,10 @@ export function Home() {
           {"\n"}
           {'echo "@in-th3-l00p:registry=https://npm.pkg.github.com" >> ~/.npmrc'}
           {"\n\n"}
-          npm i -g @in-th3-l00p/hermes-web-api{"\n"}
-          hermes-api keys create --name my-app --scope chat:invoke --scope
+          npm i -g @in-th3-l00p/hermes-remote{"\n"}
+          hermes-remote keys create --name my-app --scope chat:invoke --scope
           sessions:read{"\n"}
-          hermes-api serve
+          hermes-remote serve
         </CodeCard>
       </section>
 
@@ -145,7 +145,7 @@ export function Home() {
           A full chat with your agent is one hook.
         </p>
         <CodeCard title="chat.tsx">
-          {'import { HermesClient, useChat } from "@in-th3-l00p/hermes-web-react";\n\n'}
+          {'import { HermesClient, useChat } from "@in-th3-l00p/hermes-remote-react";\n\n'}
           {'const client = new HermesClient({ baseUrl: "https://agent.example.com" });\n\n'}
           {"function Chat() {\n"}
           {"  const { messages, streaming, send, edit, react } = useChat({ client });\n"}

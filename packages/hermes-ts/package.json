@@ -1,15 +1,15 @@
 {
-  "name": "@in-th3-l00p/hermes-web-ts",
-  "version": "0.1.0",
-  "description": "TypeScript client for the hermes-web API",
+  "name": "@in-th3-l00p/hermes-remote-client",
+  "version": "0.2.0",
+  "description": "Typed TypeScript client for Hermes Remote",
   "license": "MIT",
   "author": "Tisca Catalin",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/in-th3-l00p/hermes-web.git",
+    "url": "git+https://github.com/in-th3-l00p/hermes-remote.git",
     "directory": "packages/hermes-ts"
   },
-  "homepage": "https://github.com/in-th3-l00p/hermes-web",
+  "homepage": "https://hermes-remote.tiscacatalin.com",
   "type": "module",
   "exports": {
     ".": {

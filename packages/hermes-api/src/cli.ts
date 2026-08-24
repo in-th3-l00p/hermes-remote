@@ -8,7 +8,7 @@ import { DemoAgent, HermesAgent } from "./chat/agent.ts";
 import { SupabaseJwksVerifier, hs256Verifier } from "./auth/supabase.ts";
 
 const homeDir =
-  process.env["HERMES_API_HOME"] ?? join(homedir(), ".hermes-api");
+  process.env["HERMES_REMOTE_HOME"] ?? join(homedir(), ".hermes-remote");
 
 const ctx: CliContext = {
   homeDir,

@@ -8,7 +8,7 @@ afterAll(async () => {
 });
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { useChat, type ChatClientLike } from "./index.ts";
-import type { ChatEvent, ChatMessage } from "@in-th3-l00p/hermes-web-ts";
+import type { ChatEvent, ChatMessage } from "@in-th3-l00p/hermes-remote-client";
 
 const msg = (id: string, role: "user" | "assistant", content: string): ChatMessage => ({
   id,

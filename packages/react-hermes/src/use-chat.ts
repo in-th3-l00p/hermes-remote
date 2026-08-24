@@ -5,7 +5,7 @@ import type {
   ChatMessage,
   ChatSession,
   SendMessageInput,
-} from "@in-th3-l00p/hermes-web-ts";
+} from "@in-th3-l00p/hermes-remote-client";
 
 /** Structural subset of HermesClient used by useChat (easy to fake in tests). */
 export interface ChatClientLike {

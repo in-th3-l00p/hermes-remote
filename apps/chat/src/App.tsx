@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { createClient } from "@supabase/supabase-js";
-import { HermesClient, useChat } from "@in-th3-l00p/hermes-web-react";
+import { HermesClient, useChat } from "@in-th3-l00p/hermes-remote-react";
 import type {
   Attachment,
   ChatMessage,
   ChatSessionMeta,
-} from "@in-th3-l00p/hermes-web-react";
+} from "@in-th3-l00p/hermes-remote-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -207,7 +207,7 @@ function AuthGate({ onError }: { onError: (message: string) => void }) {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <p className="text-muted-foreground text-xl">✧</p>
-          <CardTitle>Sign in to hermes chat</CardTitle>
+          <CardTitle>Sign in to hermes remote</CardTitle>
           <CardDescription>
             The agent requires an identity — sign in with your email, or
             continue as an anonymous guest.

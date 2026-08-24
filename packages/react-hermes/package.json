@@ -1,15 +1,15 @@
 {
-  "name": "@in-th3-l00p/hermes-web-react",
-  "version": "0.1.0",
-  "description": "React hooks for the hermes-web API",
+  "name": "@in-th3-l00p/hermes-remote-react",
+  "version": "0.2.0",
+  "description": "React hooks for Hermes Remote",
   "license": "MIT",
   "author": "Tisca Catalin",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/in-th3-l00p/hermes-web.git",
+    "url": "git+https://github.com/in-th3-l00p/hermes-remote.git",
     "directory": "packages/react-hermes"
   },
-  "homepage": "https://github.com/in-th3-l00p/hermes-web",
+  "homepage": "https://hermes-remote.tiscacatalin.com",
   "type": "module",
   "exports": {
     ".": {
@@ -30,11 +30,11 @@
     "agent"
   ],
   "scripts": {
-    "build": "rm -rf dist && bun build src/index.ts --outdir dist --target node --external react --external @in-th3-l00p/hermes-web-ts && tsc -p tsconfig.build.json",
+    "build": "rm -rf dist && bun build src/index.ts --outdir dist --target node --external react --external @in-th3-l00p/hermes-remote-client && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@in-th3-l00p/hermes-web-ts": "^0.1.0"
+    "@in-th3-l00p/hermes-remote-client": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=18"
