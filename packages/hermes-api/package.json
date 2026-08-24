@@ -1,6 +1,6 @@
 {
   "name": "@in-th3-l00p/hermes-remote",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "description": "Secure web API and management CLI for a local Hermes agent (Hermes Remote server)",
   "license": "MIT",
   "author": "Tisca Catalin",
