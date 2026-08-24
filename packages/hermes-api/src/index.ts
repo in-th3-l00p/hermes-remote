@@ -1,7 +1,11 @@
 export { createApp } from "./app.ts";
 export type { App, AppOptions, KeyVerifier, Principal } from "./app.ts";
-export { verifySupabaseJwt } from "./auth/supabase.ts";
-export type { SupabaseUser } from "./auth/supabase.ts";
+export {
+  SupabaseJwksVerifier,
+  hs256Verifier,
+  verifySupabaseJwt,
+} from "./auth/supabase.ts";
+export type { SupabaseUser, UserTokenVerifier } from "./auth/supabase.ts";
 export { startServer } from "./server.ts";
 export type { RunningServer, StartServerOptions } from "./server.ts";
 export { ChatStore } from "./chat/store.ts";

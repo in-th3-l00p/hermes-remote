@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createHmac } from "node:crypto";
-import { createApp, ChatStore, type KeyVerifier } from "./index.ts";
+import { createApp, ChatStore, hs256Verifier, type KeyVerifier } from "./index.ts";
 import type { ApiKeyRecord } from "./store/keys.ts";
 import type { AgentBackend } from "./chat/agent.ts";
 
@@ -92,7 +92,7 @@ describe("createApp", () => {
   });
 
   test("supabase tokens verify into user principals", async () => {
-    const app = createApp({ supabaseJwtSecret: SECRET });
+    const app = createApp({ userVerifier: hs256Verifier(SECRET) });
     const res = await app.fetch(get("/v1/auth/whoami", supabaseToken("u-9")));
     expect(await res.json()).toEqual({
       type: "user",
@@ -129,7 +129,7 @@ describe("createApp", () => {
 
   test("user principals own their sessions", async () => {
     const chat = { store: new ChatStore(), agent: echoAgent };
-    const app = createApp({ chat, supabaseJwtSecret: SECRET, anonymous: true });
+    const app = createApp({ chat, userVerifier: hs256Verifier(SECRET), anonymous: true });
     const created = await app.fetch(
       new Request("http://x/v1/sessions", {
         method: "POST",

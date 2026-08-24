@@ -247,6 +247,18 @@ describe("serve", () => {
     expect(serveCalls[1]?.supabaseJwtSecret).toBe("s2");
   });
 
+  test("passes the supabase url from flag or env", async () => {
+    const { ctx, serveCalls } = await makeCtx();
+    await runCli(
+      ["serve", "--port", "0", "--supabase-url", "https://p.supabase.co"],
+      ctx,
+    );
+    expect(serveCalls[0]?.supabaseUrl).toBe("https://p.supabase.co");
+    ctx.env["SUPABASE_URL"] = "https://env.supabase.co";
+    await runCli(["serve", "--port", "0"], ctx);
+    expect(serveCalls[1]?.supabaseUrl).toBe("https://env.supabase.co");
+  });
+
   test("reads upstream from the environment", async () => {
     const { ctx, serveCalls } = await makeCtx();
     ctx.env["HERMES_UPSTREAM_URL"] = "http://env-upstream";

@@ -1,5 +1,5 @@
 import { handleChatRoute, type ChatOptions } from "./chat/routes.ts";
-import { verifySupabaseJwt } from "./auth/supabase.ts";
+import type { UserTokenVerifier } from "./auth/supabase.ts";
 import type { ApiKeyRecord } from "./store/keys.ts";
 
 export interface KeyVerifier {
@@ -15,8 +15,8 @@ export interface AppOptions {
   version?: string;
   store?: KeyVerifier;
   chat?: ChatOptions;
-  /** Supabase JWT secret; enables end-user bearer tokens. */
-  supabaseJwtSecret?: string;
+  /** Verifier for end-user bearer tokens (e.g. Supabase HS256 or JWKS). */
+  userVerifier?: UserTokenVerifier;
   /** Allow unauthenticated access to chat routes (demo / anonymous mode). */
   anonymous?: boolean;
   /** Origin allowed for browser calls; enables CORS handling. */
@@ -33,7 +33,7 @@ function error(status: number, code: string, message: string): Response {
 
 export function createApp(options: AppOptions = {}): App {
   const version = options.version ?? "0.1.0";
-  const { store, supabaseJwtSecret } = options;
+  const { store, userVerifier } = options;
 
   async function authenticate(
     request: Request,
@@ -54,8 +54,8 @@ export function createApp(options: AppOptions = {}): App {
         ? error(401, "unauthorized", "Invalid or revoked API key")
         : { type: "api_key", record };
     }
-    if (supabaseJwtSecret !== undefined) {
-      const user = verifySupabaseJwt(token, supabaseJwtSecret);
+    if (userVerifier !== undefined) {
+      const user = await userVerifier.verify(token);
       if (user !== null) {
         return {
           type: "user",

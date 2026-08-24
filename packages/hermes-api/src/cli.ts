@@ -5,6 +5,7 @@ import { runCli, type CliContext } from "./cli/run.ts";
 import { startServer } from "./server.ts";
 import { ChatStore } from "./chat/store.ts";
 import { DemoAgent, HermesAgent } from "./chat/agent.ts";
+import { SupabaseJwksVerifier, hs256Verifier } from "./auth/supabase.ts";
 
 const homeDir =
   process.env["HERMES_API_HOME"] ?? join(homedir(), ".hermes-api");
@@ -22,9 +23,11 @@ const ctx: CliContext = {
       ...(request.corsOrigin === undefined
         ? {}
         : { corsOrigin: request.corsOrigin }),
-      ...(request.supabaseJwtSecret === undefined
-        ? {}
-        : { supabaseJwtSecret: request.supabaseJwtSecret }),
+      ...(request.supabaseUrl !== undefined
+        ? { userVerifier: new SupabaseJwksVerifier(request.supabaseUrl) }
+        : request.supabaseJwtSecret !== undefined
+          ? { userVerifier: hs256Verifier(request.supabaseJwtSecret) }
+          : {}),
       chat: {
         store: new ChatStore(join(homeDir, "chat.db")),
         agent:

@@ -15,6 +15,7 @@ export interface ServeRequest {
   anonymous: boolean;
   corsOrigin: string | undefined;
   supabaseJwtSecret: string | undefined;
+  supabaseUrl: string | undefined;
   upstream: { baseUrl: string; apiKey: string; model?: string } | null;
 }
 
@@ -219,6 +220,7 @@ export async function runCli(
       corsOrigin: flag(parsed, "cors"),
       supabaseJwtSecret:
         flag(parsed, "supabase-jwt-secret") ?? ctx.env["SUPABASE_JWT_SECRET"],
+      supabaseUrl: flag(parsed, "supabase-url") ?? ctx.env["SUPABASE_URL"],
       upstream,
     });
     return ok(
