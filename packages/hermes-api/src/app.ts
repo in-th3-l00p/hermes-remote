@@ -1,14 +1,22 @@
 import { handleChatRoute, type ChatOptions } from "./chat/routes.ts";
+import { verifySupabaseJwt } from "./auth/supabase.ts";
 import type { ApiKeyRecord } from "./store/keys.ts";
 
 export interface KeyVerifier {
   verifyToken(token: string): Promise<ApiKeyRecord | null>;
 }
 
+export type Principal =
+  | { type: "api_key"; record: ApiKeyRecord }
+  | { type: "user"; userId: string; email?: string }
+  | { type: "anonymous" };
+
 export interface AppOptions {
   version?: string;
   store?: KeyVerifier;
   chat?: ChatOptions;
+  /** Supabase JWT secret; enables end-user bearer tokens. */
+  supabaseJwtSecret?: string;
   /** Allow unauthenticated access to chat routes (demo / anonymous mode). */
   anonymous?: boolean;
   /** Origin allowed for browser calls; enables CORS handling. */
@@ -25,24 +33,38 @@ function error(status: number, code: string, message: string): Response {
 
 export function createApp(options: AppOptions = {}): App {
   const version = options.version ?? "0.1.0";
-  const store = options.store;
+  const { store, supabaseJwtSecret } = options;
 
   async function authenticate(
     request: Request,
-  ): Promise<ApiKeyRecord | Response> {
-    if (store === undefined) {
-      return error(503, "auth_unavailable", "No key store configured");
-    }
+  ): Promise<Principal | Response> {
     const header = request.headers.get("authorization");
     const token = header?.startsWith("Bearer ") ? header.slice(7) : null;
     if (token === null) {
-      return error(401, "unauthorized", "Missing bearer token");
+      return options.anonymous === true
+        ? { type: "anonymous" }
+        : error(401, "unauthorized", "Missing bearer token");
     }
-    const record = await store.verifyToken(token);
-    if (record === null) {
-      return error(401, "unauthorized", "Invalid or revoked API key");
+    if (token.startsWith("hk_")) {
+      if (store === undefined) {
+        return error(503, "auth_unavailable", "No key store configured");
+      }
+      const record = await store.verifyToken(token);
+      return record === null
+        ? error(401, "unauthorized", "Invalid or revoked API key")
+        : { type: "api_key", record };
     }
-    return record;
+    if (supabaseJwtSecret !== undefined) {
+      const user = verifySupabaseJwt(token, supabaseJwtSecret);
+      if (user !== null) {
+        return {
+          type: "user",
+          userId: user.sub,
+          ...(user.email === undefined ? {} : { email: user.email }),
+        };
+      }
+    }
+    return error(401, "unauthorized", "Invalid bearer token");
   }
 
   async function route(request: Request): Promise<Response> {
@@ -57,22 +79,30 @@ export function createApp(options: AppOptions = {}): App {
       if (principal instanceof Response) {
         return principal;
       }
-      return Response.json({
-        type: "api_key",
-        id: principal.id,
-        name: principal.name,
-        scopes: principal.scopes,
-      });
+      if (principal.type === "api_key") {
+        return Response.json({
+          type: "api_key",
+          id: principal.record.id,
+          name: principal.record.name,
+          scopes: principal.record.scopes,
+        });
+      }
+      if (principal.type === "user") {
+        return Response.json({
+          type: "user",
+          id: principal.userId,
+          ...(principal.email === undefined ? {} : { email: principal.email }),
+        });
+      }
+      return Response.json({ type: "anonymous" });
     }
 
     if (options.chat !== undefined) {
-      if (options.anonymous !== true) {
-        const principal = await authenticate(request);
-        if (principal instanceof Response) {
-          return principal;
-        }
+      const principal = await authenticate(request);
+      if (principal instanceof Response) {
+        return principal;
       }
-      const handled = await handleChatRoute(request, url, options.chat);
+      const handled = await handleChatRoute(request, url, options.chat, principal);
       if (handled !== null) {
         return handled;
       }

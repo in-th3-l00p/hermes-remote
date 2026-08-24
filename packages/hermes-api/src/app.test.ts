@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { createApp, type KeyVerifier } from "./index.ts";
+import { createHmac } from "node:crypto";
+import { createApp, ChatStore, type KeyVerifier } from "./index.ts";
 import type { ApiKeyRecord } from "./store/keys.ts";
+import type { AgentBackend } from "./chat/agent.ts";
 
 const record: ApiKeyRecord = {
   id: "abc123",
@@ -14,75 +16,98 @@ const record: ApiKeyRecord = {
 };
 
 const store: KeyVerifier = {
-  verifyToken: async (token) => (token === "good" ? record : null),
+  verifyToken: async (token) => (token === "hk_good" ? record : null),
 };
+
+const echoAgent: AgentBackend = {
+  async *stream() {
+    yield "ok";
+  },
+};
+
+const SECRET = "sb-secret";
+
+function supabaseToken(sub: string): string {
+  const enc = (o: unknown) =>
+    Buffer.from(JSON.stringify(o)).toString("base64url");
+  const head = enc({ alg: "HS256", typ: "JWT" });
+  const body = enc({ sub, email: `${sub}@x.io`, exp: Date.now() / 1000 + 600 });
+  const sig = createHmac("sha256", SECRET)
+    .update(`${head}.${body}`)
+    .digest("base64url");
+  return `${head}.${body}.${sig}`;
+}
+
+const get = (path: string, token?: string) =>
+  new Request(`http://x${path}`, {
+    headers: token === undefined ? {} : { authorization: `Bearer ${token}` },
+  });
 
 describe("createApp", () => {
   test("GET /v1/status is public and returns version", async () => {
     const app = createApp({ version: "1.2.3" });
-    const res = await app.fetch(new Request("http://localhost/v1/status"));
+    const res = await app.fetch(get("/v1/status"));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true, version: "1.2.3" });
   });
 
-  test("default version", async () => {
+  test("default version and 404s", async () => {
     const app = createApp();
-    const res = await app.fetch(new Request("http://localhost/v1/status"));
-    expect(await res.json()).toEqual({ ok: true, version: "0.1.0" });
+    expect(await (await app.fetch(get("/v1/status"))).json()).toEqual({
+      ok: true,
+      version: "0.1.0",
+    });
+    expect((await app.fetch(get("/nope"))).status).toBe(404);
+    expect(
+      (
+        await app.fetch(
+          new Request("http://x/v1/status", { method: "POST" }),
+        )
+      ).status,
+    ).toBe(404);
   });
 
-  test("unknown route and method return 404", async () => {
-    const app = createApp();
-    const missing = await app.fetch(new Request("http://localhost/nope"));
-    expect(missing.status).toBe(404);
-    const wrongMethod = await app.fetch(
-      new Request("http://localhost/v1/status", { method: "POST" }),
-    );
-    expect(wrongMethod.status).toBe(404);
-  });
-
-  test("whoami without a store returns 503", async () => {
-    const app = createApp();
-    const res = await app.fetch(new Request("http://localhost/v1/auth/whoami"));
-    expect(res.status).toBe(503);
-    const body = (await res.json()) as { error: { code: string } };
-    expect(body.error.code).toBe("auth_unavailable");
-  });
-
-  test("whoami without bearer token returns 401", async () => {
+  test("whoami without a token is 401, or anonymous when allowed", async () => {
     const app = createApp({ store });
-    const noHeader = await app.fetch(
-      new Request("http://localhost/v1/auth/whoami"),
-    );
-    expect(noHeader.status).toBe(401);
-    const wrongScheme = await app.fetch(
-      new Request("http://localhost/v1/auth/whoami", {
-        headers: { authorization: "Basic abc" },
-      }),
-    );
-    expect(wrongScheme.status).toBe(401);
+    expect((await app.fetch(get("/v1/auth/whoami"))).status).toBe(401);
+    const open = createApp({ anonymous: true });
+    expect(await (await open.fetch(get("/v1/auth/whoami"))).json()).toEqual({
+      type: "anonymous",
+    });
   });
 
-  test("whoami with invalid token returns 401", async () => {
+  test("api key tokens: no store 503, invalid 401, valid principal", async () => {
+    const noStore = createApp();
+    expect(
+      (await noStore.fetch(get("/v1/auth/whoami", "hk_x"))).status,
+    ).toBe(503);
     const app = createApp({ store });
-    const res = await app.fetch(
-      new Request("http://localhost/v1/auth/whoami", {
-        headers: { authorization: "Bearer bad" },
-      }),
-    );
-    expect(res.status).toBe(401);
+    expect((await app.fetch(get("/v1/auth/whoami", "hk_bad"))).status).toBe(401);
+    expect(await (await app.fetch(get("/v1/auth/whoami", "hk_good"))).json()).toEqual({
+      type: "api_key",
+      id: "abc123",
+      name: "test",
+      scopes: ["chat:invoke"],
+    });
+  });
+
+  test("supabase tokens verify into user principals", async () => {
+    const app = createApp({ supabaseJwtSecret: SECRET });
+    const res = await app.fetch(get("/v1/auth/whoami", supabaseToken("u-9")));
+    expect(await res.json()).toEqual({
+      type: "user",
+      id: "u-9",
+      email: "u-9@x.io",
+    });
+    expect((await app.fetch(get("/v1/auth/whoami", "garbage"))).status).toBe(401);
+    const noSecret = createApp({ store });
+    expect(
+      (await noSecret.fetch(get("/v1/auth/whoami", "garbage"))).status,
+    ).toBe(401);
   });
 
   test("chat routes require auth unless anonymous", async () => {
-    const { ChatStore } = await import("./chat/store.ts");
-    const chat = {
-      store: new ChatStore(),
-      agent: {
-        async *stream() {
-          yield "ok";
-        },
-      },
-    };
+    const chat = { store: new ChatStore(), agent: echoAgent };
     const app = createApp({ store, chat });
     const denied = await app.fetch(
       new Request("http://x/v1/sessions", { method: "POST" }),
@@ -91,7 +116,7 @@ describe("createApp", () => {
     const allowed = await app.fetch(
       new Request("http://x/v1/sessions", {
         method: "POST",
-        headers: { authorization: "Bearer good" },
+        headers: { authorization: "Bearer hk_good" },
       }),
     );
     expect(allowed.status).toBe(201);
@@ -100,6 +125,44 @@ describe("createApp", () => {
       new Request("http://x/v1/sessions", { method: "POST" }),
     );
     expect(open.status).toBe(201);
+  });
+
+  test("user principals own their sessions", async () => {
+    const chat = { store: new ChatStore(), agent: echoAgent };
+    const app = createApp({ chat, supabaseJwtSecret: SECRET, anonymous: true });
+    const created = await app.fetch(
+      new Request("http://x/v1/sessions", {
+        method: "POST",
+        headers: { authorization: `Bearer ${supabaseToken("u-1")}` },
+      }),
+    );
+    const session = (await created.json()) as { id: string; userId: string };
+    expect(session.userId).toBe("u-1");
+    const mine = await app.fetch(
+      get("/v1/sessions", supabaseToken("u-1")),
+    );
+    expect(
+      ((await mine.json()) as { sessions: { id: string }[] }).sessions.map(
+        (s) => s.id,
+      ),
+    ).toEqual([session.id]);
+    const theirs = await app.fetch(get("/v1/sessions", supabaseToken("u-2")));
+    expect(
+      ((await theirs.json()) as { sessions: unknown[] }).sessions,
+    ).toEqual([]);
+    const stolen = await app.fetch(
+      get(`/v1/sessions/${session.id}/messages`, supabaseToken("u-2")),
+    );
+    expect(stolen.status).toBe(404);
+    const owner = await app.fetch(
+      get(`/v1/sessions/${session.id}/messages`, supabaseToken("u-1")),
+    );
+    expect(owner.status).toBe(200);
+    const apiKeyAccess = createApp({ store, chat });
+    const viaKey = await apiKeyAccess.fetch(
+      get(`/v1/sessions/${session.id}/messages`, "hk_good"),
+    );
+    expect(viaKey.status).toBe(200);
   });
 
   test("CORS preflight and response headers", async () => {
@@ -111,28 +174,12 @@ describe("createApp", () => {
     expect(preflight.headers.get("access-control-allow-origin")).toBe(
       "http://localhost:5173",
     );
-    const res = await app.fetch(new Request("http://x/v1/status"));
+    const res = await app.fetch(get("/v1/status"));
     expect(res.headers.get("access-control-allow-origin")).toBe(
       "http://localhost:5173",
     );
     const noCors = createApp();
-    const plain = await noCors.fetch(new Request("http://x/v1/status"));
+    const plain = await noCors.fetch(get("/v1/status"));
     expect(plain.headers.get("access-control-allow-origin")).toBeNull();
-  });
-
-  test("whoami with valid token returns the principal", async () => {
-    const app = createApp({ store });
-    const res = await app.fetch(
-      new Request("http://localhost/v1/auth/whoami", {
-        headers: { authorization: "Bearer good" },
-      }),
-    );
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({
-      type: "api_key",
-      id: "abc123",
-      name: "test",
-      scopes: ["chat:invoke"],
-    });
   });
 });

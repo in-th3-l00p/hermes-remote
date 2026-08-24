@@ -235,6 +235,18 @@ describe("serve", () => {
     });
   });
 
+  test("passes the supabase jwt secret from flag or env", async () => {
+    const { ctx, serveCalls } = await makeCtx();
+    await runCli(
+      ["serve", "--port", "0", "--supabase-jwt-secret", "s1"],
+      ctx,
+    );
+    expect(serveCalls[0]?.supabaseJwtSecret).toBe("s1");
+    ctx.env["SUPABASE_JWT_SECRET"] = "s2";
+    await runCli(["serve", "--port", "0"], ctx);
+    expect(serveCalls[1]?.supabaseJwtSecret).toBe("s2");
+  });
+
   test("reads upstream from the environment", async () => {
     const { ctx, serveCalls } = await makeCtx();
     ctx.env["HERMES_UPSTREAM_URL"] = "http://env-upstream";

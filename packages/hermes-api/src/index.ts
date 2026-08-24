@@ -1,9 +1,16 @@
 export { createApp } from "./app.ts";
-export type { App, AppOptions, KeyVerifier } from "./app.ts";
+export type { App, AppOptions, KeyVerifier, Principal } from "./app.ts";
+export { verifySupabaseJwt } from "./auth/supabase.ts";
+export type { SupabaseUser } from "./auth/supabase.ts";
 export { startServer } from "./server.ts";
 export type { RunningServer, StartServerOptions } from "./server.ts";
 export { ChatStore } from "./chat/store.ts";
-export type { Attachment, ChatMessage, ChatSession } from "./chat/store.ts";
+export type {
+  Attachment,
+  ChatMessage,
+  ChatSession,
+  ChatSessionMeta,
+} from "./chat/store.ts";
 export { DemoAgent, HermesAgent, HermesUpstreamError } from "./chat/agent.ts";
 export type {
   AgentBackend,

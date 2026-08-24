@@ -6,8 +6,11 @@ import { startServer } from "./server.ts";
 import { ChatStore } from "./chat/store.ts";
 import { DemoAgent, HermesAgent } from "./chat/agent.ts";
 
+const homeDir =
+  process.env["HERMES_API_HOME"] ?? join(homedir(), ".hermes-api");
+
 const ctx: CliContext = {
-  homeDir: process.env["HERMES_API_HOME"] ?? join(homedir(), ".hermes-api"),
+  homeDir,
   now: () => new Date(),
   env: process.env,
   serve: (request) =>
@@ -19,8 +22,11 @@ const ctx: CliContext = {
       ...(request.corsOrigin === undefined
         ? {}
         : { corsOrigin: request.corsOrigin }),
+      ...(request.supabaseJwtSecret === undefined
+        ? {}
+        : { supabaseJwtSecret: request.supabaseJwtSecret }),
       chat: {
-        store: new ChatStore(),
+        store: new ChatStore(join(homeDir, "chat.db")),
         agent:
           request.upstream === null
             ? new DemoAgent()

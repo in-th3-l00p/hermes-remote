@@ -18,7 +18,7 @@ const failingAgent: AgentBackend = {
 };
 
 function makeApp(agent: AgentBackend = echoAgent) {
-  const store = new ChatStore(() => new Date("2026-08-24T00:00:00Z"));
+  const store = new ChatStore(":memory:", () => new Date("2026-08-24T00:00:00Z"));
   const app = createApp({ chat: { store, agent }, anonymous: true });
   return { app, store };
 }
@@ -204,6 +204,54 @@ describe("chat routes", () => {
         )
       ).status,
     ).toBe(400);
+  });
+
+  test("lists anonymous sessions by ids", async () => {
+    const { app, store } = makeApp();
+    const anonymous = store.createSession();
+    const owned = store.createSession("user-1");
+    const res = await app.fetch(
+      new Request(
+        `http://x/v1/sessions?ids=${anonymous.id},${owned.id},zzz,ffff`,
+      ),
+    );
+    const body = (await res.json()) as { sessions: { id: string }[] };
+    expect(body.sessions.map((s) => s.id)).toEqual([anonymous.id]);
+    const empty = await app.fetch(new Request("http://x/v1/sessions"));
+    expect(((await empty.json()) as { sessions: unknown[] }).sessions).toEqual(
+      [],
+    );
+  });
+
+  test("deletes sessions", async () => {
+    const { app, store } = makeApp();
+    const session = store.createSession();
+    const res = await app.fetch(
+      new Request(`http://x/v1/sessions/${session.id}`, { method: "DELETE" }),
+    );
+    expect(await res.json()).toEqual({ deleted: true });
+    expect(store.getSession(session.id)).toBeNull();
+    const missing = await app.fetch(
+      new Request(`http://x/v1/sessions/${session.id}`, { method: "DELETE" }),
+    );
+    expect(missing.status).toBe(404);
+  });
+
+  test("anonymous principals cannot touch user-owned sessions", async () => {
+    const { app, store } = makeApp();
+    const owned = store.createSession("user-1");
+    store.addMessage(owned.id, { role: "user", content: "secret" });
+    const messageId = store.getSession(owned.id)?.messages[0]?.id as string;
+    const requests = [
+      new Request(`http://x/v1/sessions/${owned.id}/messages`),
+      post(`/v1/sessions/${owned.id}/messages`, { content: "x" }),
+      post(`/v1/sessions/${owned.id}/messages/${messageId}`, { content: "x" }, "PATCH"),
+      post(`/v1/sessions/${owned.id}/messages/${messageId}/reactions`, { emoji: "🔥" }),
+      new Request(`http://x/v1/sessions/${owned.id}`, { method: "DELETE" }),
+    ];
+    for (const request of requests) {
+      expect((await app.fetch(request)).status).toBe(404);
+    }
   });
 
   test("unmatched chat-shaped routes fall through to 404", async () => {

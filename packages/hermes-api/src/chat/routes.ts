@@ -1,9 +1,17 @@
 import type { AgentBackend, AgentTurnMessage } from "./agent.ts";
-import type { Attachment, ChatMessage, ChatStore } from "./store.ts";
+import type { Attachment, ChatMessage, ChatSession, ChatStore } from "./store.ts";
+import type { Principal } from "../app.ts";
 
 export interface ChatOptions {
   store: ChatStore;
   agent: AgentBackend;
+}
+
+function canAccess(session: ChatSession, principal: Principal): boolean {
+  if (session.userId === null || principal.type === "api_key") {
+    return true;
+  }
+  return principal.type === "user" && principal.userId === session.userId;
 }
 
 function json(status: number, body: unknown): Response {
@@ -105,12 +113,41 @@ export async function handleChatRoute(
   request: Request,
   url: URL,
   options: ChatOptions,
+  principal: Principal,
 ): Promise<Response | null> {
   const { store } = options;
   const { method } = request;
 
   if (url.pathname === "/v1/sessions" && method === "POST") {
-    return json(201, store.createSession());
+    return json(
+      201,
+      store.createSession(principal.type === "user" ? principal.userId : null),
+    );
+  }
+
+  if (url.pathname === "/v1/sessions" && method === "GET") {
+    if (principal.type === "user") {
+      return json(200, {
+        sessions: store.listSessions({ userId: principal.userId }),
+      });
+    }
+    const ids = (url.searchParams.get("ids") ?? "")
+      .split(",")
+      .filter((id) => /^[0-9a-f]+$/.test(id));
+    const sessions = store
+      .listSessions({ ids })
+      .filter((s) => s.userId === null || principal.type === "api_key");
+    return json(200, { sessions });
+  }
+
+  const sessionMatch = /^\/v1\/sessions\/([0-9a-f]+)$/.exec(url.pathname);
+  if (sessionMatch !== null && method === "DELETE") {
+    const session = store.getSession(sessionMatch[1] as string);
+    if (session === null || !canAccess(session, principal)) {
+      return error(404, "session_not_found", "Unknown session");
+    }
+    store.deleteSession(session.id);
+    return json(200, { deleted: true });
   }
 
   const messagesMatch = /^\/v1\/sessions\/([0-9a-f]+)\/messages$/.exec(
@@ -119,7 +156,7 @@ export async function handleChatRoute(
   if (messagesMatch !== null) {
     const sessionId = messagesMatch[1] as string;
     const session = store.getSession(sessionId);
-    if (session === null) {
+    if (session === null || !canAccess(session, principal)) {
       return error(404, "session_not_found", "Unknown session");
     }
     if (method === "GET") {
@@ -155,6 +192,10 @@ export async function handleChatRoute(
       string,
       string,
     ];
+    const session = store.getSession(sessionId);
+    if (session === null || !canAccess(session, principal)) {
+      return error(404, "session_not_found", "Unknown session");
+    }
     const body = (await request.json().catch(() => null)) as SendBody | null;
     if (body === null || typeof body.content !== "string" || body.content.trim() === "") {
       return error(400, "invalid_message", "content (string) is required");
@@ -176,6 +217,10 @@ export async function handleChatRoute(
       string,
       string,
     ];
+    const session = store.getSession(sessionId);
+    if (session === null || !canAccess(session, principal)) {
+      return error(404, "session_not_found", "Unknown session");
+    }
     const body = (await request.json().catch(() => null)) as {
       emoji?: unknown;
     } | null;
