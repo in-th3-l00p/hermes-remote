@@ -97,6 +97,14 @@
   <h1>hermes web</h1>
   <p class="tagline">put your <a href="https://hermes-agent.nousresearch.com">Hermes agent</a> on the web</p>
 
+  <h2>what it does</h2>
+  <ul>
+    <li><span class="d">exposes a local Hermes agent as an authenticated web API</span></li>
+    <li><span class="d">scoped API keys, restrictive by default</span></li>
+    <li><span class="d">user identities with optional agent anonymity</span></li>
+    <li><span class="d">typed client &amp; React hooks, 100% test coverage</span></li>
+  </ul>
+
   <h2>packages</h2>
   <ul>
     <li><a href="https://github.com/in-th3-l00p/hermes-web/packages">@in-th3-l00p/hermes-web-api</a> <span class="d">— authenticated API server &amp; management CLI</span></li>
@@ -117,16 +125,21 @@ hermes-api serve
 <span class="c"># in your app</span>
 npm i @in-th3-l00p/hermes-web-ts @in-th3-l00p/hermes-web-react</pre>
 
-  <h2>what it does</h2>
-  <ul>
-    <li><span class="d">exposes a local Hermes agent as an authenticated web API</span></li>
-    <li><span class="d">scoped API keys, restrictive by default</span></li>
-    <li><span class="d">user identities with optional agent anonymity</span></li>
-    <li><span class="d">typed client &amp; React hooks, 100% test coverage</span></li>
-  </ul>
+  <h2>react hooks</h2>
+  <p class="d" style="color: var(--dim); margin: 0 0 0.6rem">a full chat with your agent is one hook:</p>
+  <pre class="code">import { HermesClient, useChat } from "@in-th3-l00p/hermes-web-react";
+
+const client = new HermesClient({ baseUrl: "https://agent.example.com" });
+
+function Chat() {
+  const { messages, streaming, send, edit, react } = useChat({ client });
+  return &lt;Messages items={messages} onSend={send} /&gt;;
+}</pre>
+  <p style="color: var(--dim)">streaming, attachments, reactions and edits included — see the <a href="/examples/">examples</a>.</p>
 
   <h2>links</h2>
   <ul>
+    <li><a href="/examples/">examples</a></li>
     <li><a href="https://github.com/in-th3-l00p/hermes-web">github.com/in-th3-l00p/hermes-web</a></li>
     <li><a href="https://hermes-agent.nousresearch.com/docs/getting-started/quickstart">hermes agent docs</a></li>
   </ul>

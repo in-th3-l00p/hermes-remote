@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hermes web — examples</title>
+<meta name="description" content="examples of integrating a Hermes agent on the web with hermes-web">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --dim: #6a6a6a;
+    --line: #e4e4e4;
+    --code-bg: #f6f6f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e0e0e;
+      --fg: #e8e8e8;
+      --dim: #8a8a8a;
+      --line: #262626;
+      --code-bg: #171717;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  main { max-width: 34rem; margin: 0 auto; padding: 4rem 1.25rem 3rem; }
+  h1 { text-align: center; font-size: 1.15rem; font-weight: 600; margin: 0 0 0.25rem; }
+  p.tagline { text-align: center; color: var(--dim); margin: 0 0 3rem; }
+  h2 { font-size: 0.95rem; font-weight: 600; margin: 2.5rem 0 0.75rem; }
+  h2::before { content: "✧ "; color: var(--dim); }
+  a { color: inherit; text-underline-offset: 3px; }
+  a:hover { color: var(--dim); }
+  p { color: var(--dim); }
+  pre.star { text-align: center; line-height: 1.2; margin: 0 0 1.5rem; font-size: 13px; user-select: none; }
+  pre.code {
+    background: var(--code-bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 0.9rem 1rem;
+    overflow-x: auto;
+    font-size: 13.5px;
+    line-height: 1.6;
+  }
+  pre.code .c { color: var(--dim); }
+  footer {
+    margin-top: 4rem; padding-top: 1.5rem;
+    border-top: 1px solid var(--line);
+    text-align: center; color: var(--dim);
+  }
+  footer a { color: var(--dim); }
+</style>
+</head>
+<body>
+<main>
+  <pre class="star" aria-hidden="true">
+     ✧
+    ✧ ✧
+ ✧ ✧   ✧ ✧
+    ✧ ✧
+     ✧</pre>
+  <h1>examples</h1>
+  <p class="tagline"><a href="/">hermes web</a> — integrating a Hermes agent, end to end</p>
+
+  <h2>anonymous telegram-style chat</h2>
+  <p>
+    a complete chat webapp against a real Hermes agent — streaming replies,
+    markdown rendering, image attachments, reactions and message edits.
+    the agent never learns who the user is.
+    full source: <a href="https://github.com/in-th3-l00p/hermes-web/tree/main/apps/chat">apps/chat</a>.
+  </p>
+
+  <h2>1 · run the api next to your agent</h2>
+  <pre class="code"><span class="c"># hermes-api proxies your local Hermes agent to the web</span>
+npm i -g @in-th3-l00p/hermes-web-api
+hermes-api serve --anonymous \
+  --cors http://localhost:5173 \
+  --upstream http://127.0.0.1:8642 \
+  --upstream-key $API_SERVER_KEY</pre>
+
+  <h2>2 · the whole chat is one hook</h2>
+  <pre class="code">import { HermesClient, useChat } from "@in-th3-l00p/hermes-web-react";
+
+const client = new HermesClient({ baseUrl: "http://localhost:8643" });
+
+function Chat() {
+  const { messages, streaming, error, send, edit, react } =
+    useChat({ client });
+
+  return (
+    &lt;&gt;
+      {messages.map((m) =&gt; (
+        &lt;Bubble key={m.id} message={m}
+          onReact={(emoji) =&gt; react(m.id, emoji)}
+          onEdit={(text) =&gt; edit(m.id, text)} /&gt;
+      ))}
+      &lt;Composer onSend={send} busy={streaming} /&gt;
+    &lt;/&gt;
+  );
+}</pre>
+
+  <h2>3 · streaming, edits, reactions, attachments</h2>
+  <pre class="code"><span class="c">// send() streams — messages update token by token</span>
+await send("Explain SSE in one paragraph");
+
+<span class="c">// attach images as data urls; they reach vision models</span>
+await send("What is in this photo?", [
+  { name: "photo.png", type: "image/png", dataUrl },
+]);
+
+<span class="c">// editing a message truncates history and regenerates</span>
+await edit(messageId, "Explain WebSockets instead");
+
+<span class="c">// reactions toggle</span>
+await react(messageId, "🔥");</pre>
+
+  <h2>plain typescript, no react</h2>
+  <pre class="code">import { HermesClient } from "@in-th3-l00p/hermes-web-ts";
+
+const client = new HermesClient({ baseUrl: "http://localhost:8643" });
+const session = await client.createSession();
+
+for await (const event of client.sendMessage(session.id, {
+  content: "hello!",
+})) {
+  if (event.event === "delta") process.stdout.write(event.data.text);
+}</pre>
+
+  <footer>
+    <a href="https://www.tiscacatalin.com">✧ tiscacatalin.com ✧</a>
+  </footer>
+</main>
+</body>
+</html>

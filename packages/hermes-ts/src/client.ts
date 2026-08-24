@@ -43,7 +43,9 @@ export class HermesClient {
     this.tokenProvider =
       options.tokenProvider ??
       (staticToken === undefined ? null : () => staticToken);
-    this.fetchImpl = options.fetch ?? fetch;
+    // Bind to globalThis: browsers throw "Illegal invocation" when fetch is
+    // called detached from its global.
+    this.fetchImpl = options.fetch ?? globalThis.fetch.bind(globalThis);
   }
 
   private async doFetch(
