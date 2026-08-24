@@ -25,6 +25,7 @@ export interface ChatClientLike {
     messageId: string,
     emoji: string,
   ): Promise<ChatMessage>;
+  stopTurn(sessionId: string): Promise<{ stopped: boolean }>;
 }
 
 export interface UseChatOptions {
@@ -44,6 +45,8 @@ export interface UseChat {
   open(sessionId: string): Promise<void>;
   /** Clears state so the next send starts a fresh session. */
   reset(): void;
+  /** Aborts the in-flight agent turn; the partial reply is kept. */
+  stop(): Promise<void>;
 }
 
 function placeholder(id: string): ChatMessage {
@@ -166,6 +169,12 @@ export function useChat(options: UseChatOptions): UseChat {
     [client],
   );
 
+  const stop = useCallback(async () => {
+    if (sessionRef.current !== null) {
+      await client.stopTurn(sessionRef.current);
+    }
+  }, [client]);
+
   const reset = useCallback(() => {
     sessionRef.current = null;
     setSessionId(null);
@@ -173,5 +182,5 @@ export function useChat(options: UseChatOptions): UseChat {
     setError(null);
   }, []);
 
-  return { sessionId, messages, streaming, error, send, edit, react, open, reset };
+  return { sessionId, messages, streaming, error, send, edit, react, open, reset, stop };
 }

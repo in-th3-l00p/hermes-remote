@@ -19,8 +19,9 @@ const failingAgent: AgentBackend = {
 
 function makeApp(agent: AgentBackend = echoAgent) {
   const store = new ChatStore(":memory:", () => new Date("2026-08-24T00:00:00Z"));
-  const app = createApp({ chat: { store, agent }, anonymous: true });
-  return { app, store };
+  const turns = new Map<string, AbortController>();
+  const app = createApp({ chat: { store, agent, turns }, anonymous: true });
+  return { app, store, turns };
 }
 
 function parseSse(text: string): { event: string; data: unknown }[] {
@@ -252,6 +253,143 @@ describe("chat routes", () => {
     for (const request of requests) {
       expect((await app.fetch(request)).status).toBe(404);
     }
+  });
+
+  test("stop aborts an in-flight turn and keeps the partial reply", async () => {
+    let release: (() => void) | null = null;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const slowAgent: AgentBackend = {
+      async *stream(_messages, signal) {
+        yield "partial ";
+        await gate;
+        if (signal?.aborted === true) {
+          throw new Error("aborted");
+        }
+        yield "rest";
+      },
+    };
+    const { app, store } = makeApp(slowAgent);
+    const session = store.createSession();
+    const pending = Promise.resolve(
+      app.fetch(post(`/v1/sessions/${session.id}/messages`, { content: "go" })),
+    ).then((res) => res.text());
+    await new Promise((r) => setTimeout(r, 20));
+    const stop = await app.fetch(post(`/v1/sessions/${session.id}/stop`, {}));
+    expect(await stop.json()).toEqual({ stopped: true });
+    (release as unknown as () => void)();
+    const events = parseSse(await pending);
+    expect(events.at(-1)?.event).toBe("done");
+    expect((events.at(-1)?.data as { content: string }).content).toBe("partial ");
+    expect(store.getSession(session.id)?.messages.at(-1)?.status).toBe("done");
+    const idle = await app.fetch(post(`/v1/sessions/${session.id}/stop`, {}));
+    expect(await idle.json()).toEqual({ stopped: false });
+    const missing = await app.fetch(post("/v1/sessions/ffff/stop", {}));
+    expect(missing.status).toBe(404);
+  });
+
+  test("api keys need the right scope per route", async () => {
+    const store = new ChatStore(":memory:", () => new Date("2026-08-24T00:00:00Z"));
+    const session = store.createSession();
+    const record = {
+      id: "k1", name: "scopeless", hash: "h", scopes: [] as string[],
+      userGrantable: [], createdAt: "t", expiresAt: null, revoked: false,
+    };
+    const app = createApp({
+      chat: { store, agent: echoAgent },
+      store: { verifyToken: async () => record },
+    });
+    const withKey = (path: string, method: string) =>
+      new Request(`http://x${path}`, {
+        method,
+        headers: {
+          authorization: "Bearer hk_x",
+          "content-type": "application/json",
+        },
+        body: method === "GET" || method === "DELETE" ? null : "{}",
+      });
+    const cases: [string, string][] = [
+      ["/v1/sessions", "POST"],
+      ["/v1/sessions", "GET"],
+      [`/v1/sessions/${session.id}`, "DELETE"],
+      [`/v1/sessions/${session.id}/stop`, "POST"],
+      [`/v1/sessions/${session.id}/messages`, "GET"],
+      [`/v1/sessions/${session.id}/messages`, "POST"],
+      [`/v1/sessions/${session.id}/messages/ffff`, "PATCH"],
+      [`/v1/sessions/${session.id}/messages/ffff/reactions`, "POST"],
+    ];
+    for (const [path, method] of cases) {
+      const res = await app.fetch(withKey(path, method));
+      expect(res.status).toBe(403);
+      const body = (await res.json()) as { error: { code: string } };
+      expect(body.error.code).toBe("missing_scope");
+    }
+  });
+
+  test("paginates sessions and messages", async () => {
+    const { app, store } = makeApp();
+    const session = store.createSession();
+    for (let i = 0; i < 5; i += 1) {
+      store.addMessage(session.id, { role: "user", content: `m${i}` });
+    }
+    const page = await app.fetch(
+      new Request(
+        `http://x/v1/sessions/${session.id}/messages?limit=2&offset=1`,
+      ),
+    );
+    const body = (await page.json()) as { messages: { content: string }[]; total: number };
+    expect(body.total).toBe(5);
+    expect(body.messages.map((m) => m.content)).toEqual(["m1", "m2"]);
+    const bad = await app.fetch(
+      new Request(
+        `http://x/v1/sessions/${session.id}/messages?limit=-1&offset=x`,
+      ),
+    );
+    expect(((await bad.json()) as { messages: unknown[] }).messages).toHaveLength(5);
+    const ids = [store.createSession().id, store.createSession().id, session.id];
+    const paged = await app.fetch(
+      new Request(`http://x/v1/sessions?ids=${ids.join(",")}&limit=2`),
+    );
+    expect(((await paged.json()) as { sessions: unknown[] }).sessions).toHaveLength(2);
+  });
+
+  test("enforces message and attachment limits", async () => {
+    const store = new ChatStore(":memory:", () => new Date("2026-08-24T00:00:00Z"));
+    const app = createApp({
+      chat: { store, agent: echoAgent },
+      anonymous: true,
+      limits: { maxMessageChars: 5, maxAttachments: 1, maxAttachmentChars: 10 },
+    });
+    const session = store.createSession();
+    const path = `/v1/sessions/${session.id}/messages`;
+    expect((await app.fetch(post(path, { content: "toolong" }))).status).toBe(400);
+    const attachment = { name: "a", type: "t", dataUrl: "x" };
+    expect(
+      (
+        await app.fetch(
+          post(path, { content: "ok", attachments: [attachment, attachment] }),
+        )
+      ).status,
+    ).toBe(400);
+    expect(
+      (
+        await app.fetch(
+          post(path, {
+            content: "ok",
+            attachments: [{ ...attachment, dataUrl: "x".repeat(20) }],
+          }),
+        )
+      ).status,
+    ).toBe(400);
+    const user = store.addMessage(session.id, { role: "user", content: "a" });
+    expect(
+      (
+        await app.fetch(
+          post(`${path}/${user?.id}`, { content: "toolong" }, "PATCH"),
+        )
+      ).status,
+    ).toBe(400);
   });
 
   test("unmatched chat-shaped routes fall through to 404", async () => {

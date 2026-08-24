@@ -178,6 +178,51 @@ describe("HermesClient", () => {
     expect(reacted.reactions).toEqual({ "👍": 1 });
   });
 
+  test("retries once on 401 with a token provider", async () => {
+    let calls = 0;
+    const fetchImpl = (async () => {
+      calls += 1;
+      return calls === 1
+        ? new Response("no", { status: 401 })
+        : Response.json({ ok: true, version: "1" });
+    }) as unknown as typeof fetch;
+    const client = new HermesClient({
+      baseUrl: "http://x",
+      tokenProvider: async () => `t${calls}`,
+      fetch: fetchImpl,
+    });
+    expect((await client.status()).ok).toBe(true);
+    expect(calls).toBe(2);
+    let anonCalls = 0;
+    const anonymous = new HermesClient({
+      baseUrl: "http://x",
+      fetch: (async () => {
+        anonCalls += 1;
+        return new Response("no", { status: 401 });
+      }) as unknown as typeof fetch,
+    });
+    await expect(anonymous.status()).rejects.toBeInstanceOf(HermesApiError);
+    expect(anonCalls).toBe(1);
+  });
+
+  test("passes abort signals through and stops turns", async () => {
+    const { calls, fetch } = mockFetch((url) =>
+      url.endsWith("/stop")
+        ? Response.json({ stopped: true })
+        : sseBody([{ event: "done", data: { id: "a1" } }]),
+    );
+    const client = new HermesClient({ baseUrl: "http://x", fetch });
+    const controller = new AbortController();
+    await collect(
+      client.sendMessage("s1", { content: "x" }, { signal: controller.signal }),
+    );
+    expect(calls[0]?.init.signal).toBe(controller.signal);
+    await collect(client.editMessage("s1", "m1", "y", { signal: controller.signal }));
+    expect(calls[1]?.init.signal).toBe(controller.signal);
+    expect(await client.stopTurn("s1")).toEqual({ stopped: true });
+    expect(calls[2]?.url).toBe("http://x/v1/sessions/s1/stop");
+  });
+
   test("stream errors on failure status and missing body", async () => {
     const failing = new HermesClient({
       baseUrl: "http://x",

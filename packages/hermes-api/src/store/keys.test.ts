@@ -78,6 +78,21 @@ describe("KeyStore", () => {
     ).toBeNull();
   });
 
+  test("rotates the secret", async () => {
+    const store = await tempStore();
+    const { record, token } = await store.create({
+      name: "x",
+      scopes: ["chat:invoke"],
+      cidrs: ["10.0.0.0/8"],
+    });
+    expect(record.cidrs).toEqual(["10.0.0.0/8"]);
+    const rotated = await store.rotate(record.id);
+    expect(rotated?.token).toStartWith(`hk_${record.id}.`);
+    expect(await store.verifyToken(token)).toBeNull();
+    expect(await store.verifyToken(rotated?.token as string)).not.toBeNull();
+    expect(await store.rotate("nope")).toBeNull();
+  });
+
   test("grants and ungrants scopes", async () => {
     const store = await tempStore();
     const { record } = await store.create({

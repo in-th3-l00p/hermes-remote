@@ -7,7 +7,10 @@ export interface AgentTurnMessage {
 }
 
 export interface AgentBackend {
-  stream(messages: AgentTurnMessage[]): AsyncIterable<string>;
+  stream(
+    messages: AgentTurnMessage[],
+    signal?: AbortSignal,
+  ): AsyncIterable<string>;
 }
 
 /** Offline fallback agent used when no Hermes upstream is configured. */
@@ -16,7 +19,10 @@ export class DemoAgent implements AgentBackend {
   // as uncoverable functions.
   constructor() {}
 
-  async *stream(messages: AgentTurnMessage[]): AsyncIterable<string> {
+  async *stream(
+    messages: AgentTurnMessage[],
+    signal?: AbortSignal,
+  ): AsyncIterable<string> {
     const system = messages.find((m) => m.role === "system");
     const last = messages.at(-1);
     const reply =
@@ -27,6 +33,9 @@ export class DemoAgent implements AgentBackend {
         : "") +
       "\n\nThis is the **demo agent** — configure a Hermes upstream to talk to a real agent.";
     for (const word of reply.split(/(?<= )/)) {
+      if (signal?.aborted === true) {
+        return;
+      }
       yield word;
     }
   }
@@ -67,7 +76,10 @@ export class HermesAgent implements AgentBackend {
     this.fetchImpl = options.fetch ?? fetch;
   }
 
-  async *stream(messages: AgentTurnMessage[]): AsyncIterable<string> {
+  async *stream(
+    messages: AgentTurnMessage[],
+    signal?: AbortSignal,
+  ): AsyncIterable<string> {
     const body = {
       model: this.model,
       stream: true,
@@ -94,6 +106,7 @@ export class HermesAgent implements AgentBackend {
         "content-type": "application/json",
       },
       body: JSON.stringify(body),
+      ...(signal === undefined ? {} : { signal }),
     });
     if (!res.ok || res.body === null) {
       throw new HermesUpstreamError(

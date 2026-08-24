@@ -10,6 +10,8 @@ export interface ApiKeyRecord {
   createdAt: string;
   expiresAt: string | null;
   revoked: boolean;
+  /** Optional IPv4 CIDR allowlist; empty or absent means any address. */
+  cidrs?: string[];
 }
 
 export interface CreateKeyInput {
@@ -17,6 +19,7 @@ export interface CreateKeyInput {
   scopes: string[];
   userGrantable?: string[];
   expiresAt?: Date;
+  cidrs?: string[];
   now?: Date;
 }
 
@@ -61,6 +64,9 @@ export class KeyStore {
       createdAt: (input.now ?? new Date()).toISOString(),
       expiresAt: input.expiresAt?.toISOString() ?? null,
       revoked: false,
+      ...(input.cidrs === undefined || input.cidrs.length === 0
+        ? {}
+        : { cidrs: input.cidrs }),
     };
     data.keys.push(record);
     await this.save(data);
@@ -87,6 +93,16 @@ export class KeyStore {
     change(record);
     await this.save(data);
     return record;
+  }
+
+  /** Replaces the key's secret; the id, scopes and metadata are unchanged. */
+  async rotate(id: string): Promise<{ record: ApiKeyRecord; token: string } | null> {
+    const secret = randomHex(24);
+    const hash = await Bun.password.hash(secret);
+    const record = await this.update(id, (r) => {
+      r.hash = hash;
+    });
+    return record === null ? null : { record, token: `hk_${id}.${secret}` };
   }
 
   revoke(id: string): Promise<ApiKeyRecord | null> {

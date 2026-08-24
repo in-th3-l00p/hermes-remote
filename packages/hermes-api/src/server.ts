@@ -6,6 +6,8 @@ import { createApp, type AppOptions } from "./app.ts";
 export interface StartServerOptions extends AppOptions {
   port: number;
   logPath: string;
+  /** JSONL audit log destination; enables auditing when set. */
+  auditPath?: string;
   now?: () => Date;
 }
 
@@ -17,16 +19,24 @@ export interface RunningServer {
 export async function startServer(
   options: StartServerOptions,
 ): Promise<RunningServer> {
-  const app = createApp(options);
   const now = options.now ?? (() => new Date());
   await mkdir(dirname(options.logPath), { recursive: true });
+  const appOptions: AppOptions = { ...options };
+  if (options.auditPath !== undefined) {
+    const auditPath = options.auditPath;
+    appOptions.audit = (entry) => {
+      appendFileSync(auditPath, `${JSON.stringify(entry)}\n`);
+    };
+  }
+  const app = createApp(appOptions);
   const log = (line: string): void => {
     appendFileSync(options.logPath, `${now().toISOString()} ${line}\n`);
   };
   const server = Bun.serve({
     port: options.port,
-    async fetch(request) {
-      const response = await app.fetch(request);
+    async fetch(request, bunServer) {
+      const ip = bunServer.requestIP(request)?.address;
+      const response = await app.fetch(request, ip);
       log(`${request.method} ${new URL(request.url).pathname} ${response.status}`);
       return response;
     },

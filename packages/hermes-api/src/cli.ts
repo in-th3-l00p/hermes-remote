@@ -12,6 +12,7 @@ const homeDir =
 
 const ctx: CliContext = {
   homeDir,
+  platform: process.platform,
   now: () => new Date(),
   env: process.env,
   serve: (request) =>
@@ -19,10 +20,10 @@ const ctx: CliContext = {
       port: request.port,
       store: request.store,
       logPath: request.logPath,
+      auditPath: request.auditPath,
       anonymous: request.anonymous,
-      ...(request.corsOrigin === undefined
-        ? {}
-        : { corsOrigin: request.corsOrigin }),
+      corsOrigins: request.corsOrigins,
+      ...(request.rateLimit === null ? {} : { rateLimit: request.rateLimit }),
       ...(request.supabaseUrl !== undefined
         ? { userVerifier: new SupabaseJwksVerifier(request.supabaseUrl) }
         : request.supabaseJwtSecret !== undefined
@@ -34,6 +35,7 @@ const ctx: CliContext = {
           request.upstream === null
             ? new DemoAgent()
             : new HermesAgent(request.upstream),
+        turns: new Map(),
       },
     }),
 };

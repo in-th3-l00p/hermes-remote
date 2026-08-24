@@ -1,0 +1,10 @@
+{
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "hermes-web.tiscacatalin.com" }],
+      "destination": "https://hermes-remote.tiscacatalin.com/:path*",
+      "permanent": true
+    }
+  ]
+}

@@ -12,6 +12,7 @@ async function makeCtx(): Promise<{
   const serveCalls: ServeRequest[] = [];
   const ctx: CliContext = {
     homeDir,
+    platform: "darwin",
     now: () => new Date("2026-08-23T00:00:00Z"),
     env: {},
     serve: async (request) => {
@@ -230,7 +231,7 @@ describe("serve", () => {
     );
     expect(serveCalls[0]).toMatchObject({
       anonymous: true,
-      corsOrigin: "http://localhost:5173",
+      corsOrigins: ["http://localhost:5173"],
       upstream: { baseUrl: "http://127.0.0.1:8642", apiKey: "k", model: "m" },
     });
   });
@@ -270,7 +271,7 @@ describe("serve", () => {
       apiKey: "env-key",
     });
     expect(serveCalls[0]?.anonymous).toBe(false);
-    expect(serveCalls[0]?.corsOrigin).toBeUndefined();
+    expect(serveCalls[0]?.corsOrigins).toEqual([]);
   });
 
   test("upstream without a key fails", async () => {
@@ -296,6 +297,105 @@ describe("serve", () => {
     expect((await runCli(["serve", "--port", "hi"], ctx)).output).toContain(
       "invalid --port: hi",
     );
+  });
+});
+
+describe("init and config file", () => {
+  test("init writes config.json and serve reads it", async () => {
+    const { ctx, serveCalls } = await makeCtx();
+    const result = await runCli(
+      [
+        "init", "--port", "9999", "--cors", "http://a.test,http://b.test",
+        "--anonymous", "--upstream", "http://up", "--upstream-key", "uk",
+        "--model", "m", "--supabase-url", "https://sb",
+        "--supabase-jwt-secret", "sec", "--rate-limit", "30", "--rate-window", "10",
+      ],
+      ctx,
+    );
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toContain("config.json");
+    await runCli(["serve"], ctx);
+    expect(serveCalls[0]).toMatchObject({
+      port: 9999,
+      anonymous: true,
+      corsOrigins: ["http://a.test", "http://b.test"],
+      supabaseUrl: "https://sb",
+      supabaseJwtSecret: "sec",
+      rateLimit: { limit: 30, windowSeconds: 10 },
+      upstream: { baseUrl: "http://up", apiKey: "uk", model: "m" },
+    });
+    expect(serveCalls[0]?.auditPath).toContain("audit.log");
+    await runCli(["serve", "--port", "0", "--cors", "http://c.test"], ctx);
+    expect(serveCalls[1]?.port).toBe(0);
+    expect(serveCalls[1]?.corsOrigins).toEqual(["http://c.test"]);
+  });
+
+  test("init with no flags writes an empty config", async () => {
+    const { ctx } = await makeCtx();
+    expect((await runCli(["init"], ctx)).exitCode).toBe(0);
+    const { ctx: fresh, serveCalls } = await makeCtx();
+    await writeFile(join(fresh.homeDir, "config.json"), "not json");
+    await runCli(["serve", "--port", "0"], fresh);
+    expect(serveCalls[0]?.rateLimit).toBeNull();
+  });
+
+  test("rate limit flags override config", async () => {
+    const { ctx, serveCalls } = await makeCtx();
+    await runCli(
+      ["serve", "--port", "0", "--rate-limit", "5", "--rate-window", "7"],
+      ctx,
+    );
+    expect(serveCalls[0]?.rateLimit).toEqual({ limit: 5, windowSeconds: 7 });
+  });
+});
+
+describe("service", () => {
+  test("install writes a launchd plist on darwin", async () => {
+    const { ctx } = await makeCtx();
+    const result = await runCli(["service", "install"], ctx);
+    expect(result.exitCode).toBe(0);
+    const unit = await Bun.file(
+      join(ctx.homeDir, "com.hermes-remote.server.plist"),
+    ).text();
+    expect(unit).toContain("<string>hermes-remote</string>");
+    expect((await runCli(["service", "status"], ctx)).output).toContain(
+      "launchctl load",
+    );
+    expect((await runCli(["service", "uninstall"], ctx)).output).toContain(
+      "launchctl unload",
+    );
+  });
+
+  test("install writes a systemd unit on linux", async () => {
+    const { ctx } = await makeCtx();
+    ctx.platform = "linux";
+    await runCli(["service", "install"], ctx);
+    const unit = await Bun.file(
+      join(ctx.homeDir, "hermes-remote.service"),
+    ).text();
+    expect(unit).toContain("ExecStart=hermes-remote serve");
+    expect((await runCli(["service", "status"], ctx)).output).toContain(
+      "systemctl --user",
+    );
+    expect((await runCli(["service", "uninstall"], ctx)).output).toContain(
+      "systemctl --user disable",
+    );
+    expect((await runCli(["service", "explode"], ctx)).exitCode).toBe(1);
+    expect((await runCli(["service"], ctx)).exitCode).toBe(1);
+  });
+});
+
+describe("keys rotate and cidr", () => {
+  test("rotate prints a fresh token once", async () => {
+    const { ctx } = await makeCtx();
+    const id = await createKey(ctx, ["--cidr", "10.0.0.0/8,192.168.1.0/24"]);
+    const shown = await runCli(["keys", "show", id], ctx);
+    expect(shown.output).toContain("10.0.0.0/8");
+    const rotated = await runCli(["keys", "rotate", id], ctx);
+    expect(rotated.exitCode).toBe(0);
+    expect(rotated.output).toContain("hk_");
+    expect(rotated.output).toContain("previous secret no longer works");
+    expect((await runCli(["keys", "rotate", "ffffff"], ctx)).exitCode).toBe(1);
   });
 });
 

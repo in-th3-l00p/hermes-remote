@@ -21,6 +21,19 @@ describe("DemoAgent", () => {
     expect(text).toContain("demo agent");
   });
 
+  test("stops when the signal aborts", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const chunks: string[] = [];
+    for await (const chunk of new DemoAgent().stream(
+      userTurn("bye"),
+      controller.signal,
+    )) {
+      chunks.push(chunk);
+    }
+    expect(chunks).toEqual([]);
+  });
+
   test("supports abandoning the stream early", async () => {
     for await (const chunk of new DemoAgent().stream(userTurn("bye"))) {
       expect(chunk.length).toBeGreaterThan(0);
@@ -133,6 +146,21 @@ describe("HermesAgent", () => {
     };
     expect(body.model).toBe("custom");
     expect(body.messages[0]?.content).toBe("hi");
+  });
+
+  test("forwards the abort signal to fetch", async () => {
+    let seenSignal: AbortSignal | undefined;
+    const agent = new HermesAgent({
+      baseUrl: "http://upstream",
+      apiKey: "k",
+      fetch: (async (_url: string | URL | Request, init?: RequestInit) => {
+        seenSignal = init?.signal ?? undefined;
+        return sseResponse([chunk("ok")]);
+      }) as unknown as typeof fetch,
+    });
+    const controller = new AbortController();
+    await collect(agent.stream(userTurn("x"), controller.signal));
+    expect(seenSignal).toBe(controller.signal);
   });
 
   test("handles chunks split across reads", async () => {

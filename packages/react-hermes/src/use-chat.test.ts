@@ -56,6 +56,7 @@ function fakeClient(overrides: Partial<ChatClientLike> = {}): ChatClientLike {
       ...msg(messageId, "user", "hello"),
       reactions: { [emoji]: 1 },
     }),
+    stopTurn: async () => ({ stopped: true }),
     ...overrides,
   };
 }
@@ -145,6 +146,28 @@ describe("useChat", () => {
     });
     expect(result.current.sessionId).toBeNull();
     expect(result.current.messages).toEqual([]);
+  });
+
+  test("stop forwards to the client for the active session", async () => {
+    const stopped: string[] = [];
+    const client = fakeClient({
+      stopTurn: async (sessionId) => {
+        stopped.push(sessionId);
+        return { stopped: true };
+      },
+    });
+    const { result } = renderHook(() => useChat({ client }));
+    await act(async () => {
+      await result.current.stop();
+    });
+    expect(stopped).toEqual([]);
+    await act(async () => {
+      await result.current.send("hello");
+    });
+    await act(async () => {
+      await result.current.stop();
+    });
+    expect(stopped).toEqual(["s1"]);
   });
 
   test("error events mark the message and surface the error", async () => {

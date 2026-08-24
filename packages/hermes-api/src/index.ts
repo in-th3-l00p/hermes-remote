@@ -1,5 +1,13 @@
 export { createApp } from "./app.ts";
-export type { App, AppOptions, KeyVerifier, Principal } from "./app.ts";
+export type {
+  App,
+  AppOptions,
+  AuditEntry,
+  KeyVerifier,
+  Principal,
+} from "./app.ts";
+export { DEFAULT_LIMITS, RateLimiter, ipInCidr } from "./limits.ts";
+export type { Limits, RateLimitOptions } from "./limits.ts";
 export {
   SupabaseJwksVerifier,
   hs256Verifier,

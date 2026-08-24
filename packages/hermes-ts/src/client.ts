@@ -53,6 +53,8 @@ export class HermesClient {
     method: string,
     path: string,
     body?: unknown,
+    signal?: AbortSignal,
+    retried = false,
   ): Promise<Response> {
     const headers: Record<string, string> = {};
     if (this.tokenProvider !== null) {
@@ -65,7 +67,11 @@ export class HermesClient {
       method,
       headers,
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      ...(signal === undefined ? {} : { signal }),
     });
+    if (res.status === 401 && this.tokenProvider !== null && !retried) {
+      return this.doFetch(method, path, body, signal, true);
+    }
     if (!res.ok) {
       const payload = (await res
         .json()
@@ -88,8 +94,9 @@ export class HermesClient {
     method: string,
     path: string,
     body: unknown,
+    signal?: AbortSignal,
   ): AsyncIterable<ChatEvent> {
-    const res = await this.doFetch(method, path, body);
+    const res = await this.doFetch(method, path, body, signal);
     if (res.body === null) {
       throw new HermesApiError(res.status, "no_body", "Response had no body");
     }
@@ -133,22 +140,32 @@ export class HermesClient {
   sendMessage(
     sessionId: string,
     input: SendMessageInput,
+    options: { signal?: AbortSignal } = {},
   ): AsyncIterable<ChatEvent> {
-    return this.stream("POST", `/v1/sessions/${sessionId}/messages`, {
-      content: input.content,
-      attachments: input.attachments ?? [],
-    });
+    return this.stream(
+      "POST",
+      `/v1/sessions/${sessionId}/messages`,
+      { content: input.content, attachments: input.attachments ?? [] },
+      options.signal,
+    );
+  }
+
+  /** Aborts the in-flight agent turn; the partial reply is kept. */
+  stopTurn(sessionId: string): Promise<{ stopped: boolean }> {
+    return this.request("POST", `/v1/sessions/${sessionId}/stop`, {});
   }
 
   editMessage(
     sessionId: string,
     messageId: string,
     content: string,
+    options: { signal?: AbortSignal } = {},
   ): AsyncIterable<ChatEvent> {
     return this.stream(
       "PATCH",
       `/v1/sessions/${sessionId}/messages/${messageId}`,
       { content },
+      options.signal,
     );
   }
 

@@ -8,7 +8,7 @@ const record: ApiKeyRecord = {
   id: "abc123",
   name: "test",
   hash: "h",
-  scopes: ["chat:invoke"],
+  scopes: ["chat:invoke", "sessions:read", "sessions:write"],
   userGrantable: [],
   createdAt: "2026-08-23T00:00:00.000Z",
   expiresAt: null,
@@ -55,12 +55,14 @@ describe("createApp", () => {
     const app = createApp();
     expect(await (await app.fetch(get("/v1/status"))).json()).toEqual({
       ok: true,
-      version: "0.1.0",
+      version: "1.0.0",
     });
-    expect((await app.fetch(get("/nope"))).status).toBe(404);
+    expect((await app.fetch(get("/nope"))).status).toBe(401);
+    const open = createApp({ anonymous: true });
+    expect((await open.fetch(get("/nope"))).status).toBe(404);
     expect(
       (
-        await app.fetch(
+        await open.fetch(
           new Request("http://x/v1/status", { method: "POST" }),
         )
       ).status,
@@ -87,7 +89,7 @@ describe("createApp", () => {
       type: "api_key",
       id: "abc123",
       name: "test",
-      scopes: ["chat:invoke"],
+      scopes: ["chat:invoke", "sessions:read", "sessions:write"],
     });
   });
 
@@ -230,8 +232,98 @@ describe("createApp", () => {
     expect(seen[3]).toContain("anonymous guest (stable user id: guest-7)");
   });
 
+  test("CIDR-restricted keys only work from allowed addresses", async () => {
+    const restricted: KeyVerifier = {
+      verifyToken: async () => ({ ...record, cidrs: ["10.0.0.0/8"] }),
+    };
+    const app = createApp({ store: restricted });
+    const path = "/v1/auth/whoami";
+    expect((await app.fetch(get(path, "hk_good"), "10.1.2.3")).status).toBe(200);
+    expect((await app.fetch(get(path, "hk_good"), "11.0.0.1")).status).toBe(401);
+    expect((await app.fetch(get(path, "hk_good"))).status).toBe(401);
+  });
+
+  test("rate limits per principal with retry-after", async () => {
+    const app = createApp({
+      anonymous: true,
+      rateLimit: { limit: 2, windowSeconds: 60 },
+    });
+    expect((await app.fetch(get("/v1/auth/whoami"))).status).toBe(200);
+    expect((await app.fetch(get("/v1/auth/whoami"))).status).toBe(200);
+    const limited = await app.fetch(get("/v1/auth/whoami"));
+    expect(limited.status).toBe(429);
+    expect(Number(limited.headers.get("retry-after"))).toBeGreaterThan(0);
+    const perUser = createApp({
+      userVerifier: hs256Verifier(SECRET),
+      rateLimit: { limit: 1, windowSeconds: 60 },
+    });
+    expect(
+      (await perUser.fetch(get("/v1/auth/whoami", supabaseToken("u-r")))).status,
+    ).toBe(200);
+    expect(
+      (await perUser.fetch(get("/v1/auth/whoami", supabaseToken("u-r")))).status,
+    ).toBe(429);
+  });
+
+  test("rejects oversized request bodies", async () => {
+    const app = createApp({ anonymous: true, limits: { maxBodyBytes: 10 } });
+    const res = await app.fetch(
+      new Request("http://x/v1/auth/whoami", {
+        method: "GET",
+        headers: { "content-length": "99" },
+      }),
+    );
+    expect(res.status).toBe(413);
+  });
+
+  test("audits mutations and auth failures", async () => {
+    const entries: unknown[] = [];
+    const chat = { store: new ChatStore(), agent: echoAgent };
+    const app = createApp({
+      store,
+      chat,
+      audit: (e) => entries.push(e),
+      now: () => new Date("2026-08-24T00:00:00Z"),
+    });
+    await app.fetch(get("/v1/status"));
+    await app.fetch(get("/v1/auth/whoami", "hk_good"));
+    await app.fetch(get("/v1/auth/whoami"));
+    await app.fetch(
+      new Request("http://x/v1/sessions", {
+        method: "POST",
+        headers: { authorization: "Bearer hk_good" },
+      }),
+    );
+    expect(entries).toEqual([
+      { at: "2026-08-24T00:00:00.000Z", method: "GET", path: "/v1/auth/whoami", status: 401, principal: "unauthenticated" },
+      { at: "2026-08-24T00:00:00.000Z", method: "POST", path: "/v1/sessions", status: 201, principal: "key:abc123" },
+    ]);
+  });
+
+  test("multi-origin CORS echoes the matching origin", async () => {
+    const app = createApp({
+      corsOrigins: ["http://a.test", "http://b.test"],
+      anonymous: true,
+    });
+    const fromB = await app.fetch(
+      new Request("http://x/v1/status", { headers: { origin: "http://b.test" } }),
+    );
+    expect(fromB.headers.get("access-control-allow-origin")).toBe("http://b.test");
+    const unknown = await app.fetch(
+      new Request("http://x/v1/status", { headers: { origin: "http://evil.test" } }),
+    );
+    expect(unknown.headers.get("access-control-allow-origin")).toBe("http://a.test");
+    const preflight = await app.fetch(
+      new Request("http://x/v1/sessions", {
+        method: "OPTIONS",
+        headers: { origin: "http://b.test" },
+      }),
+    );
+    expect(preflight.headers.get("access-control-allow-origin")).toBe("http://b.test");
+  });
+
   test("CORS preflight and response headers", async () => {
-    const app = createApp({ corsOrigin: "http://localhost:5173" });
+    const app = createApp({ corsOrigins: ["http://localhost:5173"] });
     const preflight = await app.fetch(
       new Request("http://x/v1/status", { method: "OPTIONS" }),
     );

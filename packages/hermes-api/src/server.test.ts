@@ -33,4 +33,18 @@ describe("startServer", () => {
     const log = await Bun.file(logPath).text();
     expect(log).toMatch(/^\d{4}-\d{2}-\d{2}T.* server started/);
   });
+
+  test("writes audit entries when auditPath is set", async () => {
+    const logPath = await tempLogPath();
+    const auditPath = logPath.replace("server.log", "audit.log");
+    const server = await startServer({ port: 0, logPath, auditPath });
+    await fetch(`http://localhost:${server.port}/v1/auth/whoami`);
+    server.stop();
+    const entries = (await Bun.file(auditPath).text())
+      .trim()
+      .split("\n")
+      .map((l) => JSON.parse(l) as { status: number; principal: string });
+    expect(entries[0]?.status).toBe(401);
+    expect(entries[0]?.principal).toBe("unauthenticated");
+  });
 });
