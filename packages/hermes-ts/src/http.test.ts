@@ -133,6 +133,22 @@ describe("HttpClient", () => {
     expect(anonCalls).toBe(1);
   });
 
+  test("does not retry 401 with a static token", async () => {
+    let calls = 0;
+    const http = new HttpClient({
+      baseUrl: "http://x",
+      token: "t",
+      fetch: (async () => {
+        calls += 1;
+        return new Response("no", { status: 401 });
+      }) as unknown as typeof fetch,
+    });
+    await expect(http.request("GET", "/v1/status")).rejects.toBeInstanceOf(
+      HermesApiError,
+    );
+    expect(calls).toBe(1);
+  });
+
   test("stream errors on failure status and missing body", async () => {
     const failing = new HttpClient({
       baseUrl: "http://x",

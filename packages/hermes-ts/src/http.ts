@@ -25,6 +25,7 @@ export class HermesApiError extends Error {
 export class HttpClient {
   readonly baseUrl: string;
   private readonly tokenProvider: TokenProvider | null;
+  private readonly refreshable: boolean;
   private readonly fetchImpl: typeof fetch;
 
   constructor(options: HermesClientOptions) {
@@ -33,6 +34,9 @@ export class HttpClient {
     this.tokenProvider =
       options.tokenProvider ??
       (staticToken === undefined ? null : () => staticToken);
+    // A 401 retry only helps when a provider can mint a fresh token; a
+    // static token would repeat the identical request.
+    this.refreshable = options.tokenProvider !== undefined;
     // Bind to globalThis: browsers throw "Illegal invocation" when fetch is
     // called detached from its global.
     this.fetchImpl = options.fetch ?? globalThis.fetch.bind(globalThis);
@@ -58,7 +62,7 @@ export class HttpClient {
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       ...(signal === undefined ? {} : { signal }),
     });
-    if (res.status === 401 && this.tokenProvider !== null && !retried) {
+    if (res.status === 401 && this.refreshable && !retried) {
       return this.doFetch(method, path, body, signal, true);
     }
     if (!res.ok) {

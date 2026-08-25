@@ -1,6 +1,21 @@
 import { describe, expect, test } from "bun:test";
 import { HermesClient } from "./index.ts";
-import type { ChatEvent } from "./index.ts";
+import type { ChatEvent, ChatMessage } from "./index.ts";
+
+const message = (
+  id: string,
+  role: "user" | "assistant",
+  content: string,
+): ChatMessage => ({
+  id,
+  role,
+  content,
+  attachments: [],
+  reactions: {},
+  createdAt: "2026-08-25T00:00:00.000Z",
+  editedAt: null,
+  status: "done",
+});
 
 function mockFetch(
   handler: (url: string, init: RequestInit) => Response,
@@ -84,9 +99,9 @@ describe("HermesClient", () => {
   test("sendMessage streams chat events", async () => {
     const { calls, fetch } = mockFetch(() =>
       sseBody([
-        { event: "user", data: { id: "u1" } },
+        { event: "user", data: message("u1", "user", "hello") },
         { event: "delta", data: { id: "a1", text: "hi" } },
-        { event: "done", data: { id: "a1", content: "hi" } },
+        { event: "done", data: message("a1", "assistant", "hi") },
       ]),
     );
     const client = new HermesClient({ baseUrl: "http://x", fetch });
@@ -104,7 +119,7 @@ describe("HermesClient", () => {
     const { calls, fetch } = mockFetch((url) =>
       url.includes("/reactions")
         ? Response.json({ id: "m1", reactions: { "👍": 1 } })
-        : sseBody([{ event: "done", data: { id: "a1" } }]),
+        : sseBody([{ event: "done", data: message("a1", "assistant", "re") }]),
     );
     const client = new HermesClient({ baseUrl: "http://x", fetch });
     const events = await collect(client.editMessage("s1", "m1", "new"));
@@ -114,11 +129,26 @@ describe("HermesClient", () => {
     expect(reacted.reactions).toEqual({ "👍": 1 });
   });
 
+  test("drops non-conforming and unknown stream events", async () => {
+    const { fetch } = mockFetch(() =>
+      sseBody([
+        { event: "hermes.tool.progress", data: { step: 1 } },
+        { event: "delta", data: { id: "a1" } },
+        { event: "delta", data: { id: "a1", text: "hi" } },
+      ]),
+    );
+    const client = new HermesClient({ baseUrl: "http://x", fetch });
+    const events = await collect(client.sendMessage("s1", { content: "x" }));
+    expect(events).toEqual([
+      { event: "delta", data: { id: "a1", text: "hi" } },
+    ]);
+  });
+
   test("passes abort signals through and stops turns", async () => {
     const { calls, fetch } = mockFetch((url) =>
       url.endsWith("/stop")
         ? Response.json({ stopped: true })
-        : sseBody([{ event: "done", data: { id: "a1" } }]),
+        : sseBody([{ event: "done", data: message("a1", "assistant", "ok") }]),
     );
     const client = new HermesClient({ baseUrl: "http://x", fetch });
     const controller = new AbortController();

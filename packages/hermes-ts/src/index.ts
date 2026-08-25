@@ -1,3 +1,4 @@
+export { narrowChatEvent } from "./chat-event.ts";
 export { HermesClient } from "./client.ts";
 export type { SendMessageInput } from "./client.ts";
 export { HermesApiError } from "./http.ts";

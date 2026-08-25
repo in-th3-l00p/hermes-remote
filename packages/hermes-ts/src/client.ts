@@ -1,3 +1,4 @@
+import { narrowChatEvent } from "./chat-event.ts";
 import { HttpClient } from "./http.ts";
 import type { HermesClientOptions } from "./http.ts";
 import type {
@@ -26,13 +27,18 @@ export class HermesClient {
     return this.http.request(method, path, body);
   }
 
-  private stream(
+  private async *stream(
     method: string,
     path: string,
     body: unknown,
     signal?: AbortSignal,
   ): AsyncIterable<ChatEvent> {
-    return this.http.stream(method, path, body, signal) as AsyncIterable<ChatEvent>;
+    for await (const event of this.http.stream(method, path, body, signal)) {
+      const narrowed = narrowChatEvent(event);
+      if (narrowed !== null) {
+        yield narrowed;
+      }
+    }
   }
 
   status(): Promise<{ ok: boolean; version: string }> {
