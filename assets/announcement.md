@@ -28,6 +28,6 @@ Site: https://hermes-remote.tiscacatalin.com
 Docs: https://hermes-remote.tiscacatalin.com/docs/
 Code: https://github.com/in-th3-l00p/hermes-remote
 
-npm i -g @in-th3-l00p/hermes-remote
+npm i -g @in-th3-l00p/hermes-remote-cli
 hermes-remote keys create --name my-app --scope chat:invoke
 hermes-remote serve

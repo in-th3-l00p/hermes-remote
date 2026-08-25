@@ -34,7 +34,12 @@ const PACKAGES = [
   {
     name: "@in-th3-l00p/hermes-remote",
     href: "https://github.com/in-th3-l00p/hermes-remote/packages",
-    description: "API server & management CLI — keys, permissions, logs, serve.",
+    description: "API server — auth, sessions, streaming, rate limits.",
+  },
+  {
+    name: "@in-th3-l00p/hermes-remote-cli",
+    href: "https://github.com/in-th3-l00p/hermes-remote/packages",
+    description: "Management CLI — keys, permissions, logs, serve.",
   },
   {
     name: "@in-th3-l00p/hermes-remote-client",
@@ -130,7 +135,7 @@ export function Home() {
           {"\n"}
           {'echo "@in-th3-l00p:registry=https://npm.pkg.github.com" >> ~/.npmrc'}
           {"\n\n"}
-          npm i -g @in-th3-l00p/hermes-remote{"\n"}
+          npm i -g @in-th3-l00p/hermes-remote-cli{"\n"}
           hermes-remote keys create --name my-app --scope chat:invoke --scope
           sessions:read{"\n"}
           hermes-remote serve

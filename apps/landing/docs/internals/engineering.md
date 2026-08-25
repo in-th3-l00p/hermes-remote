@@ -29,4 +29,4 @@ Real bugs found and fixed along the way, kept here so they stay fixed:
 
 ## CI
 
-Two GitHub Actions workflows: `test` (install, build clients, typecheck, `bun test packages` with the coverage gate) on every push and PR, and `release` on `v*` tags (test, build, publish all three packages to GitHub Packages, attach tarballs to an auto generated GitHub release).
+Two GitHub Actions workflows: `test` (install, build clients, typecheck, `bun test packages` with the coverage gate) on every push and PR, and `release` on `v*` tags (test, build, publish all four packages to GitHub Packages, attach tarballs to an auto generated GitHub release).

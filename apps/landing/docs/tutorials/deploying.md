@@ -16,6 +16,8 @@ Restart the gateway (`hermes gateway restart`). The agent now listens on `127.0.
 ## 2. Configure and install the service
 
 ```bash
+npm i -g @in-th3-l00p/hermes-remote-cli
+
 hermes-remote init \
   --port 8643 \
   --cors https://app.example.com \

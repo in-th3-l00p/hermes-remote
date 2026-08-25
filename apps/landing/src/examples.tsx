@@ -114,7 +114,7 @@ export function Examples() {
         description="The server proxies your local Hermes agent to the web. Every request requires authorization — Supabase user tokens or scoped API keys — and each turn tells the agent exactly who it is speaking with."
       >
         <CodeCard title="terminal">
-          npm i -g @in-th3-l00p/hermes-remote{"\n\n"}
+          npm i -g @in-th3-l00p/hermes-remote-cli{"\n\n"}
           {"hermes-remote serve \\\n"}
           {"  --cors http://localhost:5173 \\\n"}
           {"  --upstream http://127.0.0.1:8642 \\\n"}
