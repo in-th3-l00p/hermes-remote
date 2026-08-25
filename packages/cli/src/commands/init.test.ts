@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { writeFile } from "node:fs/promises";
+import { stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { runCli } from "../run.ts";
 import { makeCtx } from "./harness.test.ts";
@@ -34,12 +34,38 @@ describe("init and config file", () => {
     expect(serveCalls[1]?.corsOrigins).toEqual(["http://c.test"]);
   });
 
-  test("init with no flags writes an empty config", async () => {
+  test("re-running init merges over the existing config", async () => {
+    const { ctx } = await makeCtx();
+    await runCli(
+      ["init", "--port", "9999", "--upstream-key", "uk", "--anonymous"],
+      ctx,
+    );
+    const result = await runCli(["init", "--port", "1234"], ctx);
+    expect(result.exitCode).toBe(0);
+    const config = await Bun.file(join(ctx.homeDir, "config.json")).json();
+    expect(config).toEqual({ port: 1234, upstreamKey: "uk", anonymous: true });
+  });
+
+  test("init writes config.json with owner-only permissions", async () => {
     const { ctx } = await makeCtx();
     expect((await runCli(["init"], ctx)).exitCode).toBe(0);
-    const { ctx: fresh, serveCalls } = await makeCtx();
-    await writeFile(join(fresh.homeDir, "config.json"), "not json");
-    await runCli(["serve", "--port", "0"], fresh);
-    expect(serveCalls[0]?.rateLimit).toBeNull();
+    const file = await stat(join(ctx.homeDir, "config.json"));
+    expect(file.mode & 0o777).toBe(0o600);
+    const nested = { ...ctx, homeDir: join(ctx.homeDir, "fresh-home") };
+    expect((await runCli(["init"], nested)).exitCode).toBe(0);
+    const dir = await stat(nested.homeDir);
+    expect(dir.mode & 0o777).toBe(0o700);
+  });
+
+  test("init and serve fail loudly on malformed config.json", async () => {
+    const { ctx, serveCalls } = await makeCtx();
+    await writeFile(join(ctx.homeDir, "config.json"), "not json");
+    const init = await runCli(["init", "--port", "1"], ctx);
+    expect(init.exitCode).toBe(1);
+    expect(init.output).toContain("invalid config.json:");
+    const serve = await runCli(["serve", "--port", "0"], ctx);
+    expect(serve.exitCode).toBe(1);
+    expect(serve.output).toContain("invalid config.json:");
+    expect(serveCalls).toHaveLength(0);
   });
 });

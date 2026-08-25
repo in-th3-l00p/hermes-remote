@@ -90,6 +90,26 @@ describe("serve", () => {
     );
   });
 
+  test("reports a busy port instead of crashing", async () => {
+    const { ctx } = await makeCtx();
+    ctx.serve = async () => {
+      throw Object.assign(new Error("Failed to start server"), {
+        code: "EADDRINUSE",
+      });
+    };
+    const result = await runCli(["serve", "--port", "8643"], ctx);
+    expect(result.exitCode).toBe(1);
+    expect(result.output).toBe("port 8643 already in use");
+  });
+
+  test("rethrows non-port serve errors", async () => {
+    const { ctx } = await makeCtx();
+    ctx.serve = async () => {
+      throw new Error("boom");
+    };
+    expect(runCli(["serve", "--port", "0"], ctx)).rejects.toThrow("boom");
+  });
+
   test("rate limit flags override config", async () => {
     const { ctx, serveCalls } = await makeCtx();
     await runCli(

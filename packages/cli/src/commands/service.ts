@@ -1,7 +1,74 @@
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { USAGE, fail, ok, type CliContext, type CliResult } from "../context.ts";
 
-export function serviceCommand(args: string[], ctx: CliContext): CliResult {
+export function resolveServeArgv(ctx: CliContext): string[] {
+  const bin = ctx.which("hermes-remote");
+  return bin === null
+    ? [ctx.execPath, ctx.entryPath, "serve"]
+    : [bin, "serve"];
+}
+
+function serviceEnv(ctx: CliContext, argv: string[]): [string, string][] {
+  const binDir = dirname(argv[0] as string);
+  const entries: [string, string][] = [
+    ["PATH", `${binDir}:/usr/local/bin:/usr/bin:/bin`],
+  ];
+  const home = ctx.env["HERMES_REMOTE_HOME"];
+  if (home !== undefined) {
+    entries.push(["HERMES_REMOTE_HOME", home]);
+  }
+  return entries;
+}
+
+function launchdUnit(ctx: CliContext, logPath: string): string {
+  const argv = resolveServeArgv(ctx);
+  const env = serviceEnv(ctx, argv)
+    .map(([key, value]) => `    <key>${key}</key><string>${value}</string>`)
+    .join("\n");
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.hermes-remote.server</string>
+  <key>ProgramArguments</key><array>
+${argv.map((arg) => `    <string>${arg}</string>`).join("\n")}
+  </array>
+  <key>EnvironmentVariables</key><dict>
+${env}
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>5</integer>
+  <key>StandardOutPath</key><string>${logPath}</string>
+  <key>StandardErrorPath</key><string>${logPath}</string>
+</dict></plist>
+`;
+}
+
+function systemdUnit(ctx: CliContext, logPath: string): string {
+  const argv = resolveServeArgv(ctx);
+  const env = serviceEnv(ctx, argv)
+    .map(([key, value]) => `Environment=${key}=${value}`)
+    .join("\n");
+  return `[Unit]
+Description=Hermes Remote API server
+
+[Service]
+ExecStart=${argv.join(" ")}
+${env}
+Restart=always
+RestartSec=5
+StandardOutput=append:${logPath}
+StandardError=append:${logPath}
+
+[Install]
+WantedBy=default.target
+`;
+}
+
+export async function serviceCommand(
+  args: string[],
+  ctx: CliContext,
+): Promise<CliResult> {
   const action = args[0];
   const darwin = ctx.platform === "darwin";
   const unitPath = darwin
@@ -12,30 +79,13 @@ export function serviceCommand(args: string[], ctx: CliContext): CliResult {
     : `cp ${unitPath} ~/.config/systemd/user/ && systemctl --user enable --now hermes-remote`;
 
   if (action === "install") {
-    const unit = darwin
-      ? `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-  <key>Label</key><string>com.hermes-remote.server</string>
-  <key>ProgramArguments</key><array>
-    <string>hermes-remote</string><string>serve</string>
-  </array>
-  <key>RunAtLoad</key><true/>
-  <key>KeepAlive</key><true/>
-  <key>StandardErrorPath</key><string>${join(ctx.homeDir, "logs", "service.log")}</string>
-</dict></plist>
-`
-      : `[Unit]
-Description=Hermes Remote API server
-
-[Service]
-ExecStart=hermes-remote serve
-Restart=always
-
-[Install]
-WantedBy=default.target
-`;
-    Bun.write(unitPath, unit);
+    const logPath = join(ctx.homeDir, "logs", "service.log");
+    const unit = darwin ? launchdUnit(ctx, logPath) : systemdUnit(ctx, logPath);
+    try {
+      await Bun.write(unitPath, unit);
+    } catch (error) {
+      return fail(`failed to write ${unitPath}: ${(error as Error).message}`);
+    }
     return ok(`wrote ${unitPath}\n\nto activate:\n  ${loadHint}`);
   }
   if (action === "uninstall" && darwin) {

@@ -14,8 +14,11 @@ export async function makeCtx(): Promise<{
   const ctx: CliContext = {
     homeDir,
     platform: "darwin",
+    execPath: "/test/bun",
+    entryPath: "/test/cli.ts",
     now: () => new Date("2026-08-23T00:00:00Z"),
     env: {},
+    which: (name) => `/test/bin/${name}`,
     serve: async (request) => {
       serveCalls.push(request);
       return { port: request.port === 0 ? 12345 : request.port };

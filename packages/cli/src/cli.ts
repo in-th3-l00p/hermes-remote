@@ -17,8 +17,11 @@ const homeDir =
 const ctx: CliContext = {
   homeDir,
   platform: process.platform,
+  execPath: process.execPath,
+  entryPath: import.meta.path,
   now: () => new Date(),
   env: process.env,
+  which: (name) => Bun.which(name),
   serve: (request) =>
     startServer({
       port: request.port,

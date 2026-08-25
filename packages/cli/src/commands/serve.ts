@@ -21,7 +21,11 @@ export async function serveCommand(
   paths: ServePaths,
 ): Promise<CliResult> {
   const parsed = parseArgs(args);
-  const config = await loadConfig(ctx.homeDir);
+  const loaded = await loadConfig(ctx.homeDir);
+  if (!loaded.ok) {
+    return fail(loaded.error);
+  }
+  const config = loaded.config;
   const portText = flag(parsed, "port") ?? String(config.port ?? 8643);
   const port = Number(portText);
   if (!Number.isInteger(port) || port < 0 || port > 65535) {
@@ -54,30 +58,39 @@ export async function serveCommand(
   }
   const corsFlags = flagAll(parsed, "cors");
   const rateLimitFlag = flag(parsed, "rate-limit");
-  const running = await ctx.serve({
-    port,
-    store: paths.store,
-    logPath: paths.logPath,
-    auditPath: paths.auditPath,
-    anonymous: flag(parsed, "anonymous") === "true" || config.anonymous === true,
-    corsOrigins: corsFlags.length > 0 ? corsFlags : (config.cors ?? []),
-    supabaseJwtSecret:
-      flag(parsed, "supabase-jwt-secret") ??
-      ctx.env["SUPABASE_JWT_SECRET"] ??
-      config.supabaseJwtSecret,
-    supabaseUrl:
-      flag(parsed, "supabase-url") ??
-      ctx.env["SUPABASE_URL"] ??
-      config.supabaseUrl,
-    rateLimit:
-      rateLimitFlag !== undefined
-        ? {
-            limit: Number(rateLimitFlag),
-            windowSeconds: Number(flag(parsed, "rate-window") ?? "60"),
-          }
-        : (config.rateLimit ?? null),
-    upstream,
-  });
+  let running: { port: number };
+  try {
+    running = await ctx.serve({
+      port,
+      store: paths.store,
+      logPath: paths.logPath,
+      auditPath: paths.auditPath,
+      anonymous:
+        flag(parsed, "anonymous") === "true" || config.anonymous === true,
+      corsOrigins: corsFlags.length > 0 ? corsFlags : (config.cors ?? []),
+      supabaseJwtSecret:
+        flag(parsed, "supabase-jwt-secret") ??
+        ctx.env["SUPABASE_JWT_SECRET"] ??
+        config.supabaseJwtSecret,
+      supabaseUrl:
+        flag(parsed, "supabase-url") ??
+        ctx.env["SUPABASE_URL"] ??
+        config.supabaseUrl,
+      rateLimit:
+        rateLimitFlag !== undefined
+          ? {
+              limit: Number(rateLimitFlag),
+              windowSeconds: Number(flag(parsed, "rate-window") ?? "60"),
+            }
+          : (config.rateLimit ?? null),
+      upstream,
+    });
+  } catch (error) {
+    if ((error as { code?: string }).code === "EADDRINUSE") {
+      return fail(`port ${port} already in use`);
+    }
+    throw error;
+  }
   return ok(
     `hermes-remote listening on port ${running.port}\n` +
       `agent: ${upstream === null ? "demo (no upstream configured)" : upstream.baseUrl}\n` +

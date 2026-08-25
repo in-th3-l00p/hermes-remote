@@ -21,8 +21,11 @@ export interface ServeRequest {
 export interface CliContext {
   homeDir: string;
   platform: string;
+  execPath: string;
+  entryPath: string;
   now(): Date;
   env: Record<string, string | undefined>;
+  which(name: string): string | null;
   serve(request: ServeRequest): Promise<{ port: number }>;
 }
 
