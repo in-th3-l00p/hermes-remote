@@ -10,6 +10,8 @@
 
 See `ARCHITECTURE.md` for the package layout, the full API endpoint map, and how the server bridges to the local Hermes instance.
 
+**Start with `HANDOFF.md`** — it records the actual state of the project as shipped (v1.0.0, released as "Hermes Remote"), where it diverges from ARCHITECTURE.md, all external infrastructure (GitHub, Vercel, Supabase, GitHub Packages), the release process, known pitfalls, and the roadmap.
+
 ## Project conventions
 
 - **Runtime/tooling:** Bun everywhere (`bun install`, `bun test`, `bun run`). TypeScript across all packages, strict mode.
