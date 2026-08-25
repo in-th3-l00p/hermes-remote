@@ -21,13 +21,13 @@ jobs:
         run: |
           echo "@in-th3-l00p:registry=https://npm.pkg.github.com" > ~/.npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
-          for p in hermes-ts react-hermes hermes-api; do
+          for p in hermes-ts react-hermes hermes-api cli; do
             (cd packages/$p && npm publish --registry https://npm.pkg.github.com || true)
           done
       - name: pack tarballs
         run: |
           mkdir -p /tmp/packs
-          for p in hermes-ts react-hermes hermes-api; do
+          for p in hermes-ts react-hermes hermes-api cli; do
             (cd packages/$p && npm pack --pack-destination /tmp/packs)
           done
       - name: create GitHub release
