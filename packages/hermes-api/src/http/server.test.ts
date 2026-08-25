@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { startServer } from "./index.ts";
+import { startServer } from "../index.ts";
 
 async function tempLogPath(): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), "hermes-api-server-"));

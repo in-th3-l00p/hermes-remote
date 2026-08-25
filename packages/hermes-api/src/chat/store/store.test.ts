@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ChatStore } from "./store.ts";
+import { ChatStore } from "./index.ts";
 
 const now = () => new Date("2026-08-24T00:00:00Z");
 

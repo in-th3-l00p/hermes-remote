@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { createApp } from "../index.ts";
-import { ChatStore } from "./store.ts";
-import type { AgentBackend } from "./agent.ts";
+import { createApp } from "../../index.ts";
+import { ChatStore } from "../index.ts";
+import type { AgentBackend } from "../index.ts";
 
 const echoAgent: AgentBackend = {
   async *stream(messages) {

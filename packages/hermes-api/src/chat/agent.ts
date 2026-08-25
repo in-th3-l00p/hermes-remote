@@ -1,4 +1,4 @@
-import type { Attachment } from "./store.ts";
+import type { Attachment } from "./store/index.ts";
 
 export interface AgentTurnMessage {
   role: "system" | "user" | "assistant";

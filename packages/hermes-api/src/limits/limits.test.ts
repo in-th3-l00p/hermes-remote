@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { DEFAULT_LIMITS, RateLimiter, ipInCidr } from "./limits.ts";
+import { DEFAULT_LIMITS, RateLimiter, ipInCidr } from "./index.ts";
 
 describe("RateLimiter", () => {
   test("allows within the window, blocks over it, then resets", () => {

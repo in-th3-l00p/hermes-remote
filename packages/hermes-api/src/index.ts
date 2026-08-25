@@ -1,36 +1,35 @@
-export { createApp } from "./app.ts";
+export { createApp } from "./http/index.ts";
 export type {
   App,
   AppOptions,
   AuditEntry,
-  KeyVerifier,
-  Principal,
-} from "./app.ts";
-export { DEFAULT_LIMITS, RateLimiter, ipInCidr } from "./limits.ts";
-export type { Limits, RateLimitOptions } from "./limits.ts";
+} from "./http/index.ts";
+export type { KeyVerifier, Principal } from "./auth/index.ts";
+export { DEFAULT_LIMITS, RateLimiter, ipInCidr } from "./limits/index.ts";
+export type { Limits, RateLimitOptions } from "./limits/index.ts";
 export {
   SupabaseJwksVerifier,
   hs256Verifier,
   verifySupabaseJwt,
-} from "./auth/supabase.ts";
-export type { SupabaseUser, UserTokenVerifier } from "./auth/supabase.ts";
-export { startServer } from "./server.ts";
-export type { RunningServer, StartServerOptions } from "./server.ts";
-export { ChatStore } from "./chat/store.ts";
+} from "./auth/index.ts";
+export type { SupabaseUser, UserTokenVerifier } from "./auth/index.ts";
+export { startServer } from "./http/index.ts";
+export type { RunningServer, StartServerOptions } from "./http/index.ts";
+export { ChatStore } from "./chat/index.ts";
 export type {
   Attachment,
   ChatMessage,
   ChatSession,
   ChatSessionMeta,
-} from "./chat/store.ts";
-export { DemoAgent, HermesAgent, HermesUpstreamError } from "./chat/agent.ts";
+} from "./chat/index.ts";
+export { DemoAgent, HermesAgent, HermesUpstreamError } from "./chat/index.ts";
 export type {
   AgentBackend,
   AgentTurnMessage,
   HermesAgentOptions,
-} from "./chat/agent.ts";
-export { KeyStore } from "./store/keys.ts";
-export type { ApiKeyRecord, CreateKeyInput } from "./store/keys.ts";
+} from "./chat/index.ts";
+export { KeyStore } from "./auth/index.ts";
+export type { ApiKeyRecord, CreateKeyInput } from "./auth/index.ts";
 export {
   AUTH_SCOPES,
   TIER1_SCOPES,
@@ -39,5 +38,5 @@ export {
   isDangerousScope,
   isKnownScope,
   isUserGrantableScope,
-} from "./scopes.ts";
-export type { Scope } from "./scopes.ts";
+} from "./scopes/index.ts";
+export type { Scope } from "./scopes/index.ts";

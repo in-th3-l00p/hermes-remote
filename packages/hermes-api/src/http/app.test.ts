@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { createHmac } from "node:crypto";
-import { createApp, ChatStore, hs256Verifier, type KeyVerifier } from "./index.ts";
-import type { ApiKeyRecord } from "./store/keys.ts";
-import type { AgentBackend } from "./chat/agent.ts";
+import { createApp, ChatStore, hs256Verifier, type KeyVerifier } from "../index.ts";
+import type { ApiKeyRecord } from "../auth/index.ts";
+import type { AgentBackend } from "../chat/index.ts";
 
 const record: ApiKeyRecord = {
   id: "abc123",
