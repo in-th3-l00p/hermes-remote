@@ -19,25 +19,33 @@ Hermes Remote turns a local [Hermes agent](https://hermes-agent.nousresearch.com
 
 ```
 packages/hermes-api/          @in-th3-l00p/hermes-remote — server library (no bins since 2.0.0)
-  src/app.ts                  createApp(options): authentication, CORS, rate limit, audit, body cap, whoami
-  src/chat/routes.ts          /v1/sessions* routes, scope checks, identityTurn injection, SSE streaming, stop
-  src/chat/store.ts           ChatStore — bun:sqlite sessions/messages, auto-titles, ownership, reactions, edits
-  src/chat/agent.ts           AgentBackend interface; DemoAgent (offline fake); HermesAgent (upstream proxy)
+                              (one directory per concern; deps flow scopes/limits → auth → chat → http)
+  src/scopes/                 closed scope catalog + 4 tiers (no admin scope, by design)
+  src/limits/                 DEFAULT_LIMITS, RateLimiter (fixed window per principal), ipInCidr
+  src/auth/principal.ts       Principal/KeyVerifier types, authenticate()
   src/auth/supabase.ts        UserTokenVerifier; hs256Verifier; SupabaseJwksVerifier (ES256/JWKS, kid cache)
-  src/store/keys.ts           KeyStore — hk_<id>.<secret> keys, argon2 via Bun.password, scopes, CIDR, rotate
-  src/scopes.ts               closed scope catalog + 4 tiers (no admin scope, by design)
-  src/limits.ts               DEFAULT_LIMITS, RateLimiter (fixed window per principal), ipInCidr
-  src/server.ts               startServer — Bun.serve, requestIP → app.fetch(request, ip), audit JSONL append
+  src/auth/keys.ts            KeyStore — hk_<id>.<secret> keys, argon2 via Bun.password, scopes, CIDR, rotate
+  src/chat/agent.ts           AgentBackend interface; DemoAgent (offline fake); HermesAgent (upstream proxy)
+  src/chat/identity.ts        identityTurn injection (security invariant) + history builder
+  src/chat/routes/            /v1/sessions* dispatch: sessions.ts, messages.ts, sse.ts, shared.ts, validate.ts
+  src/chat/store/             ChatStore — bun:sqlite; db.ts schema, messages.ts ops, types.ts models
+  src/http/app.ts             createApp composition root: body cap, auth, rate limit, routing, audit
+  src/http/cors.ts, whoami.ts CORS + whoami helpers
+  src/http/server.ts          startServer — Bun.serve, requestIP → app.fetch(request, ip), audit JSONL append
 packages/cli/                 @in-th3-l00p/hermes-remote-cli — management CLI (bins: hermes-remote, hermes-api)
-  src/run.ts                  CLI: init, serve, keys (create/list/show/revoke/rotate/grant/ungrant), service, logs
+  src/run.ts                  thin dispatcher over commands/
+  src/commands/               keys.ts, serve.ts, service.ts, init.ts, logs.ts — one file per command family
+  src/context.ts, config.ts   CliContext/CliResult/USAGE; config file load
   src/args.ts                 flag parsing
   src/cli.ts                  bin entry — wires config, HERMES_REMOTE_HOME ?? ~/.hermes-remote, real verifiers
 packages/hermes-ts/           @in-th3-l00p/hermes-remote-client — isomorphic client
-  src/client.ts               HermesClient: token|tokenProvider (401 single retry), sendMessage/editMessage
-                              (AsyncIterable<ChatEvent>, AbortSignal), stopTurn, sessions CRUD, whoami
+  src/http.ts                 HTTP/auth core: fetch wrapper, token|tokenProvider (401 single retry), SSE stream
+  src/client.ts               HermesClient resource methods: sendMessage/editMessage (AsyncIterable<ChatEvent>,
+                              AbortSignal), stopTurn, sessions CRUD, whoami
   src/sse.ts                  SSE parser (async iterator over fetch body)
 packages/react-hermes/        @in-th3-l00p/hermes-remote-react — hooks
-  src/use-chat.ts             useChat: messages, streaming, send/edit/react/open/reset/stop
+  src/use-chat.ts             useChat: React state wiring for messages, streaming, send/edit/react/open/reset/stop
+  src/chat-events.ts          pure chat-event → message-list reducer used by useChat
   src/use-sessions.ts         useSessions: list/refresh/remove (note idsKey join — see gotchas)
   src/context.ts              HermesProvider + useHermesClient
 apps/chat/                    Reference chat app: Vite + React + shadcn (zinc dark), Supabase auth
