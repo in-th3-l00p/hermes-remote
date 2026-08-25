@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased (2.0.0)
+
+* **Breaking:** the management CLI moved out of `@in-th3-l00p/hermes-remote` into its own package, `@in-th3-l00p/hermes-remote-cli` (`packages/cli`). The `hermes-remote` and `hermes-api` bins are now installed via `npm i -g @in-th3-l00p/hermes-remote-cli`. The server package no longer ships bins and is a pure library; its exports are unchanged.
+
 ## 1.0.0
 
 First stable release, under the new name Hermes Remote (previously hermes-web).

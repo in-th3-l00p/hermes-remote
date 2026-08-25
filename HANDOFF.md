@@ -9,7 +9,7 @@ This document exists so that any agent (or human) can pick up development cold. 
 
 ## What this project is, in one paragraph
 
-Hermes Remote turns a local [Hermes agent](https://hermes-agent.nousresearch.com) into a secure web product. A Bun server (`packages/hermes-api`, published as `@in-th3-l00p/hermes-remote`) sits in front of the agent's built-in OpenAI-compatible API server (127.0.0.1:8642), adds authentication (scoped API keys + user JWTs), authorization, persistence (SQLite chat sessions), rate limiting, and identity injection, and exposes streaming chat over SSE. A typed client (`packages/hermes-ts` → `@in-th3-l00p/hermes-remote-client`) and React hooks (`packages/react-hermes` → `@in-th3-l00p/hermes-remote-react`) consume it. A reference chat app (`apps/chat`) and a marketing/docs site (`apps/landing`) complete the product. Released at v1.0.0, live at https://hermes-remote.tiscacatalin.com.
+Hermes Remote turns a local [Hermes agent](https://hermes-agent.nousresearch.com) into a secure web product. A Bun server (`packages/hermes-api`, published as `@in-th3-l00p/hermes-remote`, managed by the CLI in `packages/cli` → `@in-th3-l00p/hermes-remote-cli`) sits in front of the agent's built-in OpenAI-compatible API server (127.0.0.1:8642), adds authentication (scoped API keys + user JWTs), authorization, persistence (SQLite chat sessions), rate limiting, and identity injection, and exposes streaming chat over SSE. A typed client (`packages/hermes-ts` → `@in-th3-l00p/hermes-remote-client`) and React hooks (`packages/react-hermes` → `@in-th3-l00p/hermes-remote-react`) consume it. A reference chat app (`apps/chat`) and a marketing/docs site (`apps/landing`) complete the product. Released at v1.0.0, live at https://hermes-remote.tiscacatalin.com.
 
 ## Design vs reality
 
@@ -18,7 +18,7 @@ Hermes Remote turns a local [Hermes agent](https://hermes-agent.nousresearch.com
 ## Repository map
 
 ```
-packages/hermes-api/          @in-th3-l00p/hermes-remote — server + CLI (bins: hermes-remote, hermes-api)
+packages/hermes-api/          @in-th3-l00p/hermes-remote — server library (no bins since 2.0.0)
   src/app.ts                  createApp(options): authentication, CORS, rate limit, audit, body cap, whoami
   src/chat/routes.ts          /v1/sessions* routes, scope checks, identityTurn injection, SSE streaming, stop
   src/chat/store.ts           ChatStore — bun:sqlite sessions/messages, auto-titles, ownership, reactions, edits
@@ -27,10 +27,11 @@ packages/hermes-api/          @in-th3-l00p/hermes-remote — server + CLI (bins:
   src/store/keys.ts           KeyStore — hk_<id>.<secret> keys, argon2 via Bun.password, scopes, CIDR, rotate
   src/scopes.ts               closed scope catalog + 4 tiers (no admin scope, by design)
   src/limits.ts               DEFAULT_LIMITS, RateLimiter (fixed window per principal), ipInCidr
-  src/cli/run.ts              CLI: init, serve, keys (create/list/show/revoke/rotate/grant/ungrant), service, logs
-  src/cli/args.ts             flag parsing
-  src/cli.ts                  bin entry — wires config, HERMES_REMOTE_HOME ?? ~/.hermes-remote, real verifiers
   src/server.ts               startServer — Bun.serve, requestIP → app.fetch(request, ip), audit JSONL append
+packages/cli/                 @in-th3-l00p/hermes-remote-cli — management CLI (bins: hermes-remote, hermes-api)
+  src/run.ts                  CLI: init, serve, keys (create/list/show/revoke/rotate/grant/ungrant), service, logs
+  src/args.ts                 flag parsing
+  src/cli.ts                  bin entry — wires config, HERMES_REMOTE_HOME ?? ~/.hermes-remote, real verifiers
 packages/hermes-ts/           @in-th3-l00p/hermes-remote-client — isomorphic client
   src/client.ts               HermesClient: token|tokenProvider (401 single retry), sendMessage/editMessage
                               (AsyncIterable<ChatEvent>, AbortSignal), stopTurn, sessions CRUD, whoami
@@ -48,7 +49,7 @@ integration/                  Live-stack tests, own workspace, coverage OFF, gat
 scripts/check-snippets.ts     Bun.Transpiler parse-check of every ts/tsx fence in the docs (runs in CI)
 assets/                       logo.svg, wordmark.svg, og.png (1200x630), announcement.md (X thread, unposted)
 .github/workflows/test.yml    push/PR: install, build clients, typecheck, bun test packages (100% gate), snippets
-.github/workflows/release.yml on v* tag: test, publish 3 packages to npm.pkg.github.com, tarballs on GH release
+.github/workflows/release.yml on v* tag: test, publish 4 packages to npm.pkg.github.com, tarballs on GH release
 ```
 
 Directory names predate the rename (hermes-api/hermes-ts/react-hermes); the published npm names are the hermes-remote ones. Do not rename directories casually — imports, workspaces, and CI reference them.

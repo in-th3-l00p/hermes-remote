@@ -34,7 +34,7 @@ echo "//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN" >> ~/.npmrc
 On the machine running your Hermes agent:
 
 ```bash
-npm i -g @in-th3-l00p/hermes-remote
+npm i -g @in-th3-l00p/hermes-remote-cli
 hermes-remote keys create --name my-app --scope chat:invoke --scope sessions:read --scope sessions:write
 hermes-remote serve --upstream http://127.0.0.1:8642 --upstream-key $API_SERVER_KEY
 ```
@@ -58,7 +58,8 @@ Full guides, tutorials (Supabase auth, custom auth providers, deployment), and t
 
 | Package | Purpose |
 | ------- | ------- |
-| [`@in-th3-l00p/hermes-remote`](packages/hermes-api) | Server and management CLI (`hermes-remote`) |
+| [`@in-th3-l00p/hermes-remote`](packages/hermes-api) | Server library (auth, sessions, streaming facade) |
+| [`@in-th3-l00p/hermes-remote-cli`](packages/cli) | Management CLI (`hermes-remote`: serve, keys, config, service) |
 | [`@in-th3-l00p/hermes-remote-client`](packages/hermes-ts) | Isomorphic TypeScript client |
 | [`@in-th3-l00p/hermes-remote-react`](packages/react-hermes) | React hooks |
 

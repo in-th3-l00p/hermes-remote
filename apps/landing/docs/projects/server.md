@@ -1,6 +1,6 @@
 # 1.1 The server and CLI
 
-`@in-th3-l00p/hermes-remote` is a Bun server that sits next to a local Hermes agent and exposes it to the web. It installs one binary, `hermes-remote` (with `hermes-api` kept as an alias).
+`@in-th3-l00p/hermes-remote` is a Bun server that sits next to a local Hermes agent and exposes it to the web. Its companion package `@in-th3-l00p/hermes-remote-cli` installs one binary, `hermes-remote` (with `hermes-api` kept as an alias).
 
 ## How it works
 

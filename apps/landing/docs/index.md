@@ -2,11 +2,12 @@
 
 Hermes Remote turns a local [Hermes agent](https://hermes-agent.nousresearch.com) into a secure web product: an authenticated HTTP API, a typed TypeScript client, and React hooks, with streaming chat, persistent sessions, and user identity built in.
 
-## The three packages
+## The four packages
 
 | Package | What it is |
 | ------- | ---------- |
-| `@in-th3-l00p/hermes-remote` | The server and management CLI. Runs next to your agent, exposes it over HTTP, owns keys, sessions, and auth. |
+| `@in-th3-l00p/hermes-remote` | The server. Runs next to your agent, exposes it over HTTP, owns keys, sessions, and auth. |
+| `@in-th3-l00p/hermes-remote-cli` | The management CLI (`hermes-remote`): serve, keys, config, service install. |
 | `@in-th3-l00p/hermes-remote-client` | An isomorphic TypeScript client with SSE streaming. Works in browsers, Node 18+, and Bun. |
 | `@in-th3-l00p/hermes-remote-react` | React hooks. A complete chat is `useChat()`, a session list is `useSessions()`. |
 
@@ -22,7 +23,7 @@ echo "//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN" >> ~/.npmrc
 On the machine running your Hermes agent (with its API server enabled, see [2.4 Deploying](/tutorials/deploying)):
 
 ```bash
-npm i -g @in-th3-l00p/hermes-remote
+npm i -g @in-th3-l00p/hermes-remote-cli
 hermes-remote keys create --name my-app --scope chat:invoke --scope sessions:read --scope sessions:write
 hermes-remote serve --upstream http://127.0.0.1:8642 --upstream-key $API_SERVER_KEY
 ```
