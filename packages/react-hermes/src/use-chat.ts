@@ -6,6 +6,7 @@ import type {
   ChatSession,
   SendMessageInput,
 } from "@in-th3-l00p/hermes-remote-client";
+import { applyChatEvent, chatEventError } from "./chat-events.ts";
 
 /** Structural subset of HermesClient used by useChat (easy to fake in tests). */
 export interface ChatClientLike {
@@ -49,19 +50,6 @@ export interface UseChat {
   stop(): Promise<void>;
 }
 
-function placeholder(id: string): ChatMessage {
-  return {
-    id,
-    role: "assistant",
-    content: "",
-    attachments: [],
-    reactions: {},
-    createdAt: new Date().toISOString(),
-    editedAt: null,
-    status: "streaming",
-  };
-}
-
 export function useChat(options: UseChatOptions): UseChat {
   const { client } = options;
   const [sessionId, setSessionId] = useState<string | null>(
@@ -88,39 +76,11 @@ export function useChat(options: UseChatOptions): UseChat {
       setError(null);
       try {
         for await (const event of events) {
-          if (event.event === "user") {
-            const message = event.data;
-            setMessages((prev) => {
-              if (editedId === null) {
-                return [...prev, message];
-              }
-              const index = prev.findIndex((m) => m.id === editedId);
-              return [...prev.slice(0, index), message];
-            });
-          } else if (event.event === "assistant") {
-            const { id } = event.data;
-            setMessages((prev) => [...prev, placeholder(id)]);
-          } else if (event.event === "delta") {
-            const { id, text } = event.data;
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === id ? { ...m, content: m.content + text } : m,
-              ),
-            );
-          } else if (event.event === "done") {
-            const message = event.data;
-            setMessages((prev) =>
-              prev.map((m) => (m.id === message.id ? message : m)),
-            );
-          } else {
-            const { id, message } = event.data;
-            setError(message);
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === id ? { ...m, status: "error" as const } : m,
-              ),
-            );
+          const failure = chatEventError(event);
+          if (failure !== null) {
+            setError(failure);
           }
+          setMessages((prev) => applyChatEvent(prev, event, editedId));
         }
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : String(cause));
