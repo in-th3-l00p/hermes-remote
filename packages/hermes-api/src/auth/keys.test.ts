@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { KeyStore } from "./keys.ts";
@@ -91,6 +91,24 @@ describe("KeyStore", () => {
     expect(await store.verifyToken(token)).toBeNull();
     expect(await store.verifyToken(rotated?.token as string)).not.toBeNull();
     expect(await store.rotate("nope")).toBeNull();
+  });
+
+  test("writes the keys file and its directory owner-only", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "hermes-api-test-"));
+    const filePath = join(dir, "secrets", "keys.json");
+    const store = new KeyStore(filePath);
+    await store.create({ name: "x", scopes: ["chat:invoke"] });
+    expect(((await stat(filePath)).mode & 0o777)).toBe(0o600);
+    expect(((await stat(join(dir, "secrets"))).mode & 0o777)).toBe(0o700);
+  });
+
+  test("tightens permissions on a pre-existing keys file", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "hermes-api-test-"));
+    const filePath = join(dir, "keys.json");
+    await writeFile(filePath, '{"keys":[]}\n', { mode: 0o644 });
+    const store = new KeyStore(filePath);
+    await store.create({ name: "x", scopes: ["chat:invoke"] });
+    expect(((await stat(filePath)).mode & 0o777)).toBe(0o600);
   });
 
   test("grants and ungrants scopes", async () => {

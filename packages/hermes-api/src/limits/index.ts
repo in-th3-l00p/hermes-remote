@@ -31,6 +31,21 @@ export class RateLimiter {
     private readonly now: () => number = () => Date.now(),
   ) {}
 
+  /** Like check but never counts: returns the block without consuming a slot. */
+  peek(key: string): number | null {
+    const at = this.now();
+    const windowMs = this.options.windowSeconds * 1000;
+    const window = this.windows.get(key);
+    if (
+      window === undefined ||
+      at - window.start >= windowMs ||
+      window.count < this.options.limit
+    ) {
+      return null;
+    }
+    return Math.ceil((window.start + windowMs - at) / 1000);
+  }
+
   /** Returns null when allowed, otherwise seconds until the window resets. */
   check(key: string): number | null {
     const at = this.now();

@@ -9,7 +9,7 @@ export interface KeyVerifier {
 export type Principal =
   | { type: "api_key"; record: ApiKeyRecord }
   | { type: "user"; userId: string; email?: string }
-  | { type: "anonymous" };
+  | { type: "anonymous"; ip?: string };
 
 export interface AuthDenial {
   status: number;
@@ -30,7 +30,7 @@ export function principalKey(principal: Principal): string {
   if (principal.type === "user") {
     return `user:${principal.userId}`;
   }
-  return "anonymous";
+  return principal.ip === undefined ? "anonymous" : `anonymous:${principal.ip}`;
 }
 
 function denial(status: number, code: string, message: string): AuthDenial {
@@ -46,7 +46,7 @@ export async function authenticate(
   const token = header?.startsWith("Bearer ") ? header.slice(7) : null;
   if (token === null) {
     return options.anonymous === true
-      ? { type: "anonymous" }
+      ? { type: "anonymous", ...(clientIp === undefined ? {} : { ip: clientIp }) }
       : denial(401, "unauthorized", "Missing bearer token");
   }
   if (token.startsWith("hk_")) {

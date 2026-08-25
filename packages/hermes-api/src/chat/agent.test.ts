@@ -174,6 +174,34 @@ describe("HermesAgent", () => {
     expect(await collect(agent.stream(userTurn("x")))).toBe("abcd");
   });
 
+  test("abandoning the stream cancels the upstream body", async () => {
+    let cancelled = false;
+    const encoder = new TextEncoder();
+    const agent = new HermesAgent({
+      baseUrl: "http://upstream",
+      apiKey: "k",
+      fetch: (async () =>
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(encoder.encode(chunk("first")));
+            },
+            cancel() {
+              cancelled = true;
+              // Rejecting cancellation must not surface to the caller.
+              throw new Error("cancel failed");
+            },
+          }),
+          { status: 200 },
+        )) as unknown as typeof fetch,
+    });
+    for await (const text of agent.stream(userTurn("x"))) {
+      expect(text).toBe("first");
+      break;
+    }
+    expect(cancelled).toBe(true);
+  });
+
   test("throws HermesUpstreamError on failure responses", async () => {
     const agent = new HermesAgent({
       baseUrl: "http://upstream",

@@ -289,6 +289,73 @@ describe("chat routes", () => {
     expect(missing.status).toBe(404);
   });
 
+  test("a second turn on a busy session returns 409", async () => {
+    let release: (() => void) | null = null;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const slowAgent: AgentBackend = {
+      async *stream() {
+        yield "partial ";
+        await gate;
+        yield "rest";
+      },
+    };
+    const { app, store } = makeApp(slowAgent);
+    const session = store.createSession();
+    const pending = Promise.resolve(
+      app.fetch(post(`/v1/sessions/${session.id}/messages`, { content: "go" })),
+    ).then((res) => res.text());
+    await new Promise((r) => setTimeout(r, 20));
+    const busy = await app.fetch(
+      post(`/v1/sessions/${session.id}/messages`, { content: "again" }),
+    );
+    expect(busy.status).toBe(409);
+    expect(
+      ((await busy.json()) as { error: { code: string } }).error.code,
+    ).toBe("turn_in_flight");
+    (release as unknown as () => void)();
+    await pending;
+    const after = await app.fetch(
+      post(`/v1/sessions/${session.id}/messages`, { content: "free" }),
+    );
+    expect(after.status).toBe(200);
+    await after.text();
+  });
+
+  test("client disconnect aborts the turn and keeps the partial reply", async () => {
+    let release: (() => void) | null = null;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let seenSignal: AbortSignal | undefined;
+    const ignoringAgent: AgentBackend = {
+      async *stream(_messages, signal) {
+        seenSignal = signal;
+        yield "partial ";
+        await gate;
+        yield "ignored ";
+        yield "still ignored";
+      },
+    };
+    const { app, store, turns } = makeApp(ignoringAgent);
+    const session = store.createSession();
+    const res = await app.fetch(
+      post(`/v1/sessions/${session.id}/messages`, { content: "go" }),
+    );
+    const reader = (res.body as ReadableStream<Uint8Array>).getReader();
+    await reader.read();
+    await reader.cancel();
+    expect(seenSignal?.aborted).toBe(true);
+    (release as unknown as () => void)();
+    while (turns.size > 0) {
+      await new Promise((r) => setTimeout(r, 5));
+    }
+    const last = store.getSession(session.id)?.messages.at(-1);
+    expect(last?.status).toBe("done");
+    expect(last?.content).toBe("partial ignored still ignored");
+  });
+
   test("api keys need the right scope per route", async () => {
     const store = new ChatStore(":memory:", () => new Date("2026-08-24T00:00:00Z"));
     const session = store.createSession();

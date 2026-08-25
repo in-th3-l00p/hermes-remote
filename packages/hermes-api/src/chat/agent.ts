@@ -117,32 +117,37 @@ export class HermesAgent implements AgentBackend {
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) {
-        break;
-      }
-      buffer += decoder.decode(value, { stream: true });
-      const events = buffer.split("\n\n");
-      buffer = events.pop() as string;
-      for (const event of events) {
-        for (const line of event.split("\n")) {
-          if (!line.startsWith("data: ")) {
-            continue;
-          }
-          const data = line.slice(6);
-          if (data === "[DONE]") {
-            return;
-          }
-          const parsed = JSON.parse(data) as {
-            choices?: { delta?: { content?: string } }[];
-          };
-          const text = parsed.choices?.[0]?.delta?.content;
-          if (text !== undefined && text !== "") {
-            yield text;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+        buffer += decoder.decode(value, { stream: true });
+        const events = buffer.split("\n\n");
+        buffer = events.pop() as string;
+        for (const event of events) {
+          for (const line of event.split("\n")) {
+            if (!line.startsWith("data: ")) {
+              continue;
+            }
+            const data = line.slice(6);
+            if (data === "[DONE]") {
+              return;
+            }
+            const parsed = JSON.parse(data) as {
+              choices?: { delta?: { content?: string } }[];
+            };
+            const text = parsed.choices?.[0]?.delta?.content;
+            if (text !== undefined && text !== "") {
+              yield text;
+            }
           }
         }
       }
+    } finally {
+      // Abandoning the generator must release the upstream connection.
+      await reader.cancel().catch(() => {});
     }
   }
 }

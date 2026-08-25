@@ -1,6 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { appendFileSync } from "node:fs";
 import { dirname } from "node:path";
+import { DEFAULT_LIMITS } from "../limits/index.ts";
 import { createApp, type AppOptions } from "./app.ts";
 
 export interface StartServerOptions extends AppOptions {
@@ -16,6 +17,15 @@ export interface RunningServer {
   stop(): void;
 }
 
+// A failed log append must never fail the request it describes.
+function appendSafely(path: string, line: string): void {
+  try {
+    appendFileSync(path, line);
+  } catch (cause) {
+    console.error(`hermes-api: failed to append to ${path}`, cause);
+  }
+}
+
 export async function startServer(
   options: StartServerOptions,
 ): Promise<RunningServer> {
@@ -25,15 +35,17 @@ export async function startServer(
   if (options.auditPath !== undefined) {
     const auditPath = options.auditPath;
     appOptions.audit = (entry) => {
-      appendFileSync(auditPath, `${JSON.stringify(entry)}\n`);
+      appendSafely(auditPath, `${JSON.stringify(entry)}\n`);
     };
   }
   const app = createApp(appOptions);
   const log = (line: string): void => {
-    appendFileSync(options.logPath, `${now().toISOString()} ${line}\n`);
+    appendSafely(options.logPath, `${now().toISOString()} ${line}\n`);
   };
   const server = Bun.serve({
     port: options.port,
+    // Closes the chunked-transfer bypass of the content-length check.
+    maxRequestBodySize: options.limits?.maxBodyBytes ?? DEFAULT_LIMITS.maxBodyBytes,
     async fetch(request, bunServer) {
       const ip = bunServer.requestIP(request)?.address;
       const response = await app.fetch(request, ip);

@@ -25,6 +25,8 @@ export interface AppOptions {
   corsOrigins?: string[];
   limits?: Partial<Limits>;
   rateLimit?: RateLimitOptions;
+  /** Fixed window applied to failed auth attempts per client ip; always on. */
+  authFailureLimit?: RateLimitOptions;
   audit?: (entry: AuditEntry) => void;
   now?: () => Date;
 }
@@ -37,6 +39,17 @@ function error(status: number, code: string, message: string): Response {
   return Response.json({ error: { code, message } }, { status });
 }
 
+function rateLimited(retryAfter: number): Response {
+  const res = error(429, "rate_limited", "Too many requests");
+  res.headers.set("retry-after", String(retryAfter));
+  return res;
+}
+
+const DEFAULT_AUTH_FAILURE_LIMIT: RateLimitOptions = {
+  limit: 30,
+  windowSeconds: 60,
+};
+
 export function createApp(options: AppOptions = {}): App {
   const version = options.version ?? "1.0.0";
   const limits: Limits = { ...DEFAULT_LIMITS, ...options.limits };
@@ -44,6 +57,9 @@ export function createApp(options: AppOptions = {}): App {
     options.rateLimit === undefined
       ? null
       : new RateLimiter(options.rateLimit);
+  const authFailures = new RateLimiter(
+    options.authFailureLimit ?? DEFAULT_AUTH_FAILURE_LIMIT,
+  );
   const now = options.now ?? (() => new Date());
 
   async function route(
@@ -67,8 +83,18 @@ export function createApp(options: AppOptions = {}): App {
       };
     }
 
+    // Blocks repeated credential guessing before the argon2 verify runs.
+    const failKey = `ip:${clientIp ?? "unknown"}`;
+    const blocked = authFailures.peek(failKey);
+    if (blocked !== null) {
+      return { response: rateLimited(blocked), principal: null };
+    }
+
     const principal = await authenticate(request, clientIp, options);
     if ("code" in principal) {
+      if (principal.status === 401) {
+        authFailures.check(failKey);
+      }
       return {
         response: error(principal.status, principal.code, principal.message),
         principal: null,
@@ -78,9 +104,7 @@ export function createApp(options: AppOptions = {}): App {
     if (rateLimiter !== null) {
       const retryAfter = rateLimiter.check(principalKey(principal));
       if (retryAfter !== null) {
-        const res = error(429, "rate_limited", "Too many requests");
-        res.headers.set("retry-after", String(retryAfter));
-        return { response: res, principal };
+        return { response: rateLimited(retryAfter), principal };
       }
     }
 

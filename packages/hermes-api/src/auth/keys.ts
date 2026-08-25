@@ -1,4 +1,4 @@
-import { mkdir } from "node:fs/promises";
+import { chmod, mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 export interface ApiKeyRecord {
@@ -44,9 +44,13 @@ export class KeyStore {
     return (await file.json()) as KeysFile;
   }
 
+  // The file holds secret hashes: keep it and its directory owner-only.
   private async save(data: KeysFile): Promise<void> {
-    await mkdir(dirname(this.filePath), { recursive: true });
-    await Bun.write(this.filePath, `${JSON.stringify(data, null, 2)}\n`);
+    await mkdir(dirname(this.filePath), { recursive: true, mode: 0o700 });
+    await writeFile(this.filePath, `${JSON.stringify(data, null, 2)}\n`, {
+      mode: 0o600,
+    });
+    await chmod(this.filePath, 0o600);
   }
 
   async create(

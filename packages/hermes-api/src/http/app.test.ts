@@ -265,6 +265,60 @@ describe("createApp", () => {
     ).toBe(429);
   });
 
+  test("anonymous principals rate limit per client ip", async () => {
+    const app = createApp({
+      anonymous: true,
+      rateLimit: { limit: 1, windowSeconds: 60 },
+    });
+    expect((await app.fetch(get("/v1/auth/whoami"), "1.1.1.1")).status).toBe(200);
+    expect((await app.fetch(get("/v1/auth/whoami"), "2.2.2.2")).status).toBe(200);
+    const limited = await app.fetch(get("/v1/auth/whoami"), "1.1.1.1");
+    expect(limited.status).toBe(429);
+  });
+
+  test("failed auth attempts rate limit per ip before key verification", async () => {
+    let verifies = 0;
+    const counting: KeyVerifier = {
+      verifyToken: async () => {
+        verifies += 1;
+        return null;
+      },
+    };
+    const app = createApp({
+      store: counting,
+      authFailureLimit: { limit: 2, windowSeconds: 60 },
+    });
+    const attempt = (ip?: string) => app.fetch(get("/v1/auth/whoami", "hk_guess"), ip);
+    expect((await attempt("9.9.9.9")).status).toBe(401);
+    expect((await attempt("9.9.9.9")).status).toBe(401);
+    const limited = await attempt("9.9.9.9");
+    expect(limited.status).toBe(429);
+    expect(Number(limited.headers.get("retry-after"))).toBeGreaterThan(0);
+    const shortCircuited = await attempt("9.9.9.9");
+    expect(shortCircuited.status).toBe(429);
+    expect(verifies).toBe(2);
+    expect((await attempt("8.8.8.8")).status).toBe(401);
+    expect((await attempt()).status).toBe(401);
+    const success = createApp({
+      store,
+      authFailureLimit: { limit: 2, windowSeconds: 60 },
+    });
+    for (let i = 0; i < 4; i += 1) {
+      expect(
+        (await success.fetch(get("/v1/auth/whoami", "hk_good"), "9.9.9.9")).status,
+      ).toBe(200);
+    }
+  });
+
+  test("non-401 auth denials do not count toward the failure limit", async () => {
+    const app = createApp({ authFailureLimit: { limit: 1, windowSeconds: 60 } });
+    for (let i = 0; i < 3; i += 1) {
+      expect(
+        (await app.fetch(get("/v1/auth/whoami", "hk_x"), "3.3.3.3")).status,
+      ).toBe(503);
+    }
+  });
+
   test("rejects oversized request bodies", async () => {
     const app = createApp({ anonymous: true, limits: { maxBodyBytes: 10 } });
     const res = await app.fetch(

@@ -16,6 +16,21 @@ describe("RateLimiter", () => {
     expect(limiter.check("k")).toBeNull();
   });
 
+  test("peek reports the block without consuming a slot", () => {
+    let at = 0;
+    const limiter = new RateLimiter({ limit: 2, windowSeconds: 60 }, () => at);
+    expect(limiter.peek("k")).toBeNull();
+    expect(limiter.check("k")).toBeNull();
+    expect(limiter.peek("k")).toBeNull();
+    expect(limiter.check("k")).toBeNull();
+    expect(limiter.peek("k")).toBe(60);
+    at = 30_000;
+    expect(limiter.peek("k")).toBe(30);
+    at = 61_000;
+    expect(limiter.peek("k")).toBeNull();
+    expect(limiter.check("k")).toBeNull();
+  });
+
   test("uses the real clock by default", () => {
     const limiter = new RateLimiter({ limit: 1, windowSeconds: 60 });
     expect(limiter.check("k")).toBeNull();
