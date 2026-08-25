@@ -1,18 +1,22 @@
 {
-  "name": "@in-th3-l00p/hermes-remote",
+  "name": "@in-th3-l00p/hermes-remote-cli",
   "version": "2.0.0",
-  "description": "Secure web API for a local Hermes agent (Hermes Remote server)",
+  "description": "Management CLI for Hermes Remote (serve, keys, config, service)",
   "license": "MIT",
   "author": "Tisca Catalin",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/in-th3-l00p/hermes-remote.git",
-    "directory": "packages/hermes-api"
+    "directory": "packages/cli"
   },
   "homepage": "https://hermes-remote.tiscacatalin.com",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/run.ts"
+  },
+  "bin": {
+    "hermes-remote": "./src/cli.ts",
+    "hermes-api": "./src/cli.ts"
   },
   "files": [
     "src",
@@ -25,11 +29,14 @@
     "hermes",
     "hermes-agent",
     "nous-research",
-    "api",
+    "cli",
     "agent"
   ],
   "scripts": {
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@in-th3-l00p/hermes-remote": "^2.0.0"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"

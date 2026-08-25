@@ -71,21 +71,28 @@
         "@in-th3-l00p/hermes-remote-client": "workspace:*",
       },
     },
-    "packages/hermes-api": {
-      "name": "@in-th3-l00p/hermes-remote",
-      "version": "0.2.0",
+    "packages/cli": {
+      "name": "@in-th3-l00p/hermes-remote-cli",
+      "version": "2.0.0",
       "bin": {
         "hermes-remote": "./src/cli.ts",
         "hermes-api": "./src/cli.ts",
       },
+      "dependencies": {
+        "@in-th3-l00p/hermes-remote": "workspace:*",
+      },
+    },
+    "packages/hermes-api": {
+      "name": "@in-th3-l00p/hermes-remote",
+      "version": "2.0.0",
     },
     "packages/hermes-ts": {
       "name": "@in-th3-l00p/hermes-remote-client",
-      "version": "0.2.0",
+      "version": "1.0.0",
     },
     "packages/react-hermes": {
       "name": "@in-th3-l00p/hermes-remote-react",
-      "version": "0.2.0",
+      "version": "1.0.0",
       "dependencies": {
         "@in-th3-l00p/hermes-remote-client": "workspace:*",
       },
@@ -285,6 +292,8 @@
     "@iconify/types": ["@iconify/types@2.0.0", "", {}, "sha512-+wluvCrRhXrhyOmRDJ3q8mux9JkKy5SJ/v8ol2tu4FVjyYvtEzkc/3pK15ET6RKg4b4w4BmTk1+gsCUhf21Ykg=="],
 
     "@in-th3-l00p/hermes-remote": ["@in-th3-l00p/hermes-remote@workspace:packages/hermes-api"],
+
+    "@in-th3-l00p/hermes-remote-cli": ["@in-th3-l00p/hermes-remote-cli@workspace:packages/cli"],
 
     "@in-th3-l00p/hermes-remote-client": ["@in-th3-l00p/hermes-remote-client@workspace:packages/hermes-ts"],
 

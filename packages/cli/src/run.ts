@@ -1,7 +1,12 @@
 import { join } from "node:path";
 import { flag, flagAll, parseArgs, parseDuration } from "./args.ts";
-import { isDangerousScope, isKnownScope, isUserGrantableScope } from "../scopes.ts";
-import { KeyStore, type ApiKeyRecord } from "../store/keys.ts";
+import {
+  KeyStore,
+  isDangerousScope,
+  isKnownScope,
+  isUserGrantableScope,
+  type ApiKeyRecord,
+} from "@in-th3-l00p/hermes-remote";
 
 export interface CliResult {
   exitCode: number;

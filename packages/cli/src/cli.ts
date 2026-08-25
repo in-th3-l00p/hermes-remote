@@ -1,11 +1,15 @@
 #!/usr/bin/env bun
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { runCli, type CliContext } from "./cli/run.ts";
-import { startServer } from "./server.ts";
-import { ChatStore } from "./chat/store.ts";
-import { DemoAgent, HermesAgent } from "./chat/agent.ts";
-import { SupabaseJwksVerifier, hs256Verifier } from "./auth/supabase.ts";
+import { runCli, type CliContext } from "./run.ts";
+import {
+  ChatStore,
+  DemoAgent,
+  HermesAgent,
+  SupabaseJwksVerifier,
+  hs256Verifier,
+  startServer,
+} from "@in-th3-l00p/hermes-remote";
 
 const homeDir =
   process.env["HERMES_REMOTE_HOME"] ?? join(homedir(), ".hermes-remote");
