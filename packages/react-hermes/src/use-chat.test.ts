@@ -202,6 +202,118 @@ describe("useChat", () => {
     expect(result.current.streaming).toBe(false);
   });
 
+  test("stream failure marks streaming messages as error", async () => {
+    const client = fakeClient({
+      sendMessage: async function* () {
+        yield { event: "user", data: msg("u1", "user", "x") } as ChatEvent;
+        yield { event: "assistant", data: { id: "a1" } } as ChatEvent;
+        throw new Error("network gone");
+      },
+    });
+    const { result } = renderHook(() => useChat({ client }));
+    await act(async () => {
+      await result.current.send("x");
+    });
+    expect(result.current.error).toBe("network gone");
+    expect(result.current.messages.map((m) => m.status)).toEqual([
+      "done",
+      "error",
+    ]);
+  });
+
+  test("unmount aborts the in-flight stream", async () => {
+    let signal: AbortSignal | null = null;
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const client = fakeClient({
+      sendMessage: (_s, _i, options) =>
+        (async function* () {
+          signal = options?.signal ?? null;
+          yield { event: "user", data: msg("u1", "user", "x") } as ChatEvent;
+          await gate;
+          yield { event: "done", data: msg("a1", "assistant", "late") } as ChatEvent;
+        })(),
+    });
+    const { result, unmount } = renderHook(() => useChat({ client }));
+    let pending: Promise<void> = Promise.resolve();
+    act(() => {
+      pending = result.current.send("x");
+    });
+    await waitFor(() => expect(signal).not.toBeNull());
+    unmount();
+    expect((signal as unknown as AbortSignal).aborted).toBe(true);
+    release();
+    await pending;
+    expect(result.current.error).toBeNull();
+  });
+
+  test("open mid-stream aborts without bleeding events or erroring", async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const client = fakeClient({
+      sendMessage: (_s, _i, options) =>
+        (async function* () {
+          yield { event: "user", data: msg("u1", "user", "x") } as ChatEvent;
+          await gate;
+          if (options?.signal?.aborted) {
+            throw new Error("aborted");
+          }
+          yield { event: "user", data: msg("u2", "user", "stale") } as ChatEvent;
+        })(),
+    });
+    const { result } = renderHook(() => useChat({ client }));
+    let pending: Promise<void> = Promise.resolve();
+    act(() => {
+      pending = result.current.send("x");
+    });
+    await waitFor(() => expect(result.current.streaming).toBe(true));
+    await act(async () => {
+      await result.current.open("other");
+    });
+    release();
+    await act(async () => {
+      await pending;
+    });
+    expect(result.current.sessionId).toBe("other");
+    expect(result.current.messages.map((m) => m.content)).toEqual(["old"]);
+    expect(result.current.error).toBeNull();
+    expect(result.current.streaming).toBe(false);
+  });
+
+  test("reset mid-stream aborts and clears state", async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const client = fakeClient({
+      sendMessage: async function* () {
+        yield { event: "user", data: msg("u1", "user", "x") } as ChatEvent;
+        await gate;
+        yield { event: "user", data: msg("u2", "user", "stale") } as ChatEvent;
+      },
+    });
+    const { result } = renderHook(() => useChat({ client }));
+    let pending: Promise<void> = Promise.resolve();
+    act(() => {
+      pending = result.current.send("x");
+    });
+    await waitFor(() => expect(result.current.streaming).toBe(true));
+    act(() => {
+      result.current.reset();
+    });
+    release();
+    await act(async () => {
+      await pending;
+    });
+    expect(result.current.messages).toEqual([]);
+    expect(result.current.error).toBeNull();
+    expect(result.current.streaming).toBe(false);
+  });
+
   test("streaming flag is true mid-stream", async () => {
     let release: (() => void) | null = null;
     const gate = new Promise<void>((resolve) => {

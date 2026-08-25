@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   Attachment,
   ChatEvent,
@@ -15,11 +15,13 @@ export interface ChatClientLike {
   sendMessage(
     sessionId: string,
     input: SendMessageInput,
+    options?: { signal?: AbortSignal },
   ): AsyncIterable<ChatEvent>;
   editMessage(
     sessionId: string,
     messageId: string,
     content: string,
+    options?: { signal?: AbortSignal },
   ): AsyncIterable<ChatEvent>;
   react(
     sessionId: string,
@@ -50,6 +52,11 @@ export interface UseChat {
   stop(): Promise<void>;
 }
 
+const failStreaming = (prev: ChatMessage[]): ChatMessage[] =>
+  prev.map((m) =>
+    m.status === "streaming" ? { ...m, status: "error" as const } : m,
+  );
+
 export function useChat(options: UseChatOptions): UseChat {
   const { client } = options;
   const [sessionId, setSessionId] = useState<string | null>(
@@ -59,6 +66,15 @@ export function useChat(options: UseChatOptions): UseChat {
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const sessionRef = useRef<string | null>(options.sessionId ?? null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const abort = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setStreaming(false);
+  }, []);
+
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   const ensureSession = useCallback(async (): Promise<string> => {
     if (sessionRef.current !== null) {
@@ -71,11 +87,19 @@ export function useChat(options: UseChatOptions): UseChat {
   }, [client]);
 
   const consume = useCallback(
-    async (events: AsyncIterable<ChatEvent>, editedId: string | null) => {
+    async (
+      start: (signal: AbortSignal) => AsyncIterable<ChatEvent>,
+      editedId: string | null,
+    ) => {
+      const controller = new AbortController();
+      abortRef.current = controller;
       setStreaming(true);
       setError(null);
       try {
-        for await (const event of events) {
+        for await (const event of start(controller.signal)) {
+          if (controller.signal.aborted) {
+            break;
+          }
           const failure = chatEventError(event);
           if (failure !== null) {
             setError(failure);
@@ -83,9 +107,15 @@ export function useChat(options: UseChatOptions): UseChat {
           setMessages((prev) => applyChatEvent(prev, event, editedId));
         }
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : String(cause));
+        if (!controller.signal.aborted) {
+          setError(cause instanceof Error ? cause.message : String(cause));
+          setMessages(failStreaming);
+        }
       } finally {
-        setStreaming(false);
+        if (abortRef.current === controller) {
+          abortRef.current = null;
+          setStreaming(false);
+        }
       }
     },
     [],
@@ -94,7 +124,10 @@ export function useChat(options: UseChatOptions): UseChat {
   const send = useCallback(
     async (content: string, attachments: Attachment[] = []) => {
       const id = await ensureSession();
-      await consume(client.sendMessage(id, { content, attachments }), null);
+      await consume(
+        (signal) => client.sendMessage(id, { content, attachments }, { signal }),
+        null,
+      );
     },
     [client, consume, ensureSession],
   );
@@ -102,7 +135,10 @@ export function useChat(options: UseChatOptions): UseChat {
   const edit = useCallback(
     async (messageId: string, content: string) => {
       const id = await ensureSession();
-      await consume(client.editMessage(id, messageId, content), messageId);
+      await consume(
+        (signal) => client.editMessage(id, messageId, content, { signal }),
+        messageId,
+      );
     },
     [client, consume, ensureSession],
   );
@@ -120,13 +156,14 @@ export function useChat(options: UseChatOptions): UseChat {
 
   const open = useCallback(
     async (id: string) => {
+      abort();
       const history = await client.listMessages(id);
       sessionRef.current = id;
       setSessionId(id);
       setMessages(history);
       setError(null);
     },
-    [client],
+    [abort, client],
   );
 
   const stop = useCallback(async () => {
@@ -136,11 +173,12 @@ export function useChat(options: UseChatOptions): UseChat {
   }, [client]);
 
   const reset = useCallback(() => {
+    abort();
     sessionRef.current = null;
     setSessionId(null);
     setMessages([]);
     setError(null);
-  }, []);
+  }, [abort]);
 
   return { sessionId, messages, streaming, error, send, edit, react, open, reset, stop };
 }

@@ -37,6 +37,16 @@ describe("applyChatEvent", () => {
     expect(next.map((m) => m.id)).toEqual(["u0b"]);
   });
 
+  test("user appends when the edited message is not found", () => {
+    const prev = [msg("u0", "user", "hi"), msg("a0", "assistant", "yo")];
+    const next = applyChatEvent(
+      prev,
+      { event: "user", data: msg("u1", "user", "new") },
+      "missing",
+    );
+    expect(next.map((m) => m.id)).toEqual(["u0", "a0", "u1"]);
+  });
+
   test("assistant appends a streaming placeholder", () => {
     const next = applyChatEvent([], { event: "assistant", data: { id: "a1" } }, null);
     expect(next).toHaveLength(1);
@@ -87,6 +97,16 @@ describe("applyChatEvent", () => {
       null,
     );
     expect(next).toEqual(prev);
+  });
+
+  test("unknown event names leave messages untouched", () => {
+    const prev = [{ ...msg("a1", "assistant", "h"), status: "streaming" as const }];
+    const next = applyChatEvent(
+      prev,
+      { event: "hermes.tool.progress", data: { id: "a1" } } as never,
+      null,
+    );
+    expect(next).toBe(prev);
   });
 });
 

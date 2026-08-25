@@ -27,7 +27,9 @@ export function applyChatEvent(
         return [...prev, event.data];
       }
       const index = prev.findIndex((m) => m.id === editedId);
-      return [...prev.slice(0, index), event.data];
+      return index === -1
+        ? [...prev, event.data]
+        : [...prev.slice(0, index), event.data];
     }
     case "assistant":
       return [...prev, placeholder(event.data.id)];
@@ -39,10 +41,12 @@ export function applyChatEvent(
     }
     case "done":
       return prev.map((m) => (m.id === event.data.id ? event.data : m));
-    default:
+    case "error":
       return prev.map((m) =>
         m.id === event.data.id ? { ...m, status: "error" as const } : m,
       );
+    default:
+      return prev;
   }
 }
 
