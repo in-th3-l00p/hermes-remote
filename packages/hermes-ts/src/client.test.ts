@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { HermesApiError, HermesClient } from "./index.ts";
+import { HermesClient } from "./index.ts";
 import type { ChatEvent } from "./index.ts";
 
 function mockFetch(
@@ -34,85 +34,21 @@ async function collect(iter: AsyncIterable<ChatEvent>): Promise<ChatEvent[]> {
 }
 
 describe("HermesClient", () => {
-  test("strips trailing slashes from baseUrl", () => {
+  test("exposes the normalized baseUrl", () => {
     const client = new HermesClient({ baseUrl: "http://x///", token: "t" });
     expect(client.baseUrl).toBe("http://x");
   });
 
-  test("anonymous clients send no authorization header", async () => {
-    const { calls, fetch } = mockFetch(() =>
-      Response.json({ ok: true, version: "0.1.0" }),
-    );
-    const client = new HermesClient({ baseUrl: "http://x", fetch });
-    await client.status();
-    expect(
-      (calls[0]?.init.headers as Record<string, string>).authorization,
-    ).toBeUndefined();
-  });
-
-  test("sends bearer token from static token", async () => {
+  test("reports status", async () => {
     const { calls, fetch } = mockFetch(() =>
       Response.json({ ok: true, version: "0.0.1" }),
     );
     const client = new HermesClient({ baseUrl: "http://x", token: "t1", fetch });
-    const status = await client.status();
-    expect(status).toEqual({ ok: true, version: "0.0.1" });
+    expect(await client.status()).toEqual({ ok: true, version: "0.0.1" });
     expect(calls[0]?.url).toBe("http://x/v1/status");
     expect(
       (calls[0]?.init.headers as Record<string, string>).authorization,
     ).toBe("Bearer t1");
-  });
-
-  test("uses async tokenProvider", async () => {
-    const { calls, fetch } = mockFetch(() => Response.json({}));
-    const client = new HermesClient({
-      baseUrl: "http://x",
-      tokenProvider: async () => "t2",
-      fetch,
-    });
-    await client.request("GET", "/v1/status");
-    expect(
-      (calls[0]?.init.headers as Record<string, string>).authorization,
-    ).toBe("Bearer t2");
-  });
-
-  test("serializes JSON bodies with content-type", async () => {
-    const { calls, fetch } = mockFetch(() => Response.json({}));
-    const client = new HermesClient({ baseUrl: "http://x", token: "t", fetch });
-    await client.request("POST", "/v1/sessions", { title: "hi" });
-    expect(calls[0]?.init.method).toBe("POST");
-    expect(calls[0]?.init.body).toBe('{"title":"hi"}');
-    expect(
-      (calls[0]?.init.headers as Record<string, string>)["content-type"],
-    ).toBe("application/json");
-  });
-
-  test("throws HermesApiError with server error payload", async () => {
-    const { fetch } = mockFetch(() =>
-      Response.json(
-        { error: { code: "not_found", message: "Unknown route" } },
-        { status: 404 },
-      ),
-    );
-    const client = new HermesClient({ baseUrl: "http://x", token: "t", fetch });
-    const err = (await client
-      .request("GET", "/nope")
-      .catch((e: unknown) => e)) as HermesApiError;
-    expect(err).toBeInstanceOf(HermesApiError);
-    expect(err.status).toBe(404);
-    expect(err.code).toBe("not_found");
-    expect(err.message).toBe("Unknown route");
-  });
-
-  test("throws HermesApiError on non-JSON error body", async () => {
-    const { fetch } = mockFetch(() => new Response("boom", { status: 500 }));
-    const client = new HermesClient({ baseUrl: "http://x", token: "t", fetch });
-    const err = (await client
-      .request("GET", "/x")
-      .catch((e: unknown) => e)) as HermesApiError;
-    expect(err.status).toBe(500);
-    expect(err.code).toBe("unknown_error");
-    expect(err.message).toBe("Request failed with status 500");
   });
 
   test("creates sessions and lists messages", async () => {
@@ -178,33 +114,6 @@ describe("HermesClient", () => {
     expect(reacted.reactions).toEqual({ "👍": 1 });
   });
 
-  test("retries once on 401 with a token provider", async () => {
-    let calls = 0;
-    const fetchImpl = (async () => {
-      calls += 1;
-      return calls === 1
-        ? new Response("no", { status: 401 })
-        : Response.json({ ok: true, version: "1" });
-    }) as unknown as typeof fetch;
-    const client = new HermesClient({
-      baseUrl: "http://x",
-      tokenProvider: async () => `t${calls}`,
-      fetch: fetchImpl,
-    });
-    expect((await client.status()).ok).toBe(true);
-    expect(calls).toBe(2);
-    let anonCalls = 0;
-    const anonymous = new HermesClient({
-      baseUrl: "http://x",
-      fetch: (async () => {
-        anonCalls += 1;
-        return new Response("no", { status: 401 });
-      }) as unknown as typeof fetch,
-    });
-    await expect(anonymous.status()).rejects.toBeInstanceOf(HermesApiError);
-    expect(anonCalls).toBe(1);
-  });
-
   test("passes abort signals through and stops turns", async () => {
     const { calls, fetch } = mockFetch((url) =>
       url.endsWith("/stop")
@@ -221,23 +130,5 @@ describe("HermesClient", () => {
     expect(calls[1]?.init.signal).toBe(controller.signal);
     expect(await client.stopTurn("s1")).toEqual({ stopped: true });
     expect(calls[2]?.url).toBe("http://x/v1/sessions/s1/stop");
-  });
-
-  test("stream errors on failure status and missing body", async () => {
-    const failing = new HermesClient({
-      baseUrl: "http://x",
-      fetch: mockFetch(() => new Response("no", { status: 401 })).fetch,
-    });
-    await expect(
-      collect(failing.sendMessage("s1", { content: "x" })),
-    ).rejects.toBeInstanceOf(HermesApiError);
-    const empty = new HermesClient({
-      baseUrl: "http://x",
-      fetch: mockFetch(() => new Response(null, { status: 200 })).fetch,
-    });
-    const err = (await collect(empty.sendMessage("s1", { content: "x" })).catch(
-      (e: unknown) => e,
-    )) as HermesApiError;
-    expect(err.code).toBe("no_body");
   });
 });

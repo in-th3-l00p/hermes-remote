@@ -1,4 +1,5 @@
-import { parseSse } from "./sse.ts";
+import { HttpClient } from "./http.ts";
+import type { HermesClientOptions } from "./http.ts";
 import type {
   Attachment,
   ChatEvent,
@@ -7,27 +8,6 @@ import type {
   ChatSessionMeta,
 } from "./types.ts";
 
-export type TokenProvider = () => string | Promise<string>;
-
-export interface HermesClientOptions {
-  baseUrl: string;
-  /** Static bearer token. Omit both token options for anonymous servers. */
-  token?: string;
-  tokenProvider?: TokenProvider;
-  fetch?: typeof fetch;
-}
-
-export class HermesApiError extends Error {
-  constructor(
-    readonly status: number,
-    readonly code: string,
-    message: string,
-  ) {
-    super(message);
-    this.name = "HermesApiError";
-  }
-}
-
 export interface SendMessageInput {
   content: string;
   attachments?: Attachment[];
@@ -35,74 +15,24 @@ export interface SendMessageInput {
 
 export class HermesClient {
   readonly baseUrl: string;
-  private readonly tokenProvider: TokenProvider | null;
-  private readonly fetchImpl: typeof fetch;
+  private readonly http: HttpClient;
 
   constructor(options: HermesClientOptions) {
-    this.baseUrl = options.baseUrl.replace(/\/+$/, "");
-    const staticToken = options.token;
-    this.tokenProvider =
-      options.tokenProvider ??
-      (staticToken === undefined ? null : () => staticToken);
-    // Bind to globalThis: browsers throw "Illegal invocation" when fetch is
-    // called detached from its global.
-    this.fetchImpl = options.fetch ?? globalThis.fetch.bind(globalThis);
+    this.http = new HttpClient(options);
+    this.baseUrl = this.http.baseUrl;
   }
 
-  private async doFetch(
-    method: string,
-    path: string,
-    body?: unknown,
-    signal?: AbortSignal,
-    retried = false,
-  ): Promise<Response> {
-    const headers: Record<string, string> = {};
-    if (this.tokenProvider !== null) {
-      headers["authorization"] = `Bearer ${await this.tokenProvider()}`;
-    }
-    if (body !== undefined) {
-      headers["content-type"] = "application/json";
-    }
-    const res = await this.fetchImpl(`${this.baseUrl}${path}`, {
-      method,
-      headers,
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-      ...(signal === undefined ? {} : { signal }),
-    });
-    if (res.status === 401 && this.tokenProvider !== null && !retried) {
-      return this.doFetch(method, path, body, signal, true);
-    }
-    if (!res.ok) {
-      const payload = (await res
-        .json()
-        .catch(() => null)) as { error?: { code?: string; message?: string } } | null;
-      throw new HermesApiError(
-        res.status,
-        payload?.error?.code ?? "unknown_error",
-        payload?.error?.message ?? `Request failed with status ${res.status}`,
-      );
-    }
-    return res;
+  request<T>(method: string, path: string, body?: unknown): Promise<T> {
+    return this.http.request(method, path, body);
   }
 
-  async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-    const res = await this.doFetch(method, path, body);
-    return (await res.json()) as T;
-  }
-
-  private async *stream(
+  private stream(
     method: string,
     path: string,
     body: unknown,
     signal?: AbortSignal,
   ): AsyncIterable<ChatEvent> {
-    const res = await this.doFetch(method, path, body, signal);
-    if (res.body === null) {
-      throw new HermesApiError(res.status, "no_body", "Response had no body");
-    }
-    for await (const event of parseSse(res.body)) {
-      yield event as ChatEvent;
-    }
+    return this.http.stream(method, path, body, signal) as AsyncIterable<ChatEvent>;
   }
 
   status(): Promise<{ ok: boolean; version: string }> {
