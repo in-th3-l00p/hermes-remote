@@ -22,7 +22,11 @@ jobs:
           echo "@in-th3-l00p:registry=https://npm.pkg.github.com" > ~/.npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
           for p in hermes-ts react-hermes hermes-api cli; do
-            (cd packages/$p && npm publish --registry https://npm.pkg.github.com || true)
+            (cd packages/$p
+             if ! npm publish --registry https://npm.pkg.github.com 2>/tmp/publish-err.log; then
+               cat /tmp/publish-err.log
+               grep -qiE "cannot publish over|EPUBLISHCONFLICT|409" /tmp/publish-err.log || exit 1
+             fi)
           done
       - name: pack tarballs
         run: |

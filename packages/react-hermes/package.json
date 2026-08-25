@@ -34,7 +34,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@in-th3-l00p/hermes-remote-client": "workspace:*"
+    "@in-th3-l00p/hermes-remote-client": "^1.0.0"
   },
   "peerDependencies": {
     "react": ">=18"
