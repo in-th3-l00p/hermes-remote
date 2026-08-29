@@ -4,9 +4,9 @@ import { join } from "node:path";
 import { runCli, type CliContext } from "./run.ts";
 import {
   ChatStore,
+  createAuthProvider,
   DemoAgent,
   HermesAgent,
-  JwtAuthProvider,
   startServer,
 } from "@in-th3-l00p/hermes-remote";
 
@@ -21,8 +21,11 @@ const ctx: CliContext = {
   now: () => new Date(),
   env: process.env,
   which: (name) => Bun.which(name),
-  serve: (request) =>
-    startServer({
+  serve: (request) => {
+    const authProvider = createAuthProvider(
+      request.auth ?? { provider: "none" },
+    );
+    return startServer({
       port: request.port,
       store: request.store,
       logPath: request.logPath,
@@ -30,19 +33,7 @@ const ctx: CliContext = {
       anonymous: request.anonymous,
       corsOrigins: request.corsOrigins,
       ...(request.rateLimit === null ? {} : { rateLimit: request.rateLimit }),
-      ...(request.supabaseUrl !== undefined
-        ? {
-            authProvider: new JwtAuthProvider({
-              jwksUrl: `${request.supabaseUrl.replace(/\/+$/, "")}/auth/v1/.well-known/jwks.json`,
-            }),
-          }
-        : request.supabaseJwtSecret !== undefined
-          ? {
-              authProvider: new JwtAuthProvider({
-                hs256Secret: request.supabaseJwtSecret,
-              }),
-            }
-          : {}),
+      ...(authProvider === null ? {} : { authProvider }),
       chat: {
         store: new ChatStore(join(homeDir, "chat.db")),
         agent:
@@ -51,7 +42,8 @@ const ctx: CliContext = {
             : new HermesAgent(request.upstream),
         turns: new Map(),
       },
-    }),
+    });
+  },
 };
 
 const result = await runCli(process.argv.slice(2), ctx);

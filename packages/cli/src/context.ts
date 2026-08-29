@@ -1,4 +1,4 @@
-import type { KeyStore } from "@in-th3-l00p/hermes-remote";
+import type { AuthProviderConfig, KeyStore } from "@in-th3-l00p/hermes-remote";
 
 export interface CliResult {
   exitCode: number;
@@ -12,8 +12,7 @@ export interface ServeRequest {
   auditPath: string;
   anonymous: boolean;
   corsOrigins: string[];
-  supabaseJwtSecret: string | undefined;
-  supabaseUrl: string | undefined;
+  auth: AuthProviderConfig | null;
   rateLimit: { limit: number; windowSeconds: number } | null;
   upstream: { baseUrl: string; apiKey: string; model?: string } | null;
 }
@@ -37,6 +36,9 @@ Commands:
        [--cors <origin,...>] [--upstream <url>] [--upstream-key <key>]
        [--model <m>] [--supabase-url <url>] [--supabase-jwt-secret <s>]
        [--rate-limit <n>] [--rate-window <seconds>]
+       user auth providers (supabase, clerk, jwt, custom) are configured
+       via the "auth" section of config.json; see the docs
+
   keys create --name <name> --scope <s>             create an API key
        [--scope <s> ...] [--user-grantable <s,s>] [--expires 90d]
        [--cidr <a.b.c.d/n,...>] [--dangerous]

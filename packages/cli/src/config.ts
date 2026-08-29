@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import type { AuthProviderConfig } from "@in-th3-l00p/hermes-remote";
 
 export interface ConfigFile {
   port?: number;
@@ -7,6 +8,8 @@ export interface ConfigFile {
   upstreamUrl?: string;
   upstreamKey?: string;
   upstreamModel?: string;
+  auth?: AuthProviderConfig;
+  /** Legacy supabase settings, superseded by `auth`. */
   supabaseUrl?: string;
   supabaseJwtSecret?: string;
   rateLimit?: { limit: number; windowSeconds: number };

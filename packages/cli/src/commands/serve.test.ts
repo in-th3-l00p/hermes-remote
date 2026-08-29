@@ -27,28 +27,79 @@ describe("serve", () => {
     });
   });
 
-  test("passes the supabase jwt secret from flag or env", async () => {
+  test("maps the supabase jwt secret from flag or env to a jwt provider", async () => {
     const { ctx, serveCalls } = await makeCtx();
     await runCli(
       ["serve", "--port", "0", "--supabase-jwt-secret", "s1"],
       ctx,
     );
-    expect(serveCalls[0]?.supabaseJwtSecret).toBe("s1");
+    expect(serveCalls[0]?.auth).toEqual({ provider: "jwt", hs256Secret: "s1" });
     ctx.env["SUPABASE_JWT_SECRET"] = "s2";
     await runCli(["serve", "--port", "0"], ctx);
-    expect(serveCalls[1]?.supabaseJwtSecret).toBe("s2");
+    expect(serveCalls[1]?.auth).toEqual({ provider: "jwt", hs256Secret: "s2" });
   });
 
-  test("passes the supabase url from flag or env", async () => {
+  test("maps the supabase url from flag or env to a jwks provider", async () => {
     const { ctx, serveCalls } = await makeCtx();
     await runCli(
-      ["serve", "--port", "0", "--supabase-url", "https://p.supabase.co"],
+      ["serve", "--port", "0", "--supabase-url", "https://p.supabase.co/"],
       ctx,
     );
-    expect(serveCalls[0]?.supabaseUrl).toBe("https://p.supabase.co");
+    expect(serveCalls[0]?.auth).toEqual({
+      provider: "jwt",
+      jwksUrl: "https://p.supabase.co/auth/v1/.well-known/jwks.json",
+    });
     ctx.env["SUPABASE_URL"] = "https://env.supabase.co";
     await runCli(["serve", "--port", "0"], ctx);
-    expect(serveCalls[1]?.supabaseUrl).toBe("https://env.supabase.co");
+    expect(serveCalls[1]?.auth).toEqual({
+      provider: "jwt",
+      jwksUrl: "https://env.supabase.co/auth/v1/.well-known/jwks.json",
+    });
+  });
+
+  test("no auth settings means no provider", async () => {
+    const { ctx, serveCalls } = await makeCtx();
+    await runCli(["serve", "--port", "0"], ctx);
+    expect(serveCalls[0]?.auth).toBeNull();
+  });
+
+  test("the auth config section passes through verbatim and wins over legacy fields", async () => {
+    const { ctx, serveCalls } = await makeCtx();
+    await Bun.write(
+      `${ctx.homeDir}/config.json`,
+      JSON.stringify({
+        auth: { provider: "clerk", secretKey: "sk_test_1" },
+        supabaseUrl: "https://legacy.supabase.co",
+      }),
+    );
+    await runCli(["serve", "--port", "0"], ctx);
+    expect(serveCalls[0]?.auth).toEqual({
+      provider: "clerk",
+      secretKey: "sk_test_1",
+    });
+  });
+
+  test("a supabase flag overrides the auth config section", async () => {
+    const { ctx, serveCalls } = await makeCtx();
+    await Bun.write(
+      `${ctx.homeDir}/config.json`,
+      JSON.stringify({ auth: { provider: "clerk", secretKey: "sk" } }),
+    );
+    await runCli(
+      ["serve", "--port", "0", "--supabase-jwt-secret", "s"],
+      ctx,
+    );
+    expect(serveCalls[0]?.auth).toEqual({ provider: "jwt", hs256Secret: "s" });
+  });
+
+  test("CLERK_SECRET_KEY enables the clerk provider when nothing else is set", async () => {
+    const { ctx, serveCalls } = await makeCtx();
+    ctx.env["CLERK_SECRET_KEY"] = "sk_env";
+    await runCli(["serve", "--port", "0"], ctx);
+    expect(serveCalls[0]?.auth).toEqual({
+      provider: "clerk",
+      secretKey: "sk_env",
+    });
   });
 
   test("reads upstream from the environment", async () => {

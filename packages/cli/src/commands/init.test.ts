@@ -23,8 +23,10 @@ describe("init and config file", () => {
       port: 9999,
       anonymous: true,
       corsOrigins: ["http://a.test", "http://b.test"],
-      supabaseUrl: "https://sb",
-      supabaseJwtSecret: "sec",
+      auth: {
+        provider: "jwt",
+        jwksUrl: "https://sb/auth/v1/.well-known/jwks.json",
+      },
       rateLimit: { limit: 30, windowSeconds: 10 },
       upstream: { baseUrl: "http://up", apiKey: "uk", model: "m" },
     });

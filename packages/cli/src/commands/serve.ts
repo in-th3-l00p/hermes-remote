@@ -1,6 +1,6 @@
-import type { KeyStore } from "@in-th3-l00p/hermes-remote";
-import { flag, flagAll, parseArgs } from "../args.ts";
-import { loadConfig } from "../config.ts";
+import type { AuthProviderConfig, KeyStore } from "@in-th3-l00p/hermes-remote";
+import { flag, flagAll, parseArgs, type ParsedArgs } from "../args.ts";
+import { loadConfig, type ConfigFile } from "../config.ts";
 import {
   fail,
   ok,
@@ -8,6 +8,50 @@ import {
   type CliResult,
   type ServeRequest,
 } from "../context.ts";
+
+function supabaseAuth(
+  url: string | undefined,
+  secret: string | undefined,
+): AuthProviderConfig | null {
+  if (url !== undefined) {
+    return {
+      provider: "jwt",
+      jwksUrl: `${url.replace(/\/+$/, "")}/auth/v1/.well-known/jwks.json`,
+    };
+  }
+  if (secret !== undefined) {
+    return { provider: "jwt", hs256Secret: secret };
+  }
+  return null;
+}
+
+function resolveAuth(
+  parsed: ParsedArgs,
+  env: Record<string, string | undefined>,
+  config: ConfigFile,
+): AuthProviderConfig | null {
+  const fromFlags = supabaseAuth(
+    flag(parsed, "supabase-url"),
+    flag(parsed, "supabase-jwt-secret"),
+  );
+  if (fromFlags !== null) {
+    return fromFlags;
+  }
+  if (config.auth !== undefined) {
+    return config.auth;
+  }
+  const fromLegacy = supabaseAuth(
+    env["SUPABASE_URL"] ?? config.supabaseUrl,
+    env["SUPABASE_JWT_SECRET"] ?? config.supabaseJwtSecret,
+  );
+  if (fromLegacy !== null) {
+    return fromLegacy;
+  }
+  const clerkSecretKey = env["CLERK_SECRET_KEY"];
+  return clerkSecretKey === undefined
+    ? null
+    : { provider: "clerk", secretKey: clerkSecretKey };
+}
 
 export interface ServePaths {
   store: KeyStore;
@@ -68,14 +112,7 @@ export async function serveCommand(
       anonymous:
         flag(parsed, "anonymous") === "true" || config.anonymous === true,
       corsOrigins: corsFlags.length > 0 ? corsFlags : (config.cors ?? []),
-      supabaseJwtSecret:
-        flag(parsed, "supabase-jwt-secret") ??
-        ctx.env["SUPABASE_JWT_SECRET"] ??
-        config.supabaseJwtSecret,
-      supabaseUrl:
-        flag(parsed, "supabase-url") ??
-        ctx.env["SUPABASE_URL"] ??
-        config.supabaseUrl,
+      auth: resolveAuth(parsed, ctx.env, config),
       rateLimit:
         rateLimitFlag !== undefined
           ? {
