@@ -43,7 +43,7 @@ export function denyUnownedRun(
   runStore: RunStore,
 ): Response | null {
   const principal = c.get("principal");
-  const record = runStore.get(c.req.param("id"));
+  const record = runStore.get(c.req.param("id") ?? "");
   if (
     record === null ||
     (principal.type !== "api_key" && record.principal !== principalKey(principal))
