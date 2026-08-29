@@ -85,7 +85,11 @@ describe("conversation handle", () => {
     }
     expect(await conversation.stop()).toEqual({ stopped: true });
     await conversation.react("m2", "🔥");
-    expect(await conversation.messages()).toEqual([{ id: "m1" }]);
+    expect(await conversation.messages()).toEqual([
+      { id: "m1" } as unknown as Awaited<
+        ReturnType<typeof conversation.messages>
+      >[number],
+    ]);
     await conversation.remove();
     expect(calls).toEqual([
       "PATCH /v1/sessions/s9/messages/m1",
@@ -119,7 +123,9 @@ describe("conversation handle", () => {
     const conversation = client.conversation("s2");
     const controller = new AbortController();
     for await (const event of conversation.send("look", {
-      attachments: [{ dataUrl: "data:image/png;base64,AA==" }],
+      attachments: [
+        { name: "a.png", type: "image/png", dataUrl: "data:image/png;base64,AA==" },
+      ],
       signal: controller.signal,
     })) {
       void event;
