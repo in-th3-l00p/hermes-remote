@@ -63,6 +63,12 @@ export const MGMT_ROUTES: CliRouteSpec[] = [
   { method: "post", path: "/v1/agent/pause", scope: "ops:control", argv: ["pause"] },
   { method: "post", path: "/v1/agent/resume", scope: "ops:control", argv: ["resume"] },
 
+  { method: "get", path: "/v1/memory/journey", scope: "memory:read", argv: ["journey"] },
+  { method: "get", path: "/v1/memory/providers", scope: "memory:providers", argv: ["memory", "status"] },
+  { method: "put", path: "/v1/memory/providers", scope: "memory:providers", argv: ["memory", "set", "{provider}"], params: [body("provider", true)] },
+  { method: "get", path: "/v1/soul/skins", scope: "soul:read", argv: ["skin", "list"] },
+  { method: "put", path: "/v1/soul/skin", scope: "soul:write", argv: ["skin", "use", "{name}"], params: [body("name", true)] },
+
   { method: "get", path: "/v1/skills/pending", scope: "skills:write", argv: ["skills", "pending"] },
   { method: "post", path: "/v1/skills/pending/:id/approve", scope: "skills:write", argv: ["skills", "approve", "{id}"], params: [param("id")] },
   { method: "post", path: "/v1/skills/pending/:id/reject", scope: "skills:write", argv: ["skills", "reject", "{id}"], params: [param("id")] },

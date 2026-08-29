@@ -1,4 +1,52 @@
 export { narrowChatEvent } from "./chat-event.ts";
+export {
+  AgentSessionsResource,
+  BrowserResource,
+  CommandsResource,
+  EventsResource,
+  GoalsResource,
+  MediaResource,
+  PassthroughResource,
+  WebToolsResource,
+} from "./agent-features.ts";
+export type {
+  CommandInfo,
+  CommandResult,
+  GoalGate,
+  GoalState,
+  ToolRunResult,
+} from "./agent-features.ts";
+export {
+  AgentOpsResource,
+  ApprovalsResource,
+  BackupsResource,
+  BundlesResource,
+  CheckpointsResource,
+  ConfigResource,
+  GatewayResource,
+  HooksResource,
+  KanbanResource,
+  McpResource,
+  MemoryResource,
+  MessagingResource,
+  PairingResource,
+  PluginsResource,
+  ProfilesResource,
+  ProjectsResource,
+  ProvidersResource,
+  SkillsResource,
+  SoulResource,
+  SubagentsResource,
+  ToolsetsResource,
+  WebhooksResource,
+} from "./management.ts";
+export type {
+  Bundle,
+  CliResult,
+  MemoryFile,
+  ProfileInfo,
+  SkillFile,
+} from "./management.ts";
 export { Conversation } from "./conversation.ts";
 export type { ConversationSendOptions } from "./conversation.ts";
 export { DiscoveryResource } from "./discovery.ts";

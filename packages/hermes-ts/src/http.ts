@@ -8,6 +8,8 @@ export interface HermesClientOptions {
   /** Static bearer token. Omit both token options for anonymous servers. */
   token?: string;
   tokenProvider?: TokenProvider;
+  /** Extra headers sent with every request (e.g. X-Hermes-Profile). */
+  headers?: Record<string, string>;
   fetch?: typeof fetch;
 }
 
@@ -27,9 +29,11 @@ export class HttpClient {
   private readonly tokenProvider: TokenProvider | null;
   private readonly refreshable: boolean;
   private readonly fetchImpl: typeof fetch;
+  private readonly extraHeaders: Record<string, string>;
 
   constructor(options: HermesClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/+$/, "");
+    this.extraHeaders = options.headers ?? {};
     const staticToken = options.token;
     this.tokenProvider =
       options.tokenProvider ??
@@ -49,7 +53,7 @@ export class HttpClient {
     signal?: AbortSignal,
     retried = false,
   ): Promise<Response> {
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = { ...this.extraHeaders };
     if (this.tokenProvider !== null) {
       headers["authorization"] = `Bearer ${await this.tokenProvider()}`;
     }
@@ -81,6 +85,16 @@ export class HttpClient {
   async request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const res = await this.doFetch(method, path, body);
     return (await res.json()) as T;
+  }
+
+  /** Authenticated request returning the raw Response (binary/stream bodies). */
+  raw(
+    method: string,
+    path: string,
+    body?: unknown,
+    signal?: AbortSignal,
+  ): Promise<Response> {
+    return this.doFetch(method, path, body, signal);
   }
 
   async *stream(
