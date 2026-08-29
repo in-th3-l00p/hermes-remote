@@ -34,8 +34,11 @@ export const useConfig = makeHook(
 
 export const useMemory = makeHook(
   "memory",
-  (client: { memory: { get(): Promise<{ content: string }> } }) =>
-    client.memory.get(),
+  (client: {
+    memory: {
+      get(): Promise<{ content: string; chars: number; limit: number }>;
+    };
+  }) => client.memory.get(),
 );
 
 export const useSoul = makeHook(
