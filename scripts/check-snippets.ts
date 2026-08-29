@@ -6,7 +6,10 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-const DOCS_DIR = join(import.meta.dir, "..", "apps", "landing", "docs");
+const SCAN_DIRS = [
+  join(import.meta.dir, "..", "apps", "landing", "docs"),
+  join(import.meta.dir, "..", "apps", "landing", "examples", "articles"),
+];
 
 function* markdownFiles(dir: string): Generator<string> {
   for (const entry of readdirSync(dir)) {
@@ -24,7 +27,7 @@ function* markdownFiles(dir: string): Generator<string> {
 
 let checked = 0;
 let failed = 0;
-for (const file of markdownFiles(DOCS_DIR)) {
+for (const file of SCAN_DIRS.flatMap((dir) => [...markdownFiles(dir)])) {
   const text = readFileSync(file, "utf8");
   const fences = [...text.matchAll(/```(ts|tsx)\n([\s\S]*?)```/g)];
   for (const [, lang, code] of fences) {
