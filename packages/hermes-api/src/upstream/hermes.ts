@@ -91,6 +91,23 @@ export class HermesUpstream implements Upstream {
     approve: (id, body) => this.request("POST", `/v1/runs/${id}/approval`, body),
   };
 
+  raw(
+    method: string,
+    path: string,
+    body?: unknown,
+    signal?: AbortSignal,
+  ): Promise<Response> {
+    return this.fetchImpl(`${this.baseUrl}${path}`, {
+      method,
+      headers: {
+        authorization: `Bearer ${this.apiKey}`,
+        ...(body === undefined ? {} : { "content-type": "application/json" }),
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      ...(signal === undefined ? {} : { signal }),
+    });
+  }
+
   readonly sessions: UpstreamSessions = {
     list: () => this.request("GET", "/api/sessions"),
     create: (body) => this.request("POST", "/api/sessions", body),

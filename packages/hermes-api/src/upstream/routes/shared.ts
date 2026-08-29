@@ -13,6 +13,9 @@ export interface UpstreamRouteOptions {
   authProviderName?: string;
   anonymous: boolean;
   events?: EventBus;
+  /** Poll cadence for templated tool runs. */
+  pollMs?: number;
+  toolRunTimeoutMs?: number;
 }
 
 export function upstreamFailure(cause: unknown): Response {

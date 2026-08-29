@@ -11,6 +11,7 @@ interface DemoRun {
   id: string;
   status: string;
   input: unknown;
+  output: string;
   steered?: boolean;
   approved?: boolean;
 }
@@ -72,10 +73,15 @@ export class DemoUpstream implements Upstream {
 
   readonly runs: UpstreamRuns = {
     create: async (body) => {
+      const input = body["input"];
       const run: DemoRun = {
         id: `run_${this.nextRun++}`,
         status: "completed",
-        input: body["input"],
+        input,
+        output:
+          typeof input === "string"
+            ? JSON.stringify({ echo: input })
+            : "demo output",
       };
       this.runStore.set(run.id, run);
       return { ...run };
@@ -147,6 +153,22 @@ export class DemoUpstream implements Upstream {
       return { ...job };
     },
   };
+
+  async raw(method: string, path: string, body?: unknown): Promise<Response> {
+    if (path === "/v1/audio/speech") {
+      return new Response("DEMOAUDIO", {
+        headers: { "content-type": "audio/mpeg" },
+      });
+    }
+    if (path === "/v1/chat/completions" || path === "/v1/responses") {
+      return Response.json({
+        object: "demo.completion",
+        method,
+        echo: body ?? null,
+      });
+    }
+    return Response.json({ error: { message: `no demo route: ${path}` } }, { status: 404 });
+  }
 
   readonly sessions: UpstreamSessions = {
     list: async () => ({

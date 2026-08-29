@@ -53,4 +53,11 @@ export interface Upstream {
   runs: UpstreamRuns;
   jobs: UpstreamJobs;
   sessions: UpstreamSessions;
+  /** Verbatim request to the upstream; the Response comes back untouched. */
+  raw(
+    method: string,
+    path: string,
+    body?: unknown,
+    signal?: AbortSignal,
+  ): Promise<Response>;
 }

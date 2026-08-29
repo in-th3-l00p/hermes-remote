@@ -33,6 +33,9 @@ export interface UpstreamAppOptions {
   upstream: Upstream;
   /** Run-ownership store; defaults to an in-memory store. */
   runStore?: RunStore;
+  /** Poll cadence for templated tool runs (media/web endpoints). */
+  pollMs?: number;
+  toolRunTimeoutMs?: number;
 }
 
 export interface AppOptions {
@@ -127,6 +130,12 @@ export function createApp(options: AppOptions = {}): App {
           : { authProviderName: options.authProvider.name }),
         anonymous: options.anonymous === true,
         events,
+        ...(options.upstream.pollMs === undefined
+          ? {}
+          : { pollMs: options.upstream.pollMs }),
+        ...(options.upstream.toolRunTimeoutMs === undefined
+          ? {}
+          : { toolRunTimeoutMs: options.upstream.toolRunTimeoutMs }),
       }),
     );
     const relayOptions = {
