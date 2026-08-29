@@ -66,6 +66,30 @@ function Sidebar({ onOpen }: { onOpen: (id: string) => void }) {
 
 For anonymous principals pass `ids` (for example from localStorage); authenticated users get their own sessions automatically. Call `refresh()` after a send completes so titles and ordering update.
 
+## useAgentInfo, useRuns, useRunEvents
+
+```tsx
+import { useAgentInfo, useRunEvents, useRuns } from "@in-th3-l00p/hermes-remote-react";
+
+function AgentStatus({ client }: { client: HermesClient }) {
+  const { health, models, loading } = useAgentInfo({ client });
+  const { runs, create } = useRuns({ client });
+  const { events, done } = useRunEvents({ client, runId: runs[0]?.id ?? null });
+  if (loading) return <p>checking the agent…</p>;
+  return (
+    <div>
+      <p>agent: {(health as { status: string }).status}</p>
+      <button onClick={() => create({ input: "tidy my notes" })}>
+        start a run ({runs.length} so far)
+      </button>
+      <p>{events.length} events{done ? ", finished" : ""}</p>
+    </div>
+  );
+}
+```
+
+`useAgentInfo` fetches health, capabilities, and models together with a `refresh()`. `useRuns` lists the caller's runs and creates new ones. `useRunEvents` subscribes to a run's SSE stream while mounted and aborts on unmount or `runId` change.
+
 ## Provider
 
 `HermesProvider` and `useHermesClient()` put one client in context for component trees that need it in many places.

@@ -53,6 +53,10 @@ API keys carry explicit scopes, organized in four tiers. Chat routes enforce the
 | `POST /v1/sessions`, `DELETE /v1/sessions/:id`, reactions | `sessions:write` |
 | `GET /v1/sessions`, `GET .../messages` | `sessions:read` |
 | `POST .../messages`, `PATCH .../messages/:id`, `POST .../stop` | `chat:invoke` |
+| `/v1/runs*` | `chat:invoke` (runs are owned per principal; API keys see all) |
+| `GET /v1/health`, `/v1/capabilities`, `/v1/models*` | `status:read` |
+| `GET /v1/skills` / `GET /v1/toolsets` | `skills:read` / `toolsets:read` |
+| `/v1/jobs*` | `crons:read` (GET) / `crons:write` (mutations), API keys only |
 
 Tier 3 scopes (config, hooks, skill installs, and other host level surfaces reserved for future routes) require `--dangerous` at creation time. User tokens are implicitly limited to tier 1 and to sessions they own.
 
@@ -72,6 +76,16 @@ All routes require `Authorization: Bearer <token>` unless `--anonymous` is set. 
 | `PATCH /v1/sessions/:id/messages/:mid` | Edit a user message, truncate after it, regenerate |
 | `POST /v1/sessions/:id/messages/:mid/reactions` | Toggle `{emoji}` |
 | `POST /v1/sessions/:id/stop` | Abort the in flight turn, keep the partial reply |
+| `GET /v1/health` | Own status + the upstream agent's readiness report |
+| `GET /v1/capabilities` | hermes-remote features + the upstream capability set |
+| `GET /v1/models` · `GET /v1/models/options` | Model discovery (proxied) |
+| `GET /v1/skills` · `GET /v1/toolsets` | Agent skill and toolset enumeration (proxied) |
+| `POST /v1/runs` | Start a long-running agent task (identity injected for user principals) |
+| `GET /v1/runs` · `GET /v1/runs/:id` | List own runs / poll one |
+| `GET /v1/runs/:id/events` | SSE event stream for a run (proxied) |
+| `POST /v1/runs/:id/stop` · `/steer` · `/approval` | Control a run |
+| `GET /v1/jobs` · `GET /v1/jobs/:id` | Inspect scheduled jobs (API key only) |
+| `POST /v1/jobs` · `PATCH/DELETE /v1/jobs/:id` · `POST /v1/jobs/:id/pause\|resume\|run` | Administer jobs (API key only) |
 
 Streaming responses are `text/event-stream` with these events, each carrying a JSON `data` payload:
 
@@ -84,6 +98,8 @@ Streaming responses are `text/event-stream` with these events, each carrying a J
 | `error` | `{ id, message }` when the agent fails |
 
 Attachments are image data URLs; they are forwarded to the upstream model as vision content parts.
+
+Discovery, run, and job routes are proxied from the upstream agent's API server (or served by the offline demo upstream when none is configured). Upstream failures come back as 502 `upstream_error` with the upstream status; user-started runs get the same verified-identity context injected as chat turns, and run visibility is per principal.
 
 ## Operational features
 

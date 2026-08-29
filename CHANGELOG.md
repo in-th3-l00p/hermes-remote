@@ -1,6 +1,14 @@
 # Changelog
 
-## Unreleased (3.0.0)
+## Unreleased (3.1.0)
+
+* Server: the upstream agent now sits behind an `Upstream` interface family (`chat`, `discovery`, `runs`, `jobs`) with two implementations — `HermesUpstream` (live gateway) and `DemoUpstream` (offline fakes, used in demo mode and tests). `AppOptions.upstream` enables the new routes.
+* New routes, all proxied from the upstream with hermes-remote auth on top: `GET /v1/health` (own status + upstream readiness), `GET /v1/capabilities` (hermes-remote features + upstream set), `GET /v1/models`, `GET /v1/models/options`, `GET /v1/skills`, `GET /v1/toolsets`; runs (`POST/GET /v1/runs`, `GET /v1/runs/:id`, SSE `GET /v1/runs/:id/events`, `POST .../stop|steer|approval`) under `chat:invoke` with per-principal ownership (`RunStore` in chat.db) and identity injection for user-started runs; jobs (`/v1/jobs*`) API-key-only under `crons:read`/`crons:write`. Upstream failures map to 502 `upstream_error`.
+* Client (1.1.0): `client.discovery.*`, `client.runs.*` (including `events()` as an async iterable), `client.jobs.*`, and `client.conversation(sessionId?)` — a conversation handle that lazily creates its session on first send.
+* React (1.1.0): `useAgentInfo`, `useRuns`, and `useRunEvents` hooks.
+* Integration suite: gated live checks for health, capabilities, and models.
+
+## 3.0.0
 
 * **Breaking:** user authentication is now a providers module. `UserTokenVerifier`/`SupabaseUser` and the `userVerifier` option are replaced by `AuthProvider`/`VerifiedUser` and `authProvider`; `SupabaseJwksVerifier`, `hs256Verifier`, and `verifySupabaseJwt` are replaced by `JwtAuthProvider` (same zero-dependency JWKS/HS256 verification, plus optional `issuer`/`audience` pinning). `is_anonymous` on the verified identity is now `isAnonymous`.
 * New SDK-backed providers, selected via config: `SupabaseAuthProvider` (official `@supabase/supabase-js`, `auth.getClaims`) and `ClerkAuthProvider` (official `@clerk/backend`, `verifyToken` with `secretKey` or networkless `jwtKey`, `audience`, `authorizedParties`). Both SDKs are optional peer dependencies loaded only when the provider is enabled; a missing SDK fails with an error naming the package. `createAuthProvider(config)` builds any provider from a plain config object.

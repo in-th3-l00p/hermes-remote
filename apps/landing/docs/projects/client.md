@@ -35,6 +35,48 @@ When a `tokenProvider` is set and a request comes back 401, the client fetches a
 | `editMessage(sessionId, messageId, content, { signal? })` | `AsyncIterable<ChatEvent>` |
 | `react(sessionId, messageId, emoji)` | The updated `ChatMessage` |
 | `stopTurn(sessionId)` | `{ stopped }` |
+| `conversation(sessionId?)` | A `Conversation` handle (below) |
+| `discovery.*`, `runs.*`, `jobs.*` | Namespaced resources (below) |
+
+## Conversations
+
+`client.conversation()` abstracts one conversation with the agent. Without an id it creates the session on the first `send` and exposes the id afterward; with an id it wraps an existing session:
+
+```ts
+const conversation = client.conversation();
+for await (const event of conversation.send("hello")) {
+  if (event.event === "delta") process.stdout.write(event.data.text);
+}
+console.log(conversation.id);        // the session created on first send
+await conversation.messages();       // ChatMessage[]
+await conversation.stop();           // abort the in-flight turn
+await conversation.remove();         // delete the session
+```
+
+`send` and `edit` stream `ChatEvent`s exactly like the flat methods; `react`, `messages`, `stop`, and `remove` delegate to the session routes.
+
+## Discovery, runs, and jobs
+
+```ts
+const health = await client.discovery.health();          // { status, version, upstream }
+const caps = await client.discovery.capabilities();      // hermes-remote + upstream features
+await client.discovery.models();
+await client.discovery.skills();
+await client.discovery.toolsets();
+
+const run = await client.runs.create<{ id: string }>({ input: "summarize my inbox" });
+for await (const event of client.runs.events(run.id)) {
+  console.log(event.event, event.data);
+}
+await client.runs.list();                                // your own runs
+await client.runs.steer(run.id, { text: "focus on unread" });
+await client.runs.stop(run.id);
+
+await client.jobs.list();                                // requires crons:read (API key)
+await client.jobs.trigger("job_id");                     // requires crons:write
+```
+
+Run listing is per principal: users see only runs they created; API keys see all. Job methods need an API key with the crons scopes.
 
 ## Streaming
 

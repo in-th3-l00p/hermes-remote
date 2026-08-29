@@ -13,7 +13,7 @@ Hermes Remote turns a local [Hermes agent](https://hermes-agent.nousresearch.com
 
 ## Design vs reality
 
-`ARCHITECTURE.md` describes three bridges (HTTP proxy, CLI bridge, FS bridge), an OpenAPI/Zod schema pipeline, and API coverage of the agent's full feature surface (memory, cron, hooks, goals, skills management...). **What is actually implemented at 1.0.0 is the HTTP proxy bridge only, scoped to chat**: streaming turns, sessions, messages (edit/react/attachments), turn cancellation, plus the full identity/auth/scopes layer. Since 3.0.0 the HTTP layer runs on Hono (CORS, body caps, and rate limiting come from `hono/cors`, `hono/body-limit`, and `hono-rate-limiter`; still no Zod or OpenAPI generation). The CLI bridge, FS bridge, and the wider endpoint map remain the natural roadmap for 1.x/2.0. When extending, keep ARCHITECTURE.md's principal model and scope rules — those ARE implemented and enforced exactly as written.
+`ARCHITECTURE.md` describes three bridges (HTTP proxy, CLI bridge, FS bridge), an OpenAPI/Zod schema pipeline, and API coverage of the agent's full feature surface (memory, cron, hooks, goals, skills management...). **What is actually implemented is the HTTP proxy bridge**: chat (streaming turns, sessions, messages with edit/react/attachments, turn cancellation) plus, since 3.1.0, the upstream discovery surface (health, capabilities, models, skills, toolsets), runs (submit/poll/SSE events/stop/steer/approval, per-principal ownership, identity injection), and API-key-only jobs administration — all with the full identity/auth/scopes layer. Since 3.0.0 the HTTP layer runs on Hono (CORS, body caps, and rate limiting come from `hono/cors`, `hono/body-limit`, and `hono-rate-limiter`; still no Zod or OpenAPI generation). The CLI bridge, FS bridge, and the wider endpoint map remain the natural roadmap for 1.x/2.0. When extending, keep ARCHITECTURE.md's principal model and scope rules — those ARE implemented and enforced exactly as written.
 
 ## Repository map
 
@@ -33,6 +33,10 @@ packages/hermes-api/          @in-th3-l00p/hermes-remote — server library (no 
   src/chat/routes/            Hono sub-app: chatRoutes() in index.ts; sessions.ts, messages.ts, sse.ts,
                               shared.ts (ChatEnv/helpers), validate.ts
   src/chat/store/             ChatStore — bun:sqlite; db.ts schema, messages.ts ops, types.ts models
+  src/upstream/               Upstream facade {chat, discovery, runs, jobs}: types.ts contracts,
+                              hermes.ts (live gateway bridge), demo.ts (offline fakes), run-store.ts
+                              (per-principal run ownership, SQLite), identity.ts (run identity
+                              injection), routes/ (discovery.ts, runs.ts, jobs.ts Hono sub-app)
   src/http/app.ts             createApp composition root: Hono app + middleware chain
   src/http/middleware.ts      cors/auth/audit middleware + both hono-rate-limiter instances
   src/http/whoami.ts          whoami body helper
