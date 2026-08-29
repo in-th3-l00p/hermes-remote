@@ -113,6 +113,9 @@ export async function serveCommand(
         flag(parsed, "anonymous") === "true" || config.anonymous === true,
       corsOrigins: corsFlags.length > 0 ? corsFlags : (config.cors ?? []),
       auth: resolveAuth(parsed, ctx.env, config),
+      hermesBinary: config.hermesBinary ?? "hermes",
+      profileHomes: config.profileHomes ?? {},
+      commandRelay: config.commandRelay === true,
       rateLimit:
         rateLimitFlag !== undefined
           ? {

@@ -6,7 +6,9 @@ import {
   ChatStore,
   createAuthProvider,
   DemoUpstream,
+  HermesCliBridge,
   HermesUpstream,
+  ProfileRegistry,
   RunStore,
   startServer,
 } from "@in-th3-l00p/hermes-remote";
@@ -30,6 +32,11 @@ const ctx: CliContext = {
       request.upstream === null
         ? new DemoUpstream()
         : new HermesUpstream(request.upstream);
+    const cli = new HermesCliBridge({ binary: request.hermesBinary });
+    const hermesHome =
+      process.env["HERMES_HOME"] ?? join(homedir(), ".hermes");
+    const profileHome = (name: string): string =>
+      request.profileHomes[name] ?? join(hermesHome, "profiles", name);
     return startServer({
       port: request.port,
       store: request.store,
@@ -40,6 +47,13 @@ const ctx: CliContext = {
       ...(request.rateLimit === null ? {} : { rateLimit: request.rateLimit }),
       ...(authProvider === null ? {} : { authProvider }),
       upstream: { upstream, runStore: new RunStore(join(homeDir, "chat.db")) },
+      commandRelay: request.commandRelay,
+      management: {
+        cli,
+        profiles: new ProfileRegistry({ cli, homeFor: profileHome }),
+        homeFor: (profile) =>
+          profile === null ? hermesHome : profileHome(profile),
+      },
       chat: {
         store: new ChatStore(join(homeDir, "chat.db")),
         agent: upstream.chat,

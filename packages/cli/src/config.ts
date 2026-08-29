@@ -9,6 +9,12 @@ export interface ConfigFile {
   upstreamKey?: string;
   upstreamModel?: string;
   auth?: AuthProviderConfig;
+  /** Path to the hermes binary powering the management CLI bridge. */
+  hermesBinary?: string;
+  /** Per-profile home dir overrides; default ~/.hermes/profiles/<name>. */
+  profileHomes?: Record<string, string>;
+  /** Enables the slash-command relay once verified against the upstream. */
+  commandRelay?: boolean;
   /** Legacy supabase settings, superseded by `auth`. */
   supabaseUrl?: string;
   supabaseJwtSecret?: string;

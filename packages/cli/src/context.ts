@@ -13,6 +13,9 @@ export interface ServeRequest {
   anonymous: boolean;
   corsOrigins: string[];
   auth: AuthProviderConfig | null;
+  hermesBinary: string;
+  profileHomes: Record<string, string>;
+  commandRelay: boolean;
   rateLimit: { limit: number; windowSeconds: number } | null;
   upstream: { baseUrl: string; apiKey: string; model?: string } | null;
 }

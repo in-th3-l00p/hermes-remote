@@ -63,6 +63,30 @@ describe("serve", () => {
     expect(serveCalls[0]?.auth).toBeNull();
   });
 
+  test("management config defaults and overrides pass through", async () => {
+    const { ctx, serveCalls } = await makeCtx();
+    await runCli(["serve", "--port", "0"], ctx);
+    expect(serveCalls[0]).toMatchObject({
+      hermesBinary: "hermes",
+      profileHomes: {},
+      commandRelay: false,
+    });
+    await Bun.write(
+      `${ctx.homeDir}/config.json`,
+      JSON.stringify({
+        hermesBinary: "/opt/hermes/bin/hermes",
+        profileHomes: { indra: "/agents/indra" },
+        commandRelay: true,
+      }),
+    );
+    await runCli(["serve", "--port", "0"], ctx);
+    expect(serveCalls[1]).toMatchObject({
+      hermesBinary: "/opt/hermes/bin/hermes",
+      profileHomes: { indra: "/agents/indra" },
+      commandRelay: true,
+    });
+  });
+
   test("the auth config section passes through verbatim and wins over legacy fields", async () => {
     const { ctx, serveCalls } = await makeCtx();
     await Bun.write(
