@@ -30,9 +30,27 @@ export interface UpstreamJobs {
 }
 
 /** Everything hermes-remote can reach on the agent, behind one facade. */
+export interface UpstreamSessions {
+  list(): Promise<unknown>;
+  create(body: unknown): Promise<unknown>;
+  get(id: string): Promise<unknown>;
+  update(id: string, body: unknown): Promise<unknown>;
+  remove(id: string): Promise<unknown>;
+  messages(id: string): Promise<unknown>;
+  fork(id: string, body: unknown): Promise<unknown>;
+  chat(id: string, body: unknown): Promise<unknown>;
+  chatStream(
+    id: string,
+    body: unknown,
+    signal?: AbortSignal,
+  ): Promise<ReadableStream<Uint8Array>>;
+  modelLock(id: string, body: unknown): Promise<unknown>;
+}
+
 export interface Upstream {
   chat: AgentBackend;
   discovery: UpstreamDiscovery;
   runs: UpstreamRuns;
   jobs: UpstreamJobs;
+  sessions: UpstreamSessions;
 }

@@ -48,6 +48,7 @@ export function registerRunRoutes(
         return error(502, "upstream_error", "Upstream did not return a run id");
       }
       runStore.record(id, principalKey(principal));
+      options.events?.publish("run.created", { id });
       return json(201, created);
     } catch (cause) {
       return upstreamFailure(cause);
@@ -92,7 +93,11 @@ export function registerRunRoutes(
     const denied =
       requireScope(c.get("principal"), "chat:invoke") ??
       denyUnownedRun(c, runStore);
-    return denied ?? proxy(() => runs.stop(c.req.param("id")));
+    if (denied !== null) {
+      return denied;
+    }
+    options.events?.publish("run.stopped", { id: c.req.param("id") });
+    return proxy(() => runs.stop(c.req.param("id")));
   });
 
   app.post("/v1/runs/:id/steer", async (c) => {

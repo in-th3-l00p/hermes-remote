@@ -4,6 +4,7 @@ import type {
   UpstreamDiscovery,
   UpstreamJobs,
   UpstreamRuns,
+  UpstreamSessions,
 } from "./types.ts";
 
 export interface HermesUpstreamOptions {
@@ -88,6 +89,30 @@ export class HermesUpstream implements Upstream {
     stop: (id) => this.request("POST", `/v1/runs/${id}/stop`, {}),
     steer: (id, body) => this.request("POST", `/v1/runs/${id}/steer`, body),
     approve: (id, body) => this.request("POST", `/v1/runs/${id}/approval`, body),
+  };
+
+  readonly sessions: UpstreamSessions = {
+    list: () => this.request("GET", "/api/sessions"),
+    create: (body) => this.request("POST", "/api/sessions", body),
+    get: (id) => this.request("GET", `/api/sessions/${id}`),
+    update: (id, body) => this.request("PATCH", `/api/sessions/${id}`, body),
+    remove: (id) => this.request("DELETE", `/api/sessions/${id}`),
+    messages: (id) => this.request("GET", `/api/sessions/${id}/messages`),
+    fork: (id, body) => this.request("POST", `/api/sessions/${id}/fork`, body),
+    chat: (id, body) => this.request("POST", `/api/sessions/${id}/chat`, body),
+    chatStream: async (id, body, signal) => {
+      const res = await this.doFetch(
+        "POST",
+        `/api/sessions/${id}/chat/stream`,
+        body,
+        signal,
+      );
+      if (res.body === null) {
+        throw new HermesUpstreamError(res.status, "Chat stream had no body");
+      }
+      return res.body;
+    },
+    modelLock: (id, body) => this.request("POST", `/api/sessions/${id}/model`, body),
   };
 
   readonly jobs: UpstreamJobs = {

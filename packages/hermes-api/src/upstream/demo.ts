@@ -4,6 +4,7 @@ import type {
   UpstreamDiscovery,
   UpstreamJobs,
   UpstreamRuns,
+  UpstreamSessions,
 } from "./types.ts";
 
 interface DemoRun {
@@ -18,6 +19,14 @@ interface DemoJob {
   id: string;
   paused: boolean;
   runs: number;
+  [key: string]: unknown;
+}
+
+interface DemoSession {
+  id: string;
+  title: string | null;
+  model: string | null;
+  messages: { role: string; content: string }[];
   [key: string]: unknown;
 }
 
@@ -38,8 +47,10 @@ export class DemoUpstream implements Upstream {
   readonly chat = new DemoAgent();
   private readonly runStore = new Map<string, DemoRun>();
   private readonly jobStore = new Map<string, DemoJob>();
+  private readonly sessionStore = new Map<string, DemoSession>();
   private nextRun = 1;
   private nextJob = 1;
+  private nextSession = 1;
 
   constructor() {}
 
@@ -136,6 +147,85 @@ export class DemoUpstream implements Upstream {
       return { ...job };
     },
   };
+
+  readonly sessions: UpstreamSessions = {
+    list: async () => ({
+      sessions: [...this.sessionStore.values()].map((s) => ({ ...s })),
+    }),
+    create: async (body) => {
+      const session: DemoSession = {
+        ...(body as Record<string, unknown>),
+        id: `sess_${this.nextSession++}`,
+        title: ((body as { title?: string }).title ?? null) as string | null,
+        model: null,
+        messages: [],
+      };
+      this.sessionStore.set(session.id, session);
+      return { session: { ...session } };
+    },
+    get: async (id) => ({ session: { ...this.requireSession(id) } }),
+    update: async (id, body) => {
+      const session = this.requireSession(id);
+      Object.assign(session, body);
+      return { session: { ...session } };
+    },
+    remove: async (id) => {
+      this.requireSession(id);
+      this.sessionStore.delete(id);
+      return { deleted: true, id };
+    },
+    messages: async (id) => ({
+      messages: this.requireSession(id).messages.map((m) => ({ ...m })),
+    }),
+    fork: async (id, body) => {
+      const source = this.requireSession(id);
+      const fork: DemoSession = {
+        ...source,
+        ...(body as Record<string, unknown>),
+        id: `sess_${this.nextSession++}`,
+        messages: [...source.messages],
+      };
+      this.sessionStore.set(fork.id, fork);
+      return { session: { ...fork } };
+    },
+    chat: async (id, body) => {
+      const session = this.requireSession(id);
+      const message = String((body as { message?: unknown }).message ?? "");
+      session.messages.push({ role: "user", content: message });
+      session.messages.push({ role: "assistant", content: `demo: ${message}` });
+      return { output: `demo: ${message}` };
+    },
+    chatStream: async (id, body) => {
+      const session = this.requireSession(id);
+      const message = String((body as { message?: unknown }).message ?? "");
+      session.messages.push({ role: "user", content: message });
+      session.messages.push({ role: "assistant", content: `demo: ${message}` });
+      const frames =
+        `event: run.started\ndata: {"session_id":"${id}"}\n\n` +
+        `event: message.delta\ndata: ${JSON.stringify({ delta: `demo: ${message}` })}\n\n` +
+        `event: run.completed\ndata: ${JSON.stringify({ output: `demo: ${message}` })}\n\n`;
+      const encoded = new TextEncoder().encode(frames);
+      return new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(encoded);
+          controller.close();
+        },
+      });
+    },
+    modelLock: async (id, body) => {
+      const session = this.requireSession(id);
+      session.model = String((body as { model?: unknown }).model ?? "");
+      return { session: { ...session } };
+    },
+  };
+
+  private requireSession(id: string): DemoSession {
+    const session = this.sessionStore.get(id);
+    if (session === undefined) {
+      throw notFound("session", id);
+    }
+    return session;
+  }
 
   private requireRun(id: string): DemoRun {
     const run = this.runStore.get(id);

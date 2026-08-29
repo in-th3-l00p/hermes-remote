@@ -2,6 +2,7 @@ import type { Context } from "hono";
 import { HermesUpstreamError } from "../../chat/index.ts";
 import { error, json, type ChatEnv } from "../../chat/routes/shared.ts";
 import { principalKey } from "../../auth/index.ts";
+import type { EventBus } from "../../events/index.ts";
 import type { RunStore } from "../run-store.ts";
 import type { Upstream } from "../types.ts";
 
@@ -11,6 +12,7 @@ export interface UpstreamRouteOptions {
   version: string;
   authProviderName?: string;
   anonymous: boolean;
+  events?: EventBus;
 }
 
 export function upstreamFailure(cause: unknown): Response {

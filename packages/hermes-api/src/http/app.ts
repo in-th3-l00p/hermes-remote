@@ -6,6 +6,9 @@ import { RunStore, upstreamRoutes, type Upstream } from "../upstream/index.ts";
 import { DEFAULT_LIMITS, type Limits, type RateLimitOptions } from "../limits/index.ts";
 import { registerProfileRoutes } from "../profiles/index.ts";
 import { registerFsRoutes, registerMgmtRoutes } from "../mgmt/index.ts";
+import { registerCommandRoutes } from "../mgmt/commands.ts";
+import { registerGoalRoutes } from "../mgmt/goals.ts";
+import { EventBus, registerEventRoutes } from "../events/index.ts";
 import type { ManagementOptions } from "../mgmt/shared.ts";
 import {
   auditMiddleware,
@@ -51,6 +54,12 @@ export interface AppOptions {
   /** Fixed window applied to failed auth attempts per client ip; always on. */
   authFailureLimit?: RateLimitOptions;
   audit?: (entry: AuditEntry) => void;
+  /** Lifecycle event bus backing GET /v1/events; created when absent. */
+  events?: EventBus;
+  /** Enables the slash-command relay through upstream session chat. */
+  commandRelay?: boolean;
+  /** Heartbeat cadence for the /v1/events stream. */
+  eventsHeartbeatMs?: number;
   now?: () => Date;
 }
 
@@ -67,6 +76,7 @@ export function createApp(options: AppOptions = {}): App {
   const version = options.version ?? "1.0.0";
   const limits: Limits = { ...DEFAULT_LIMITS, ...options.limits };
   const now = options.now ?? (() => new Date());
+  const events = options.events ?? new EventBus(now);
   const app = new Hono<ChatEnv>();
 
   const origins = options.corsOrigins ?? [];
@@ -99,6 +109,7 @@ export function createApp(options: AppOptions = {}): App {
   }
 
   app.get("/v1/auth/whoami", (c) => c.json(whoamiBody(c.get("principal"))));
+  registerEventRoutes(app, events, options.eventsHeartbeatMs ?? 15_000);
   if (options.management !== undefined) {
     registerProfileRoutes(app, options.management);
     registerMgmtRoutes(app, options.management);
@@ -115,8 +126,21 @@ export function createApp(options: AppOptions = {}): App {
           ? {}
           : { authProviderName: options.authProvider.name }),
         anonymous: options.anonymous === true,
+        events,
       }),
     );
+    const relayOptions = {
+      upstream: options.upstream.upstream,
+      events,
+      commandRelay: options.commandRelay === true,
+    };
+    registerCommandRoutes(app, relayOptions);
+    if (options.management !== undefined) {
+      registerGoalRoutes(app, {
+        ...relayOptions,
+        management: options.management,
+      });
+    }
   }
   if (options.chat !== undefined) {
     app.route("/", chatRoutes(options.chat, limits));

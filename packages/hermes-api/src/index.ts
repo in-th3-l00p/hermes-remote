@@ -34,6 +34,7 @@ export type {
   UpstreamDiscovery,
   UpstreamJobs,
   UpstreamRuns,
+  UpstreamSessions,
 } from "./upstream/index.ts";
 export {
   BridgeDenied,
@@ -45,6 +46,11 @@ export type { CliBridge, CliResultData, SpawnLike } from "./bridge/index.ts";
 export { ProfileRegistry, profileArgs } from "./profiles/index.ts";
 export type { ProfileInfo } from "./profiles/index.ts";
 export type { ManagementOptions } from "./mgmt/shared.ts";
+export { EventBus } from "./events/index.ts";
+export type { HermesEvent } from "./events/index.ts";
+export { COMMAND_SCOPES } from "./mgmt/commands.ts";
+export { GoalStore, toGoalState } from "./mgmt/goals.ts";
+export type { GoalGate, GoalState } from "./mgmt/goals.ts";
 export { startServer } from "./http/index.ts";
 export type { RunningServer, StartServerOptions } from "./http/index.ts";
 export { ChatStore } from "./chat/index.ts";

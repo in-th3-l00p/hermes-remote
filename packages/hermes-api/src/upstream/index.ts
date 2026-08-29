@@ -3,6 +3,7 @@ export type {
   UpstreamDiscovery,
   UpstreamJobs,
   UpstreamRuns,
+  UpstreamSessions,
 } from "./types.ts";
 export { DemoUpstream } from "./demo.ts";
 export { injectRunIdentity } from "./identity.ts";
