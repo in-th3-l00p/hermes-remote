@@ -1,0 +1,38 @@
+@import "tailwindcss";
+@import "@fontsource-variable/geist";
+
+@theme {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-zinc-950 text-zinc-100 font-sans antialiased;
+}
+
+.card {
+  @apply rounded-xl border border-zinc-800 bg-zinc-900/60;
+}
+
+.btn {
+  @apply inline-flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-100 transition-colors hover:bg-zinc-700 disabled:opacity-40 disabled:pointer-events-none;
+}
+
+.btn-primary {
+  @apply border-zinc-200 bg-zinc-100 text-zinc-900 hover:bg-white;
+}
+
+.btn-ghost {
+  @apply border-transparent bg-transparent text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100;
+}
+
+.input {
+  @apply w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 outline-none focus:border-zinc-400;
+}
+
+.label {
+  @apply text-xs font-medium uppercase tracking-wider text-zinc-500;
+}
