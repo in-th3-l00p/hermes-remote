@@ -5,7 +5,7 @@ import { chatRoutes, type ChatEnv, type ChatOptions } from "../chat/index.ts";
 import { RunStore, upstreamRoutes, type Upstream } from "../upstream/index.ts";
 import { DEFAULT_LIMITS, type Limits, type RateLimitOptions } from "../limits/index.ts";
 import { registerProfileRoutes } from "../profiles/index.ts";
-import { registerMgmtRoutes } from "../mgmt/index.ts";
+import { registerFsRoutes, registerMgmtRoutes } from "../mgmt/index.ts";
 import type { ManagementOptions } from "../mgmt/shared.ts";
 import {
   auditMiddleware,
@@ -102,6 +102,7 @@ export function createApp(options: AppOptions = {}): App {
   if (options.management !== undefined) {
     registerProfileRoutes(app, options.management);
     registerMgmtRoutes(app, options.management);
+    registerFsRoutes(app, options.management);
   }
   if (options.upstream !== undefined) {
     app.route(
