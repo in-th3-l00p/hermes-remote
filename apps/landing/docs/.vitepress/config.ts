@@ -20,6 +20,7 @@ export default defineConfig({
           { text: "1.1 Server & CLI", link: "/projects/server" },
           { text: "1.2 TypeScript client", link: "/projects/client" },
           { text: "1.3 React hooks", link: "/projects/react" },
+          { text: "1.4 Management API", link: "/projects/management" },
         ],
       },
       {

@@ -13,7 +13,7 @@ Hermes Remote turns a local [Hermes agent](https://hermes-agent.nousresearch.com
 
 ## Design vs reality
 
-`ARCHITECTURE.md` describes three bridges (HTTP proxy, CLI bridge, FS bridge), an OpenAPI/Zod schema pipeline, and API coverage of the agent's full feature surface (memory, cron, hooks, goals, skills management...). **What is actually implemented is the HTTP proxy bridge**: chat (streaming turns, sessions, messages with edit/react/attachments, turn cancellation) plus, since 3.1.0, the upstream discovery surface (health, capabilities, models, skills, toolsets), runs (submit/poll/SSE events/stop/steer/approval, per-principal ownership, identity injection), and API-key-only jobs administration — all with the full identity/auth/scopes layer. Since 3.0.0 the HTTP layer runs on Hono (CORS, body caps, and rate limiting come from `hono/cors`, `hono/body-limit`, and `hono-rate-limiter`; still no Zod or OpenAPI generation). The CLI bridge, FS bridge, and the wider endpoint map remain the natural roadmap for 1.x/2.0. When extending, keep ARCHITECTURE.md's principal model and scope rules — those ARE implemented and enforced exactly as written.
+`ARCHITECTURE.md` describes three bridges (HTTP proxy, CLI bridge, FS bridge), an OpenAPI/Zod schema pipeline, and API coverage of the agent's full feature surface (memory, cron, hooks, goals, skills management...). **Since 3.2.0 all three of ARCHITECTURE.md's bridges are implemented** (HTTP proxy, CLI bridge, FS bridge) and the API covers the agent's full feature surface: chat, discovery, runs, jobs, profiles (X-Hermes-Profile everywhere, profile-pinned keys), config/providers/ops, memory/soul/skills/bundles, cron+checkpoints+approvals, hooks/webhooks/gateway/messaging/pairing/kanban/projects/toolsets/mcp/plugins/backups, the agent's own session store, goals (Ralph loops, read from state.db; writes via the command relay, off by default — the upstream does NOT intercept slash commands, verified live), media/web tool runs, OpenAI passthrough, and an SSE event firehose. CLI-backed endpoints return `{ok, raw}` — several argv templates are best-effort against hermes 0.20.x subcommands and should be validated when the agent updates. Since 3.0.0 the HTTP layer runs on Hono (CORS, body caps, and rate limiting come from `hono/cors`, `hono/body-limit`, and `hono-rate-limiter`; still no Zod or OpenAPI generation). The CLI bridge, FS bridge, and the wider endpoint map remain the natural roadmap for 1.x/2.0. When extending, keep ARCHITECTURE.md's principal model and scope rules — those ARE implemented and enforced exactly as written.
 
 ## Repository map
 
@@ -33,7 +33,17 @@ packages/hermes-api/          @in-th3-l00p/hermes-remote — server library (no 
   src/chat/routes/            Hono sub-app: chatRoutes() in index.ts; sessions.ts, messages.ts, sse.ts,
                               shared.ts (ChatEnv/helpers), validate.ts
   src/chat/store/             ChatStore — bun:sqlite; db.ts schema, messages.ts ops, types.ts models
-  src/upstream/               Upstream facade {chat, discovery, runs, jobs}: types.ts contracts,
+  src/bridge/                 CliBridge (allowlisted argv over the hermes binary, spawn seam,
+                              timeout+concurrency cap) + FakeCliBridge test double; FsBridge
+                              (profile-home file access, credential denylist, traversal-safe)
+  src/profiles/               ProfileRegistry (parses `hermes profile list`, cached) + /v1/profiles
+                              routes; X-Hermes-Profile middleware lives in http/middleware.ts
+  src/mgmt/                   Management surface: catalog.ts (declarative CLI route table, ~70 rows),
+                              routes.ts registrar, fs-routes.ts (memory/soul/skills files/bundles/
+                              cron output/subagents), commands.ts (slash-command allowlist + relay),
+                              goals.ts (GoalStore over state.db + Ralph-loop routes), shared.ts
+  src/events/                 EventBus + GET /v1/events SSE
+  src/upstream/               Upstream facade {chat, discovery, runs, jobs, sessions, raw}: types.ts contracts,
                               hermes.ts (live gateway bridge), demo.ts (offline fakes), run-store.ts
                               (per-principal run ownership, SQLite), identity.ts (run identity
                               injection), routes/ (discovery.ts, runs.ts, jobs.ts Hono sub-app)

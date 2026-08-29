@@ -99,6 +99,8 @@ Streaming responses are `text/event-stream` with these events, each carrying a J
 
 Attachments are image data URLs; they are forwarded to the upstream model as vision content parts.
 
+Beyond the routes above, the server exposes the agent's full management surface — profiles, config, providers, memory, soul, skills lifecycle, cron, hooks, gateway, kanban, goals, slash commands, media/web tools, events — documented separately in [1.4 The management API](/projects/management).
+
 Discovery, run, and job routes are proxied from the upstream agent's API server (or served by the offline demo upstream when none is configured). Upstream failures come back as 502 `upstream_error` with the upstream status; user-started runs get the same verified-identity context injected as chat turns, and run visibility is per principal.
 
 ## Operational features

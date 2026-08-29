@@ -1,6 +1,6 @@
 {
   "name": "@in-th3-l00p/hermes-remote-client",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Typed TypeScript client for Hermes Remote",
   "license": "MIT",
   "author": "Tisca Catalin",

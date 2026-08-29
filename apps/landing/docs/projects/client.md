@@ -78,6 +78,32 @@ await client.jobs.trigger("job_id");                     // requires crons:write
 
 Run listing is per principal: users see only runs they created; API keys see all. Job methods need an API key with the crons scopes.
 
+## The management namespaces
+
+With an API key holding the right scopes, the entire agent is drivable from the client — one namespace per surface, mirroring the [management API](/projects/management):
+
+```ts
+const ops = new HermesClient({ baseUrl, token: "hk_..." });
+
+await ops.profiles.list();                    // hermes profiles
+const indra = ops.withProfile("indra");       // pin every call to one profile
+await indra.agent.status();                   // hermes status
+await indra.config.set("model.name", "deepseek/deepseek-v4-flash");
+await indra.memory.add("prefers concise answers");
+await indra.soul.set("# Indra\nFirm intelligence agent.");
+await indra.skills.hubSearch("pdf");
+await indra.jobs.list();                      // cron jobs
+await indra.gateway.status();
+await indra.kanban.tasks();
+await indra.goals.set("sess_1", "ship the report", { draft: true });
+await indra.commands.run("sess_1", "/goal status");
+for await (const event of indra.events.subscribe()) {
+  console.log(event.event, event.data);       // lifecycle SSE firehose
+}
+```
+
+Also available: `providers`, `bundles`, `checkpoints`, `approvals`, `hooks`, `webhooks`, `messaging`, `pairing`, `projects`, `toolsets`, `mcp`, `plugins`, `backups`, `subagents`, `agentSessions` (the agent's own session store, incl. `chatStream`), `media`/`web`/`browser` (TTS, image generation, web search/extract, browser tasks), and `passthrough` (raw OpenAI-compatible access). CLI-backed methods resolve to `{ ok, raw }`; binary endpoints (`backups.create()`, `profiles.exportArchive()`, `media.tts()`) return the raw `Response`.
+
 ## Streaming
 
 Streaming methods return async iterables of typed `ChatEvent`s:

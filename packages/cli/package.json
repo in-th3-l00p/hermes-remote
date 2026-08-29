@@ -1,6 +1,6 @@
 {
   "name": "@in-th3-l00p/hermes-remote-cli",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "Management CLI for Hermes Remote (serve, keys, config, service)",
   "license": "MIT",
   "author": "Tisca Catalin",
@@ -36,7 +36,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@in-th3-l00p/hermes-remote": "^3.1.0"
+    "@in-th3-l00p/hermes-remote": "^3.2.0"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"

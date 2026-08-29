@@ -90,6 +90,19 @@ function AgentStatus({ client }: { client: HermesClient }) {
 
 `useAgentInfo` fetches health, capabilities, and models together with a `refresh()`. `useRuns` lists the caller's runs and creates new ones. `useRunEvents` subscribes to a run's SSE stream while mounted and aborts on unmount or `runId` change.
 
+## Management hooks
+
+Every management surface has a hook for dashboard building: `useProfiles`, `useAgentStatus`, `useConfig`, `useMemory`, `useSoul`, `useSkills`, `useBundles`, `useJobsAdmin`, `useCheckpoints`, `useHooksInfo`, `useGateway`, `useKanban`, `useProjects`, `useToolsets`, `useMcp`, `usePlugins`, `useAgentSessions`, `useCommands` — each takes `{ client }` and returns `{ data, loading, error, refresh }`. They are built on two exported generics you can reuse for anything else: `useResource(fetcher, deps)` and `useAction(fn)`.
+
+Two richer hooks:
+
+```tsx
+const { goal, set, pause, resume, addGate, addSubgoal } = useGoal({ client, sessionId });
+const { events, connected } = useEvents({ client });          // /v1/events SSE
+```
+
+`useGoal` reads the Ralph-loop state (text, contract, gates, subgoals, turns, verdict) and refreshes after every mutation; `useEvents` keeps a live subscription while mounted.
+
 ## Provider
 
 `HermesProvider` and `useHermesClient()` put one client in context for component trees that need it in many places.
