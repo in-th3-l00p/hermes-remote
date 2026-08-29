@@ -9,6 +9,7 @@ import {
 } from "../auth/index.ts";
 import type { RateLimitOptions } from "../limits/index.ts";
 import type { ChatEnv } from "../chat/index.ts";
+import type { ManagementOptions } from "../mgmt/shared.ts";
 import type { AuditEntry } from "./app.ts";
 
 type ErrorStatus = 401 | 403 | 404 | 413 | 429 | 503;
@@ -44,6 +45,35 @@ export function authMiddleware(
       );
     }
     c.set("principal", principal);
+    await next();
+  };
+}
+
+/** Resolves the target profile from the header and the key's restriction. */
+export function profileMiddleware(
+  options: ManagementOptions,
+): MiddlewareHandler<ChatEnv> {
+  return async (c, next) => {
+    const principal = c.get("principal");
+    const requested = c.req.header("x-hermes-profile") ?? null;
+    const keyProfile =
+      principal.type === "api_key" ? (principal.record.profile ?? null) : null;
+    if (requested !== null && !(await options.profiles.exists(requested))) {
+      return errorResponse(c, 404, "profile_not_found", "Unknown profile");
+    }
+    if (
+      keyProfile !== null &&
+      requested !== null &&
+      requested !== keyProfile
+    ) {
+      return errorResponse(
+        c,
+        403,
+        "profile_forbidden",
+        "This API key is restricted to another profile",
+      );
+    }
+    c.set("profile", requested ?? keyProfile);
     await next();
   };
 }

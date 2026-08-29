@@ -164,6 +164,17 @@ describe("keys management", () => {
   });
 });
 
+describe("keys profile restriction", () => {
+  test("create --profile persists on the record", async () => {
+    const { ctx } = await makeCtx();
+    const id = await createKey(ctx, ["--profile", "creative"]);
+    const keys = (await Bun.file(`${ctx.homeDir}/keys.json`).json()) as {
+      keys: { id: string; profile?: string }[];
+    };
+    expect(keys.keys.find((k) => k.id === id)?.profile).toBe("creative");
+  });
+});
+
 describe("keys rotate and cidr", () => {
   test("rotate prints a fresh token once", async () => {
     const { ctx } = await makeCtx();

@@ -12,6 +12,8 @@ export interface ApiKeyRecord {
   revoked: boolean;
   /** Optional IPv4 CIDR allowlist; empty or absent means any address. */
   cidrs?: string[];
+  /** Restricts the key to one hermes profile; absent means any profile. */
+  profile?: string;
 }
 
 export interface CreateKeyInput {
@@ -20,6 +22,7 @@ export interface CreateKeyInput {
   userGrantable?: string[];
   expiresAt?: Date;
   cidrs?: string[];
+  profile?: string;
   now?: Date;
 }
 
@@ -71,6 +74,7 @@ export class KeyStore {
       ...(input.cidrs === undefined || input.cidrs.length === 0
         ? {}
         : { cidrs: input.cidrs }),
+      ...(input.profile === undefined ? {} : { profile: input.profile }),
     };
     data.keys.push(record);
     await this.save(data);

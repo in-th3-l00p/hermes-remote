@@ -35,6 +35,16 @@ export type {
   UpstreamJobs,
   UpstreamRuns,
 } from "./upstream/index.ts";
+export {
+  BridgeDenied,
+  FakeCliBridge,
+  FsBridge,
+  HermesCliBridge,
+} from "./bridge/index.ts";
+export type { CliBridge, CliResultData, SpawnLike } from "./bridge/index.ts";
+export { ProfileRegistry, profileArgs } from "./profiles/index.ts";
+export type { ProfileInfo } from "./profiles/index.ts";
+export type { ManagementOptions } from "./mgmt/shared.ts";
 export { startServer } from "./http/index.ts";
 export type { RunningServer, StartServerOptions } from "./http/index.ts";
 export { ChatStore } from "./chat/index.ts";

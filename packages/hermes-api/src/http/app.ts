@@ -4,6 +4,8 @@ import type { AuthProvider, KeyVerifier } from "../auth/index.ts";
 import { chatRoutes, type ChatEnv, type ChatOptions } from "../chat/index.ts";
 import { RunStore, upstreamRoutes, type Upstream } from "../upstream/index.ts";
 import { DEFAULT_LIMITS, type Limits, type RateLimitOptions } from "../limits/index.ts";
+import { registerProfileRoutes } from "../profiles/index.ts";
+import type { ManagementOptions } from "../mgmt/shared.ts";
 import {
   auditMiddleware,
   authFailureLimiter,
@@ -11,6 +13,7 @@ import {
   corsMiddleware,
   errorResponse,
   principalRateLimiter,
+  profileMiddleware,
 } from "./middleware.ts";
 import { whoamiBody } from "./whoami.ts";
 
@@ -34,6 +37,8 @@ export interface AppOptions {
   chat?: ChatOptions;
   /** Enables the discovery, runs, and jobs routes. */
   upstream?: UpstreamAppOptions;
+  /** Enables the profile, config, and agent-management routes. */
+  management?: ManagementOptions;
   /** Provider for end-user bearer tokens (Supabase, Clerk, generic JWT, or custom). */
   authProvider?: AuthProvider;
   /** Allow unauthenticated access to chat routes (demo / anonymous mode). */
@@ -88,7 +93,14 @@ export function createApp(options: AppOptions = {}): App {
     app.use(principalRateLimiter(options.rateLimit));
   }
 
+  if (options.management !== undefined) {
+    app.use(profileMiddleware(options.management));
+  }
+
   app.get("/v1/auth/whoami", (c) => c.json(whoamiBody(c.get("principal"))));
+  if (options.management !== undefined) {
+    registerProfileRoutes(app, options.management);
+  }
   if (options.upstream !== undefined) {
     app.route(
       "/",

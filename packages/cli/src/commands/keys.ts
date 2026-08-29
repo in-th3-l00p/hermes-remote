@@ -61,12 +61,14 @@ export async function keysCommand(
       expiresAt = new Date(now.getTime() + ms);
     }
     const cidrs = flagAll(parsed, "cidr");
+    const profile = flag(parsed, "profile");
     const { record, token } = await store.create({
       name,
       scopes,
       userGrantable,
       cidrs,
       now,
+      ...(profile === undefined ? {} : { profile }),
       ...(expiresAt === undefined ? {} : { expiresAt }),
     });
     return ok(

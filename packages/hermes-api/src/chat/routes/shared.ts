@@ -12,7 +12,7 @@ export interface ChatOptions {
 /** Hono environment shared by every authenticated route. */
 export type ChatEnv = {
   Bindings: { clientIp?: string };
-  Variables: { principal: Principal };
+  Variables: { principal: Principal; profile: string | null };
 };
 
 export function canAccess(session: ChatSession, principal: Principal): boolean {
