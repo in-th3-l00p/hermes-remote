@@ -118,7 +118,7 @@ export function stripApiPrefix(request: Request): Request {
   const url = new URL(request.url);
   if (url.pathname.startsWith(API_PREFIX)) {
     url.pathname = url.pathname.slice(API_PREFIX.length) || "/";
-    return new Request(url, request);
+    return new Request(url.toString(), request);
   }
   return request;
 }
