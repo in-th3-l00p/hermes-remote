@@ -1,4 +1,4 @@
-# 2.1 Build a chat app in React
+# 3.1 Build a chat app in React
 
 This walks the essentials of the reference app ([apps/chat](https://github.com/in-th3-l00p/hermes-remote/tree/main/apps/chat)): a Telegram style chat with streaming, markdown, attachments, reactions, and edits.
 
@@ -9,7 +9,7 @@ hermes-remote serve --anonymous --cors http://localhost:5173 \
   --upstream http://127.0.0.1:8642 --upstream-key $API_SERVER_KEY
 ```
 
-`--anonymous` keeps this tutorial friction free; switch to real auth with [2.2](/tutorials/supabase-auth).
+`--anonymous` keeps this tutorial friction free; switch to real auth with [3.2](/tutorials/supabase-auth).
 
 ## 2. Wire the hook
 

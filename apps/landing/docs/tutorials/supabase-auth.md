@@ -1,10 +1,10 @@
-# 2.2 Authentication with Supabase
+# 3.2 Authentication with Supabase
 
-Hermes Remote verifies Supabase access tokens directly, so a Supabase project is a complete identity layer: OAuth providers, email OTP, and anonymous guests, all with stable user ids.
+Hermes Remote verifies Supabase access tokens directly, so a Supabase project is a complete identity layer: OAuth providers, email OTP, and anonymous guests, all with stable user ids. Reference: [Authentication → Supabase provider](/auth/supabase).
 
 ## Server side
 
-Point the server at your project and drop `--anonymous`:
+The quickest path needs no extra dependency — point the server at your project and drop `--anonymous`:
 
 ```bash
 hermes-remote serve --supabase-url https://YOUR_PROJECT.supabase.co \
@@ -13,6 +13,18 @@ hermes-remote serve --supabase-url https://YOUR_PROJECT.supabase.co \
 ```
 
 Tokens are verified against the project's JWKS endpoint (`/auth/v1/.well-known/jwks.json`), so no Supabase secret is stored on the server. Projects still on the legacy HS256 secret can pass `--supabase-jwt-secret` instead.
+
+To verify through the official SDK instead (`bun add @supabase/supabase-js`), select the provider in `~/.hermes-remote/config.json`:
+
+```json
+{
+  "auth": {
+    "provider": "supabase",
+    "url": "https://YOUR_PROJECT.supabase.co",
+    "publishableKey": "sb_publishable_..."
+  }
+}
+```
 
 ## Client side
 

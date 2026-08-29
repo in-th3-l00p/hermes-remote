@@ -20,7 +20,7 @@ echo "@in-th3-l00p:registry=https://npm.pkg.github.com" >> ~/.npmrc
 echo "//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN" >> ~/.npmrc
 ```
 
-On the machine running your Hermes agent (with its API server enabled, see [2.4 Deploying](/tutorials/deploying)):
+On the machine running your Hermes agent (with its API server enabled, see [3.5 Deploying](/tutorials/deploying)):
 
 ```bash
 npm i -g @in-th3-l00p/hermes-remote-cli

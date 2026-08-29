@@ -1,4 +1,4 @@
-# 2.5 Using the raw API
+# 3.6 Using the raw API
 
 Everything the clients do is plain HTTP plus server sent events, so any language works.
 

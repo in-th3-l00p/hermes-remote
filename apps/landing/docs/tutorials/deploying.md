@@ -1,4 +1,4 @@
-# 2.4 Deploying
+# 3.5 Deploying
 
 Hermes Remote runs on the same machine as the agent. The deployment story is: enable the agent's API server, run hermes-remote as a service, then expose it deliberately.
 

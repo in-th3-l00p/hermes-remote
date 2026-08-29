@@ -1,4 +1,4 @@
-# 3.2 Security model
+# 4.2 Security model
 
 The threat model starts from one fact: `chat:invoke` is remote access to an agent that can run terminal commands. Everything below exists to make that safe to expose.
 

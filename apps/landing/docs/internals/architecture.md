@@ -1,4 +1,4 @@
-# 3.1 Architecture
+# 4.1 Architecture
 
 ## The integration point
 

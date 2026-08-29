@@ -35,12 +35,14 @@ hermes-remote logs [--tail 50]
 | `--upstream` | `HERMES_UPSTREAM_URL` | `upstreamUrl` | Hermes agent API server URL |
 | `--upstream-key` | `HERMES_UPSTREAM_KEY` | `upstreamKey` | The agent's `API_SERVER_KEY` |
 | `--model` | `HERMES_UPSTREAM_MODEL` | `upstreamModel` | Upstream model name |
-| `--supabase-url` | `SUPABASE_URL` | `supabaseUrl` | Enables user tokens via JWKS |
-| `--supabase-jwt-secret` | `SUPABASE_JWT_SECRET` | `supabaseJwtSecret` | Legacy HS256 verification |
+| | | `auth` | User auth provider (`supabase`, `clerk`, `jwt`); see [Authentication](/auth/) |
+| `--supabase-url` | `SUPABASE_URL` | `supabaseUrl` | Legacy: user tokens via JWKS (maps to the `jwt` provider) |
+| `--supabase-jwt-secret` | `SUPABASE_JWT_SECRET` | `supabaseJwtSecret` | Legacy HS256 verification (maps to the `jwt` provider) |
+| | `CLERK_SECRET_KEY` | | Enables the `clerk` provider when no other auth is set |
 | `--anonymous` | | `anonymous` | Allow unauthenticated chat (demos only) |
 | `--rate-limit` / `--rate-window` | | `rateLimit` | Requests per principal per window |
 
-Precedence: flags override environment variables, which override `config.json`. `hermes-remote init` writes the config file so `serve` needs no flags at all.
+Precedence: flags override environment variables, which override `config.json`; an explicit `auth` config section beats the legacy supabase fields. `hermes-remote init` writes the config file so `serve` needs no flags at all.
 
 ## Scopes
 
