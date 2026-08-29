@@ -10,6 +10,7 @@
     "docs:dev": "vitepress dev docs"
   },
   "dependencies": {
+    "@in-th3-l00p/hermes-remote-examples-backend": "workspace:*",
     "@base-ui/react": "^1.7.0",
     "@fontsource-variable/geist": "^5.3.0",
     "class-variance-authority": "^0.7.1",
