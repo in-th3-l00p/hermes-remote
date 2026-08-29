@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import type { AuthProvider, KeyVerifier } from "../auth/index.ts";
 import { chatRoutes, type ChatEnv, type ChatOptions } from "../chat/index.ts";
+import { RunStore, upstreamRoutes, type Upstream } from "../upstream/index.ts";
 import { DEFAULT_LIMITS, type Limits, type RateLimitOptions } from "../limits/index.ts";
 import {
   auditMiddleware,
@@ -21,10 +22,18 @@ export interface AuditEntry {
   principal: string;
 }
 
+export interface UpstreamAppOptions {
+  upstream: Upstream;
+  /** Run-ownership store; defaults to an in-memory store. */
+  runStore?: RunStore;
+}
+
 export interface AppOptions {
   version?: string;
   store?: KeyVerifier;
   chat?: ChatOptions;
+  /** Enables the discovery, runs, and jobs routes. */
+  upstream?: UpstreamAppOptions;
   /** Provider for end-user bearer tokens (Supabase, Clerk, generic JWT, or custom). */
   authProvider?: AuthProvider;
   /** Allow unauthenticated access to chat routes (demo / anonymous mode). */
@@ -80,6 +89,20 @@ export function createApp(options: AppOptions = {}): App {
   }
 
   app.get("/v1/auth/whoami", (c) => c.json(whoamiBody(c.get("principal"))));
+  if (options.upstream !== undefined) {
+    app.route(
+      "/",
+      upstreamRoutes({
+        upstream: options.upstream.upstream,
+        runStore: options.upstream.runStore ?? new RunStore(),
+        version,
+        ...(options.authProvider === undefined
+          ? {}
+          : { authProviderName: options.authProvider.name }),
+        anonymous: options.anonymous === true,
+      }),
+    );
+  }
   if (options.chat !== undefined) {
     app.route("/", chatRoutes(options.chat, limits));
   }

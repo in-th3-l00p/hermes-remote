@@ -22,6 +22,19 @@ export type {
   SupabaseProviderOptions,
   VerifiedUser,
 } from "./auth/index.ts";
+export {
+  DemoUpstream,
+  HermesUpstream,
+  RunStore,
+} from "./upstream/index.ts";
+export type {
+  HermesUpstreamOptions,
+  RunRecord,
+  Upstream,
+  UpstreamDiscovery,
+  UpstreamJobs,
+  UpstreamRuns,
+} from "./upstream/index.ts";
 export { startServer } from "./http/index.ts";
 export type { RunningServer, StartServerOptions } from "./http/index.ts";
 export { ChatStore } from "./chat/index.ts";
