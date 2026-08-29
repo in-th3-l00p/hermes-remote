@@ -84,6 +84,7 @@ describe("discovery routes", () => {
     const demo = new DemoUpstream();
     const degraded = {
       ...demo,
+      raw: demo.raw.bind(demo),
       discovery: { ...demo.discovery, health: async () => ({ status: "degraded" }) },
     } as Upstream;
     const degradedApp = demoApp({ upstream: { upstream: degraded } });
@@ -92,6 +93,7 @@ describe("discovery routes", () => {
     );
     const unreachable = {
       ...demo,
+      raw: demo.raw.bind(demo),
       discovery: {
         ...demo.discovery,
         health: async () => {
@@ -141,6 +143,7 @@ describe("discovery routes", () => {
     const demo = new DemoUpstream();
     const failing = {
       ...demo,
+      raw: demo.raw.bind(demo),
       discovery: {
         ...demo.discovery,
         capabilities: async () => {
@@ -292,6 +295,7 @@ describe("run routes", () => {
     const demo = new DemoUpstream();
     const throwing = {
       ...demo,
+      raw: demo.raw.bind(demo),
       runs: {
         ...demo.runs,
         create: async () => {
@@ -307,6 +311,7 @@ describe("run routes", () => {
     });
     const idless = {
       ...demo,
+      raw: demo.raw.bind(demo),
       runs: { ...demo.runs, create: async () => ({ ok: true }) },
     } as Upstream;
     const idlessApp = demoApp({ upstream: { upstream: idless } });
