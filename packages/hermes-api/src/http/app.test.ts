@@ -319,15 +319,28 @@ describe("createApp", () => {
     }
   });
 
-  test("rejects oversized request bodies", async () => {
+  test("rejects oversized request bodies, declared or streamed", async () => {
     const app = createApp({ anonymous: true, limits: { maxBodyBytes: 10 } });
-    const res = await app.fetch(
-      new Request("http://x/v1/auth/whoami", {
-        method: "GET",
-        headers: { "content-length": "99" },
+    const declared = await app.fetch(
+      new Request("http://x/v1/sessions", {
+        method: "POST",
+        body: "x".repeat(99),
       }),
     );
-    expect(res.status).toBe(413);
+    expect(declared.status).toBe(413);
+    const streamed = await app.fetch(
+      new Request("http://x/v1/sessions", {
+        method: "POST",
+        headers: { "transfer-encoding": "chunked" },
+        body: new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode("y".repeat(99)));
+            controller.close();
+          },
+        }),
+      }),
+    );
+    expect(streamed.status).toBe(413);
   });
 
   test("audits mutations and auth failures", async () => {

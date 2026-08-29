@@ -9,6 +9,12 @@ export interface ChatOptions {
   turns?: Map<string, AbortController>;
 }
 
+/** Hono environment shared by every authenticated route. */
+export type ChatEnv = {
+  Bindings: { clientIp?: string };
+  Variables: { principal: Principal };
+};
+
 export function canAccess(session: ChatSession, principal: Principal): boolean {
   if (session.userId === null || principal.type === "api_key") {
     return true;

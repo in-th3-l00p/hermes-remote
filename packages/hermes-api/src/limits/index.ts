@@ -22,47 +22,6 @@ export interface RateLimitOptions {
   windowSeconds: number;
 }
 
-/** Fixed-window request counter per principal. */
-export class RateLimiter {
-  private readonly windows = new Map<string, { start: number; count: number }>();
-
-  constructor(
-    private readonly options: RateLimitOptions,
-    private readonly now: () => number = () => Date.now(),
-  ) {}
-
-  /** Like check but never counts: returns the block without consuming a slot. */
-  peek(key: string): number | null {
-    const at = this.now();
-    const windowMs = this.options.windowSeconds * 1000;
-    const window = this.windows.get(key);
-    if (
-      window === undefined ||
-      at - window.start >= windowMs ||
-      window.count < this.options.limit
-    ) {
-      return null;
-    }
-    return Math.ceil((window.start + windowMs - at) / 1000);
-  }
-
-  /** Returns null when allowed, otherwise seconds until the window resets. */
-  check(key: string): number | null {
-    const at = this.now();
-    const windowMs = this.options.windowSeconds * 1000;
-    const window = this.windows.get(key);
-    if (window === undefined || at - window.start >= windowMs) {
-      this.windows.set(key, { start: at, count: 1 });
-      return null;
-    }
-    if (window.count < this.options.limit) {
-      window.count += 1;
-      return null;
-    }
-    return Math.ceil((window.start + windowMs - at) / 1000);
-  }
-}
-
 /** Matches an IPv4 address against a CIDR block like "10.0.0.0/8". */
 export function ipInCidr(ip: string, cidr: string): boolean {
   const toInt = (addr: string): number | null => {

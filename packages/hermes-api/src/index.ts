@@ -5,7 +5,7 @@ export type {
   AuditEntry,
 } from "./http/index.ts";
 export type { KeyVerifier, Principal } from "./auth/index.ts";
-export { DEFAULT_LIMITS, RateLimiter, ipInCidr } from "./limits/index.ts";
+export { DEFAULT_LIMITS, ipInCidr } from "./limits/index.ts";
 export type { Limits, RateLimitOptions } from "./limits/index.ts";
 export {
   ClerkAuthProvider,

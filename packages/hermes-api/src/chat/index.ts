@@ -1,5 +1,5 @@
-export { handleChatRoute } from "./routes/index.ts";
-export type { ChatOptions } from "./routes/index.ts";
+export { chatRoutes } from "./routes/index.ts";
+export type { ChatEnv, ChatOptions } from "./routes/index.ts";
 export { ChatStore } from "./store/index.ts";
 export type {
   Attachment,

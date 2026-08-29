@@ -1,8 +1,16 @@
-import { authenticate, principalKey, type KeyVerifier, type Principal } from "../auth/index.ts";
-import type { AuthProvider } from "../auth/index.ts";
-import { handleChatRoute, type ChatOptions } from "../chat/index.ts";
-import { DEFAULT_LIMITS, RateLimiter, type Limits, type RateLimitOptions } from "../limits/index.ts";
-import { applyCors, corsOrigin, preflightResponse } from "./cors.ts";
+import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
+import type { AuthProvider, KeyVerifier } from "../auth/index.ts";
+import { chatRoutes, type ChatEnv, type ChatOptions } from "../chat/index.ts";
+import { DEFAULT_LIMITS, type Limits, type RateLimitOptions } from "../limits/index.ts";
+import {
+  auditMiddleware,
+  authFailureLimiter,
+  authMiddleware,
+  corsMiddleware,
+  errorResponse,
+  principalRateLimiter,
+} from "./middleware.ts";
 import { whoamiBody } from "./whoami.ts";
 
 export interface AuditEntry {
@@ -35,16 +43,6 @@ export interface App {
   fetch(request: Request, clientIp?: string): Response | Promise<Response>;
 }
 
-function error(status: number, code: string, message: string): Response {
-  return Response.json({ error: { code, message } }, { status });
-}
-
-function rateLimited(retryAfter: number): Response {
-  const res = error(429, "rate_limited", "Too many requests");
-  res.headers.set("retry-after", String(retryAfter));
-  return res;
-}
-
 const DEFAULT_AUTH_FAILURE_LIMIT: RateLimitOptions = {
   limit: 30,
   windowSeconds: 60,
@@ -53,108 +51,41 @@ const DEFAULT_AUTH_FAILURE_LIMIT: RateLimitOptions = {
 export function createApp(options: AppOptions = {}): App {
   const version = options.version ?? "1.0.0";
   const limits: Limits = { ...DEFAULT_LIMITS, ...options.limits };
-  const rateLimiter =
-    options.rateLimit === undefined
-      ? null
-      : new RateLimiter(options.rateLimit);
-  const authFailures = new RateLimiter(
-    options.authFailureLimit ?? DEFAULT_AUTH_FAILURE_LIMIT,
-  );
   const now = options.now ?? (() => new Date());
+  const app = new Hono<ChatEnv>();
 
-  async function route(
-    request: Request,
-    clientIp: string | undefined,
-  ): Promise<{ response: Response; principal: Principal | null }> {
-    const url = new URL(request.url);
-
-    if (url.pathname === "/v1/status" && request.method === "GET") {
-      return {
-        response: Response.json({ ok: true, version }),
-        principal: null,
-      };
-    }
-
-    const contentLength = Number(request.headers.get("content-length") ?? "0");
-    if (contentLength > limits.maxBodyBytes) {
-      return {
-        response: error(413, "payload_too_large", "Request body too large"),
-        principal: null,
-      };
-    }
-
-    // Blocks repeated credential guessing before the argon2 verify runs.
-    const failKey = `ip:${clientIp ?? "unknown"}`;
-    const blocked = authFailures.peek(failKey);
-    if (blocked !== null) {
-      return { response: rateLimited(blocked), principal: null };
-    }
-
-    const principal = await authenticate(request, clientIp, options);
-    if ("code" in principal) {
-      if (principal.status === 401) {
-        authFailures.check(failKey);
-      }
-      return {
-        response: error(principal.status, principal.code, principal.message),
-        principal: null,
-      };
-    }
-
-    if (rateLimiter !== null) {
-      const retryAfter = rateLimiter.check(principalKey(principal));
-      if (retryAfter !== null) {
-        return { response: rateLimited(retryAfter), principal };
-      }
-    }
-
-    if (url.pathname === "/v1/auth/whoami" && request.method === "GET") {
-      return { response: Response.json(whoamiBody(principal)), principal };
-    }
-
-    if (options.chat !== undefined) {
-      const handled = await handleChatRoute(
-        request,
-        url,
-        options.chat,
-        principal,
-        limits,
-      );
-      if (handled !== null) {
-        return { response: handled, principal };
-      }
-    }
-
-    return {
-      response: error(404, "not_found", "Unknown route"),
-      principal,
-    };
+  const origins = options.corsOrigins ?? [];
+  if (origins.length > 0) {
+    app.use(corsMiddleware(origins));
+  }
+  if (options.audit !== undefined) {
+    app.use(auditMiddleware(options.audit, now));
   }
 
+  app.get("/v1/status", (c) => c.json({ ok: true, version }));
+
+  app.use(
+    bodyLimit({
+      maxSize: limits.maxBodyBytes,
+      onError: (c) =>
+        errorResponse(c, 413, "payload_too_large", "Request body too large"),
+    }),
+  );
+  app.use(
+    authFailureLimiter(options.authFailureLimit ?? DEFAULT_AUTH_FAILURE_LIMIT),
+  );
+  app.use(authMiddleware(options));
+  if (options.rateLimit !== undefined) {
+    app.use(principalRateLimiter(options.rateLimit));
+  }
+
+  app.get("/v1/auth/whoami", (c) => c.json(whoamiBody(c.get("principal"))));
+  if (options.chat !== undefined) {
+    app.route("/", chatRoutes(options.chat, limits));
+  }
+  app.notFound((c) => errorResponse(c, 404, "not_found", "Unknown route"));
+
   return {
-    async fetch(request: Request, clientIp?: string): Promise<Response> {
-      const origins = options.corsOrigins ?? [];
-      const origin = corsOrigin(origins, request);
-      if (origins.length > 0 && request.method === "OPTIONS") {
-        return preflightResponse(origin as string);
-      }
-      const { response, principal } = await route(request, clientIp);
-      if (origins.length > 0) {
-        applyCors(response, origin as string);
-      }
-      if (
-        options.audit !== undefined &&
-        (request.method !== "GET" || response.status === 401)
-      ) {
-        options.audit({
-          at: now().toISOString(),
-          method: request.method,
-          path: new URL(request.url).pathname,
-          status: response.status,
-          principal: principal === null ? "unauthenticated" : principalKey(principal),
-        });
-      }
-      return response;
-    },
+    fetch: (request, clientIp) => app.fetch(request, { clientIp }),
   };
 }

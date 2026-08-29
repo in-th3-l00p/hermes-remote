@@ -1,42 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { DEFAULT_LIMITS, RateLimiter, ipInCidr } from "./index.ts";
-
-describe("RateLimiter", () => {
-  test("allows within the window, blocks over it, then resets", () => {
-    let at = 0;
-    const limiter = new RateLimiter({ limit: 2, windowSeconds: 60 }, () => at);
-    expect(limiter.check("k")).toBeNull();
-    expect(limiter.check("k")).toBeNull();
-    const retry = limiter.check("k");
-    expect(retry).toBe(60);
-    at = 30_000;
-    expect(limiter.check("k")).toBe(30);
-    expect(limiter.check("other")).toBeNull();
-    at = 61_000;
-    expect(limiter.check("k")).toBeNull();
-  });
-
-  test("peek reports the block without consuming a slot", () => {
-    let at = 0;
-    const limiter = new RateLimiter({ limit: 2, windowSeconds: 60 }, () => at);
-    expect(limiter.peek("k")).toBeNull();
-    expect(limiter.check("k")).toBeNull();
-    expect(limiter.peek("k")).toBeNull();
-    expect(limiter.check("k")).toBeNull();
-    expect(limiter.peek("k")).toBe(60);
-    at = 30_000;
-    expect(limiter.peek("k")).toBe(30);
-    at = 61_000;
-    expect(limiter.peek("k")).toBeNull();
-    expect(limiter.check("k")).toBeNull();
-  });
-
-  test("uses the real clock by default", () => {
-    const limiter = new RateLimiter({ limit: 1, windowSeconds: 60 });
-    expect(limiter.check("k")).toBeNull();
-    expect(limiter.check("k")).toBeGreaterThan(0);
-  });
-});
+import { DEFAULT_LIMITS, ipInCidr } from "./index.ts";
 
 describe("ipInCidr", () => {
   test("matches prefixes", () => {

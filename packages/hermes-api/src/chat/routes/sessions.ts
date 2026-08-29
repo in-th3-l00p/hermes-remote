@@ -1,18 +1,15 @@
-import type { Principal } from "../../auth/index.ts";
-import { canAccess, error, json, requireScope, type ChatOptions } from "./shared.ts";
+import type { Hono } from "hono";
+import { canAccess, error, json, requireScope, type ChatEnv, type ChatOptions } from "./shared.ts";
 import { pageParams } from "./validate.ts";
 
-/** Returns null when the request doesn't match a session route. */
-export function handleSessionRoutes(
-  request: Request,
-  url: URL,
+export function registerSessionRoutes(
+  app: Hono<ChatEnv>,
   options: ChatOptions,
-  principal: Principal,
-): Response | null {
+): void {
   const { store } = options;
-  const { method } = request;
 
-  if (url.pathname === "/v1/sessions" && method === "POST") {
+  app.post("/v1/sessions", (c) => {
+    const principal = c.get("principal");
     const denied = requireScope(principal, "sessions:write");
     if (denied !== null) {
       return denied;
@@ -21,13 +18,15 @@ export function handleSessionRoutes(
       201,
       store.createSession(principal.type === "user" ? principal.userId : null),
     );
-  }
+  });
 
-  if (url.pathname === "/v1/sessions" && method === "GET") {
+  app.get("/v1/sessions", (c) => {
+    const principal = c.get("principal");
     const denied = requireScope(principal, "sessions:read");
     if (denied !== null) {
       return denied;
     }
+    const url = new URL(c.req.url);
     const { limit, offset } = pageParams(url, 50);
     if (principal.type === "user") {
       return json(200, {
@@ -44,36 +43,34 @@ export function handleSessionRoutes(
       .filter((s) => s.userId === null || principal.type === "api_key")
       .slice(offset, offset + limit);
     return json(200, { sessions });
-  }
+  });
 
-  const sessionMatch = /^\/v1\/sessions\/([0-9a-f]+)$/.exec(url.pathname);
-  if (sessionMatch !== null && method === "DELETE") {
+  app.delete("/v1/sessions/:id{[0-9a-f]+}", (c) => {
+    const principal = c.get("principal");
     const denied = requireScope(principal, "sessions:write");
     if (denied !== null) {
       return denied;
     }
-    const session = store.getSession(sessionMatch[1] as string);
+    const session = store.getSession(c.req.param("id"));
     if (session === null || !canAccess(session, principal)) {
       return error(404, "session_not_found", "Unknown session");
     }
     store.deleteSession(session.id);
     return json(200, { deleted: true });
-  }
+  });
 
-  const stopMatch = /^\/v1\/sessions\/([0-9a-f]+)\/stop$/.exec(url.pathname);
-  if (stopMatch !== null && method === "POST") {
+  app.post("/v1/sessions/:id{[0-9a-f]+}/stop", (c) => {
+    const principal = c.get("principal");
     const denied = requireScope(principal, "chat:invoke");
     if (denied !== null) {
       return denied;
     }
-    const session = store.getSession(stopMatch[1] as string);
+    const session = store.getSession(c.req.param("id"));
     if (session === null || !canAccess(session, principal)) {
       return error(404, "session_not_found", "Unknown session");
     }
     const controller = options.turns?.get(session.id);
     controller?.abort();
     return json(200, { stopped: controller !== undefined });
-  }
-
-  return null;
+  });
 }
