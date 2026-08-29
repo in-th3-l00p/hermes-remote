@@ -73,7 +73,7 @@
     },
     "packages/cli": {
       "name": "@in-th3-l00p/hermes-remote-cli",
-      "version": "2.0.0",
+      "version": "3.2.0",
       "bin": {
         "hermes-remote": "./src/cli.ts",
         "hermes-api": "./src/cli.ts",
@@ -82,9 +82,16 @@
         "@in-th3-l00p/hermes-remote": "workspace:*",
       },
     },
+    "packages/examples-backend": {
+      "name": "@in-th3-l00p/hermes-remote-examples-backend",
+      "version": "0.1.0",
+      "dependencies": {
+        "@in-th3-l00p/hermes-remote": "workspace:*",
+      },
+    },
     "packages/hermes-api": {
       "name": "@in-th3-l00p/hermes-remote",
-      "version": "2.0.0",
+      "version": "3.2.0",
       "dependencies": {
         "hono": "^4.13.5",
         "hono-rate-limiter": "^0.5.3",
@@ -93,14 +100,22 @@
         "@clerk/backend": "^3.16.13",
         "@supabase/supabase-js": "^2.112.4",
       },
+      "peerDependencies": {
+        "@clerk/backend": "^3",
+        "@supabase/supabase-js": "^2",
+      },
+      "optionalPeers": [
+        "@clerk/backend",
+        "@supabase/supabase-js",
+      ],
     },
     "packages/hermes-ts": {
       "name": "@in-th3-l00p/hermes-remote-client",
-      "version": "1.0.0",
+      "version": "1.2.0",
     },
     "packages/react-hermes": {
       "name": "@in-th3-l00p/hermes-remote-react",
-      "version": "1.0.0",
+      "version": "1.2.0",
       "dependencies": {
         "@in-th3-l00p/hermes-remote-client": "workspace:*",
       },
@@ -308,6 +323,8 @@
     "@in-th3-l00p/hermes-remote-cli": ["@in-th3-l00p/hermes-remote-cli@workspace:packages/cli"],
 
     "@in-th3-l00p/hermes-remote-client": ["@in-th3-l00p/hermes-remote-client@workspace:packages/hermes-ts"],
+
+    "@in-th3-l00p/hermes-remote-examples-backend": ["@in-th3-l00p/hermes-remote-examples-backend@workspace:packages/examples-backend"],
 
     "@in-th3-l00p/hermes-remote-react": ["@in-th3-l00p/hermes-remote-react@workspace:packages/react-hermes"],
 
