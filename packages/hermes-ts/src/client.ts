@@ -1,5 +1,9 @@
 import { narrowChatEvent } from "./chat-event.ts";
+import { Conversation } from "./conversation.ts";
+import { DiscoveryResource } from "./discovery.ts";
 import { HttpClient } from "./http.ts";
+import { JobsResource } from "./jobs.ts";
+import { RunsResource } from "./runs.ts";
 import type { HermesClientOptions } from "./http.ts";
 import type {
   Attachment,
@@ -16,11 +20,22 @@ export interface SendMessageInput {
 
 export class HermesClient {
   readonly baseUrl: string;
+  readonly discovery: DiscoveryResource;
+  readonly runs: RunsResource;
+  readonly jobs: JobsResource;
   private readonly http: HttpClient;
 
   constructor(options: HermesClientOptions) {
     this.http = new HttpClient(options);
     this.baseUrl = this.http.baseUrl;
+    this.discovery = new DiscoveryResource(this.http);
+    this.runs = new RunsResource(this.http);
+    this.jobs = new JobsResource(this.http);
+  }
+
+  /** A handle on one conversation; without an id, created on first send. */
+  conversation(sessionId?: string): Conversation {
+    return new Conversation(this, sessionId);
   }
 
   request<T>(method: string, path: string, body?: unknown): Promise<T> {
