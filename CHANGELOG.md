@@ -1,6 +1,14 @@
 # Changelog
 
-## Unreleased (2.0.0)
+## Unreleased (3.0.0)
+
+* **Breaking:** user authentication is now a providers module. `UserTokenVerifier`/`SupabaseUser` and the `userVerifier` option are replaced by `AuthProvider`/`VerifiedUser` and `authProvider`; `SupabaseJwksVerifier`, `hs256Verifier`, and `verifySupabaseJwt` are replaced by `JwtAuthProvider` (same zero-dependency JWKS/HS256 verification, plus optional `issuer`/`audience` pinning). `is_anonymous` on the verified identity is now `isAnonymous`.
+* New SDK-backed providers, selected via config: `SupabaseAuthProvider` (official `@supabase/supabase-js`, `auth.getClaims`) and `ClerkAuthProvider` (official `@clerk/backend`, `verifyToken` with `secretKey` or networkless `jwtKey`, `audience`, `authorizedParties`). Both SDKs are optional peer dependencies loaded only when the provider is enabled; a missing SDK fails with an error naming the package. `createAuthProvider(config)` builds any provider from a plain config object.
+* **Breaking:** the HTTP layer moved from a hand-rolled `Bun.serve` router to Hono. Wire behavior is unchanged (routes, error bodies, SSE protocol, 401-before-404, `retry-after` on 429); CORS, body caps, and both rate limiters (per principal, and per IP for failed auth) now come from `hono/cors`, `hono/body-limit`, and `hono-rate-limiter`. The exported `RateLimiter` class is gone; 429 responses additionally carry standard `RateLimit-*` headers, and oversized streamed bodies are rejected mid-flight instead of only via Content-Length.
+* CLI: `config.json` gains an `auth` section (`{"auth": {"provider": "supabase" | "clerk" | "jwt", ...}}`). Legacy `--supabase-url`/`--supabase-jwt-secret` flags, env vars, and config fields keep working, mapped onto the `jwt` provider; `CLERK_SECRET_KEY` alone enables the Clerk provider.
+* Docs: new Authentication section (overview, Supabase, Clerk, custom providers) and an end-to-end Clerk tutorial.
+
+## 2.0.0
 
 * **Breaking:** the management CLI moved out of `@in-th3-l00p/hermes-remote` into its own package, `@in-th3-l00p/hermes-remote-cli` (`packages/cli`). The `hermes-remote` and `hermes-api` bins are now installed via `npm i -g @in-th3-l00p/hermes-remote-cli`. The server package no longer ships bins and is a pure library; its exports are unchanged.
 * Internal restructure: every package is split into one module per concern (server: scopes/limits → auth → chat → http; cli: one file per command family) with no behavior change; code-structure rules added to CONTRIBUTING.md.

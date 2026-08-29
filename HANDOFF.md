@@ -13,7 +13,7 @@ Hermes Remote turns a local [Hermes agent](https://hermes-agent.nousresearch.com
 
 ## Design vs reality
 
-`ARCHITECTURE.md` describes three bridges (HTTP proxy, CLI bridge, FS bridge), an OpenAPI/Zod schema pipeline, and API coverage of the agent's full feature surface (memory, cron, hooks, goals, skills management...). **What is actually implemented at 1.0.0 is the HTTP proxy bridge only, scoped to chat**: streaming turns, sessions, messages (edit/react/attachments), turn cancellation, plus the full identity/auth/scopes layer. The router is hand-rolled on `Bun.serve` (no Hono, no Zod, no OpenAPI generation) — this was a deliberate simplification. The CLI bridge, FS bridge, and the wider endpoint map remain the natural roadmap for 1.x/2.0. When extending, keep ARCHITECTURE.md's principal model and scope rules — those ARE implemented and enforced exactly as written.
+`ARCHITECTURE.md` describes three bridges (HTTP proxy, CLI bridge, FS bridge), an OpenAPI/Zod schema pipeline, and API coverage of the agent's full feature surface (memory, cron, hooks, goals, skills management...). **What is actually implemented at 1.0.0 is the HTTP proxy bridge only, scoped to chat**: streaming turns, sessions, messages (edit/react/attachments), turn cancellation, plus the full identity/auth/scopes layer. Since 3.0.0 the HTTP layer runs on Hono (CORS, body caps, and rate limiting come from `hono/cors`, `hono/body-limit`, and `hono-rate-limiter`; still no Zod or OpenAPI generation). The CLI bridge, FS bridge, and the wider endpoint map remain the natural roadmap for 1.x/2.0. When extending, keep ARCHITECTURE.md's principal model and scope rules — those ARE implemented and enforced exactly as written.
 
 ## Repository map
 
@@ -21,16 +21,21 @@ Hermes Remote turns a local [Hermes agent](https://hermes-agent.nousresearch.com
 packages/hermes-api/          @in-th3-l00p/hermes-remote — server library (no bins since 2.0.0)
                               (one directory per concern; deps flow scopes/limits → auth → chat → http)
   src/scopes/                 closed scope catalog + 4 tiers (no admin scope, by design)
-  src/limits/                 DEFAULT_LIMITS, RateLimiter (fixed window per principal), ipInCidr
+  src/limits/                 DEFAULT_LIMITS, RateLimitOptions, ipInCidr
   src/auth/principal.ts       Principal/KeyVerifier types, authenticate()
-  src/auth/supabase.ts        UserTokenVerifier; hs256Verifier; SupabaseJwksVerifier (ES256/JWKS, kid cache)
+  src/auth/providers/         AuthProvider/VerifiedUser contract (types.ts), JwtAuthProvider (jwt.ts,
+                              zero-dep HS256/JWKS+kid-cache, issuer/audience), SupabaseAuthProvider +
+                              ClerkAuthProvider (official SDKs as optional peer deps behind the
+                              loadModule seam), createAuthProvider registry
   src/auth/keys.ts            KeyStore — hk_<id>.<secret> keys, argon2 via Bun.password, scopes, CIDR, rotate
   src/chat/agent.ts           AgentBackend interface; DemoAgent (offline fake); HermesAgent (upstream proxy)
   src/chat/identity.ts        identityTurn injection (security invariant) + history builder
-  src/chat/routes/            /v1/sessions* dispatch: sessions.ts, messages.ts, sse.ts, shared.ts, validate.ts
+  src/chat/routes/            Hono sub-app: chatRoutes() in index.ts; sessions.ts, messages.ts, sse.ts,
+                              shared.ts (ChatEnv/helpers), validate.ts
   src/chat/store/             ChatStore — bun:sqlite; db.ts schema, messages.ts ops, types.ts models
-  src/http/app.ts             createApp composition root: body cap, auth, rate limit, routing, audit
-  src/http/cors.ts, whoami.ts CORS + whoami helpers
+  src/http/app.ts             createApp composition root: Hono app + middleware chain
+  src/http/middleware.ts      cors/auth/audit middleware + both hono-rate-limiter instances
+  src/http/whoami.ts          whoami body helper
   src/http/server.ts          startServer — Bun.serve, requestIP → app.fetch(request, ip), audit JSONL append
 packages/cli/                 @in-th3-l00p/hermes-remote-cli — management CLI (bins: hermes-remote, hermes-api)
   src/run.ts                  thin dispatcher over commands/
@@ -64,7 +69,7 @@ Directory names predate the rename (hermes-api/hermes-ts/react-hermes); the publ
 
 ## The security model (implemented, do not weaken)
 
-* **Principals:** `api_key` (Bearer `hk_<id>.<secret>`, argon2-hashed secrets, minted only via CLI, never over HTTP), `user` (Supabase JWT verified via JWKS ES256, or HS256 secret fallback, through the `UserTokenVerifier` interface), `anonymous` (only if explicitly enabled). Unknown routes return 401 before 404 when unauthenticated (deliberate: don't leak the route map).
+* **Principals:** `api_key` (Bearer `hk_<id>.<secret>`, argon2-hashed secrets, minted only via CLI, never over HTTP), `user` (a JWT verified through the `AuthProvider` interface — Supabase or Clerk via their official SDKs as optional peer deps, or the zero-dep `jwt` provider for JWKS/HS256 issuers; selected by the `auth` section of config.json), `anonymous` (only if explicitly enabled). Unknown routes return 401 before 404 when unauthenticated (deliberate: don't leak the route map).
 * **Scopes** are a closed catalog with four tiers; user tokens get tier 1 only and only their own sessions (`user_id` ownership enforced in ChatStore queries). There is **no admin scope** — administration is the host CLI only.
 * **Identity injection:** every turn prepends a system message built by `identityTurn()` in `src/chat/routes.ts` (`<user-context>You are chatting through hermes-remote with <identity>...`). Only verified claims go in. This is how "the agent knows who it is speaking with" works end to end.
 * The upstream `API_SERVER_KEY` lives only in server config; it must never reach responses, logs, or client bundles.
