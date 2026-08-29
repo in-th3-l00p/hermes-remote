@@ -30,6 +30,8 @@ export const TIER2_SCOPES = [
   "sessions:read-all",
   "sessions:write-all",
   "subagents:control",
+  "messaging:send",
+  "projects:manage",
 ] as const;
 
 export const TIER3_SCOPES = [
@@ -45,6 +47,9 @@ export const TIER3_SCOPES = [
   "providers:manage",
   "toolsets:manage",
   "memory:providers",
+  "ops:control",
+  "pairing:manage",
+  "backups:manage",
 ] as const;
 
 export const AUTH_SCOPES = ["auth:users"] as const;
