@@ -8,11 +8,20 @@ export type { KeyVerifier, Principal } from "./auth/index.ts";
 export { DEFAULT_LIMITS, RateLimiter, ipInCidr } from "./limits/index.ts";
 export type { Limits, RateLimitOptions } from "./limits/index.ts";
 export {
-  SupabaseJwksVerifier,
-  hs256Verifier,
-  verifySupabaseJwt,
+  ClerkAuthProvider,
+  JwtAuthProvider,
+  SupabaseAuthProvider,
+  createAuthProvider,
 } from "./auth/index.ts";
-export type { SupabaseUser, UserTokenVerifier } from "./auth/index.ts";
+export type {
+  AuthProvider,
+  AuthProviderConfig,
+  ClerkProviderOptions,
+  JwtProviderOptions,
+  ModuleLoader,
+  SupabaseProviderOptions,
+  VerifiedUser,
+} from "./auth/index.ts";
 export { startServer } from "./http/index.ts";
 export type { RunningServer, StartServerOptions } from "./http/index.ts";
 export { ChatStore } from "./chat/index.ts";

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createHmac } from "node:crypto";
-import { createApp, ChatStore, hs256Verifier, type KeyVerifier } from "../index.ts";
+import { createApp, ChatStore, JwtAuthProvider, type KeyVerifier } from "../index.ts";
 import type { ApiKeyRecord } from "../auth/index.ts";
 import type { AgentBackend } from "../chat/index.ts";
 
@@ -94,7 +94,7 @@ describe("createApp", () => {
   });
 
   test("supabase tokens verify into user principals", async () => {
-    const app = createApp({ userVerifier: hs256Verifier(SECRET) });
+    const app = createApp({ authProvider: new JwtAuthProvider({ hs256Secret: SECRET }) });
     const res = await app.fetch(get("/v1/auth/whoami", supabaseToken("u-9")));
     expect(await res.json()).toEqual({
       type: "user",
@@ -131,7 +131,7 @@ describe("createApp", () => {
 
   test("user principals own their sessions", async () => {
     const chat = { store: new ChatStore(), agent: echoAgent };
-    const app = createApp({ chat, userVerifier: hs256Verifier(SECRET), anonymous: true });
+    const app = createApp({ chat, authProvider: new JwtAuthProvider({ hs256Secret: SECRET }), anonymous: true });
     const created = await app.fetch(
       new Request("http://x/v1/sessions", {
         method: "POST",
@@ -206,7 +206,7 @@ describe("createApp", () => {
 
     const userApp = createApp({
       chat: { store: new ChatStore(), agent: capturingAgent },
-      userVerifier: hs256Verifier(SECRET),
+      authProvider: new JwtAuthProvider({ hs256Secret: SECRET }),
       store,
       anonymous: true,
     });
@@ -254,7 +254,7 @@ describe("createApp", () => {
     expect(limited.status).toBe(429);
     expect(Number(limited.headers.get("retry-after"))).toBeGreaterThan(0);
     const perUser = createApp({
-      userVerifier: hs256Verifier(SECRET),
+      authProvider: new JwtAuthProvider({ hs256Secret: SECRET }),
       rateLimit: { limit: 1, windowSeconds: 60 },
     });
     expect(

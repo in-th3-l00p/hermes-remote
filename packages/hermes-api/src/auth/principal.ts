@@ -1,5 +1,5 @@
 import { ipInCidr } from "../limits/index.ts";
-import type { UserTokenVerifier } from "./supabase.ts";
+import type { AuthProvider } from "./providers/index.ts";
 import type { ApiKeyRecord } from "./keys.ts";
 
 export interface KeyVerifier {
@@ -19,7 +19,7 @@ export interface AuthDenial {
 
 export interface AuthenticateOptions {
   store?: KeyVerifier;
-  userVerifier?: UserTokenVerifier;
+  authProvider?: AuthProvider;
   anonymous?: boolean;
 }
 
@@ -66,8 +66,8 @@ export async function authenticate(
     }
     return { type: "api_key", record };
   }
-  if (options.userVerifier !== undefined) {
-    const user = await options.userVerifier.verify(token);
+  if (options.authProvider !== undefined) {
+    const user = await options.authProvider.verify(token);
     if (user !== null) {
       return {
         type: "user",

@@ -31,7 +31,27 @@
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
+  "peerDependencies": {
+    "@clerk/backend": "^3",
+    "@supabase/supabase-js": "^2"
+  },
+  "peerDependenciesMeta": {
+    "@clerk/backend": {
+      "optional": true
+    },
+    "@supabase/supabase-js": {
+      "optional": true
+    }
+  },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
+  },
+  "dependencies": {
+    "hono": "^4.13.5",
+    "hono-rate-limiter": "^0.5.3"
+  },
+  "devDependencies": {
+    "@clerk/backend": "^3.16.13",
+    "@supabase/supabase-js": "^2.112.4"
   }
 }

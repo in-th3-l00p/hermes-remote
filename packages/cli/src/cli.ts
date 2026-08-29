@@ -6,8 +6,7 @@ import {
   ChatStore,
   DemoAgent,
   HermesAgent,
-  SupabaseJwksVerifier,
-  hs256Verifier,
+  JwtAuthProvider,
   startServer,
 } from "@in-th3-l00p/hermes-remote";
 
@@ -32,9 +31,17 @@ const ctx: CliContext = {
       corsOrigins: request.corsOrigins,
       ...(request.rateLimit === null ? {} : { rateLimit: request.rateLimit }),
       ...(request.supabaseUrl !== undefined
-        ? { userVerifier: new SupabaseJwksVerifier(request.supabaseUrl) }
+        ? {
+            authProvider: new JwtAuthProvider({
+              jwksUrl: `${request.supabaseUrl.replace(/\/+$/, "")}/auth/v1/.well-known/jwks.json`,
+            }),
+          }
         : request.supabaseJwtSecret !== undefined
-          ? { userVerifier: hs256Verifier(request.supabaseJwtSecret) }
+          ? {
+              authProvider: new JwtAuthProvider({
+                hs256Secret: request.supabaseJwtSecret,
+              }),
+            }
           : {}),
       chat: {
         store: new ChatStore(join(homeDir, "chat.db")),

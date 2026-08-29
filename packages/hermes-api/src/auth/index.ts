@@ -6,10 +6,21 @@ export type {
   Principal,
 } from "./principal.ts";
 export {
-  SupabaseJwksVerifier,
-  hs256Verifier,
-  verifySupabaseJwt,
-} from "./supabase.ts";
-export type { SupabaseUser, UserTokenVerifier } from "./supabase.ts";
+  ClerkAuthProvider,
+  JwtAuthProvider,
+  SupabaseAuthProvider,
+  createAuthProvider,
+  defaultModuleLoader,
+  missingDependency,
+} from "./providers/index.ts";
+export type {
+  AuthProvider,
+  AuthProviderConfig,
+  ClerkProviderOptions,
+  JwtProviderOptions,
+  ModuleLoader,
+  SupabaseProviderOptions,
+  VerifiedUser,
+} from "./providers/index.ts";
 export { KeyStore } from "./keys.ts";
 export type { ApiKeyRecord, CreateKeyInput } from "./keys.ts";

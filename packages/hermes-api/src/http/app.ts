@@ -1,5 +1,5 @@
 import { authenticate, principalKey, type KeyVerifier, type Principal } from "../auth/index.ts";
-import type { UserTokenVerifier } from "../auth/index.ts";
+import type { AuthProvider } from "../auth/index.ts";
 import { handleChatRoute, type ChatOptions } from "../chat/index.ts";
 import { DEFAULT_LIMITS, RateLimiter, type Limits, type RateLimitOptions } from "../limits/index.ts";
 import { applyCors, corsOrigin, preflightResponse } from "./cors.ts";
@@ -17,8 +17,8 @@ export interface AppOptions {
   version?: string;
   store?: KeyVerifier;
   chat?: ChatOptions;
-  /** Verifier for end-user bearer tokens (e.g. Supabase HS256 or JWKS). */
-  userVerifier?: UserTokenVerifier;
+  /** Provider for end-user bearer tokens (Supabase, Clerk, generic JWT, or custom). */
+  authProvider?: AuthProvider;
   /** Allow unauthenticated access to chat routes (demo / anonymous mode). */
   anonymous?: boolean;
   /** Origins allowed for browser calls; enables CORS handling. */
