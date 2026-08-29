@@ -5,8 +5,9 @@ import { runCli, type CliContext } from "./run.ts";
 import {
   ChatStore,
   createAuthProvider,
-  DemoAgent,
-  HermesAgent,
+  DemoUpstream,
+  HermesUpstream,
+  RunStore,
   startServer,
 } from "@in-th3-l00p/hermes-remote";
 
@@ -25,6 +26,10 @@ const ctx: CliContext = {
     const authProvider = createAuthProvider(
       request.auth ?? { provider: "none" },
     );
+    const upstream =
+      request.upstream === null
+        ? new DemoUpstream()
+        : new HermesUpstream(request.upstream);
     return startServer({
       port: request.port,
       store: request.store,
@@ -34,12 +39,10 @@ const ctx: CliContext = {
       corsOrigins: request.corsOrigins,
       ...(request.rateLimit === null ? {} : { rateLimit: request.rateLimit }),
       ...(authProvider === null ? {} : { authProvider }),
+      upstream: { upstream, runStore: new RunStore(join(homeDir, "chat.db")) },
       chat: {
         store: new ChatStore(join(homeDir, "chat.db")),
-        agent:
-          request.upstream === null
-            ? new DemoAgent()
-            : new HermesAgent(request.upstream),
+        agent: upstream.chat,
         turns: new Map(),
       },
     });
