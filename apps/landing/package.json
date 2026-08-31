@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "bun run build:examples && vite build && vitepress build docs && bun scripts/copy-examples.ts",
+    "build": "bun run build:function && bun run build:examples && vite build && vitepress build docs && bun scripts/copy-examples.ts",
+    "build:function": "bun build api-src/hermes.ts --target=bun --outfile=api/hermes.mjs",
     "build:examples": "for d in chat auth configuration runs profiles command-center; do (cd ../examples/$d && bun run build) || exit 1; done",
     "preview": "vite preview",
     "docs:dev": "vitepress dev docs"
@@ -26,6 +27,7 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
+    "@types/bun": "^1.4.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

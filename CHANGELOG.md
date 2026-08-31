@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+* Live examples platform: six example React apps (chat, auth, configuration, runs, profiles, command-center) under `apps/examples/*`, each hosted at `/examples/<name>/app/` with an architecture article at `/examples/<name>/`; `/examples/` is a grid index. A sandbox hermes-remote backend (`packages/examples-backend`) runs as a Vercel Function on the Bun runtime at `/api/hermes/*` — real `createApp` with anonymous access, a public sandbox API key, Supabase JWKS user auth, seeded profiles (default/atlas/nova), demo management fixtures, and Groq `llama-3.1-8b-instant` inference when `GROQ_API_KEY` is set (demo echo otherwise).
+
 ## Unreleased (3.2.0)
 
 * **Full agent coverage.** hermes-remote now exposes the agent's entire feature surface through three bridges: the existing HTTP proxy, a new CLI bridge (`HermesCliBridge` — allowlisted argv templates over the `hermes` binary, audited, with timeouts and a concurrency cap), and a new FS bridge (`FsBridge` — allowlisted profile-home paths; `.env`/`auth.json`/key material unreadable by construction).
