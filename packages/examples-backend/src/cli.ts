@@ -2,20 +2,20 @@ import { FakeCliBridge } from "@in-th3-l00p/hermes-remote";
 
 const PROFILE_TABLE = ` Profile   Model                     Gateway    Alias    Distribution
  ─────────   ───────────────────────    ─────────    ──────    ────────────
- ◆default   groq/llama-3.1-8b         running    —        —
-  atlas     groq/llama-3.1-8b         running    atlas    —
-  nova      groq/llama-3.1-8b         running    nova     —
+ ◆default   groq/gpt-oss-20b         running    —        —
+  atlas     groq/gpt-oss-20b         running    atlas    —
+  nova      groq/gpt-oss-20b         running    nova     —
 `;
 
 const STATUS = `⚕ Hermes Sandbox Status
-model: groq/llama-3.1-8b-instant
+model: groq/gpt-oss-20b
 gateway: running (sandbox)
 sessions: in-memory, resets on recycle
 `;
 
 const CONFIG_SHOW = `model:
   provider: groq
-  name: llama-3.1-8b-instant
+  name: gpt-oss-20b
 terminal:
   backend: disabled (sandbox)
 agent:
@@ -30,7 +30,7 @@ const RESPONSES: Record<string, { stdout: string } | { exitCode: number; stderr:
   doctor: { stdout: "sandbox: all checks pass (nothing real to break)" },
   "prompt-size": { stdout: "system prompt: 2.1 KB · tools: 3.4 KB (sandbox estimate)" },
   "config show": { stdout: CONFIG_SHOW },
-  "config get model": { stdout: "groq/llama-3.1-8b-instant" },
+  "config get model": { stdout: "groq/gpt-oss-20b" },
   "config get": { stdout: "sandbox-value" },
   "config set": { stdout: "set (sandbox: not persisted across recycles)" },
   "config unset": { stdout: "unset (sandbox)" },
@@ -42,7 +42,7 @@ const RESPONSES: Record<string, { stdout: string } | { exitCode: number; stderr:
   logs: { stdout: "2026-08-29 sandbox: gateway started\n2026-08-29 sandbox: examples deployed" },
   "gateway status": { stdout: "gateway: running (sandbox)\nplatforms: none connected" },
   "gateway list": { stdout: "default: running · atlas: running · nova: running" },
-  "fallback list": { stdout: "1. groq/llama-3.1-8b-instant (primary, free)" },
+  "fallback list": { stdout: "1. groq/gpt-oss-20b (primary, free)" },
   "moa show": { stdout: "moa: disabled in the sandbox" },
   "auth status": { stdout: "credential pools: 1 provider (groq), 1 key, healthy" },
   journey: { stdout: "2026-08-29 learned skill web-research\n2026-08-29 memory updated" },

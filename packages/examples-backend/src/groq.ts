@@ -2,7 +2,7 @@ import { HermesAgent, HermesUpstreamError } from "@in-th3-l00p/hermes-remote";
 import type { AgentBackend } from "@in-th3-l00p/hermes-remote";
 
 export const GROQ_BASE_URL = "https://api.groq.com/openai";
-export const GROQ_MODEL = "llama-3.1-8b-instant";
+export const GROQ_MODEL = "openai/gpt-oss-20b";
 export const MAX_OUTPUT_TOKENS = 400;
 
 /** Injects the sandbox output cap into every completion request body. */

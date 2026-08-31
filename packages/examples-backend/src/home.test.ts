@@ -57,7 +57,7 @@ describe("sandboxCli", () => {
     const cli = sandboxCli();
     expect((await cli.run(["status"])).stdout).toContain("Sandbox");
     expect((await cli.run(["-p", "atlas", "status"])).stdout).toContain("Sandbox");
-    expect((await cli.run(["config", "show"])).stdout).toContain("llama");
+    expect((await cli.run(["config", "show"])).stdout).toContain("gpt-oss");
     expect((await cli.run(["config", "get", "model"])).stdout).toContain("groq");
     expect((await cli.run(["config", "set", "a.b", "c"])).ok).toBe(true);
     expect((await cli.run(["kanban", "list"])).stdout).toContain("#1");

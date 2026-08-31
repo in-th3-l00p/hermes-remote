@@ -79,7 +79,7 @@ describe("groq", () => {
     const chatCall = groq.calls.find((c) => c.body["stream"] === true);
     expect(chatCall?.url).toContain("api.groq.com/openai/v1/chat/completions");
     expect(chatCall?.body["max_tokens"]).toBe(MAX_OUTPUT_TOKENS);
-    expect(chatCall?.body["model"]).toBe("llama-3.1-8b-instant");
+    expect(chatCall?.body["model"]).toBe("openai/gpt-oss-20b");
   });
 
   test("groqComplete returns content and maps failures", async () => {
@@ -138,11 +138,11 @@ describe("discovery and raw", () => {
     const health = (await (await app.fetch(req("/v1/health"))).json()) as {
       upstream: { model: string };
     };
-    expect(health.upstream.model).toBe("llama-3.1-8b-instant");
+    expect(health.upstream.model).toBe("openai/gpt-oss-20b");
     const models = (await (await app.fetch(req("/v1/models"))).json()) as {
       data: { id: string }[];
     };
-    expect(models.data[0]?.id).toBe("llama-3.1-8b-instant");
+    expect(models.data[0]?.id).toBe("openai/gpt-oss-20b");
     const { app: keyless } = await makeApp(false);
     const demoModels = (await (
       await keyless.fetch(req("/v1/models"))
