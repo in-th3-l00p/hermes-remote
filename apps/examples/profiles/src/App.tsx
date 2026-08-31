@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
-import { HermesClient } from "@in-th3-l00p/hermes-remote-client";
+import type { HermesClient } from "@intheloop-studio/hermes-remote-client";
 import {
   useAgentStatus,
   useMemory,
   useProfiles,
   useSoul,
-} from "@in-th3-l00p/hermes-remote-react";
-import { baseUrl, keyedClient, SANDBOX_KEY } from "./lib/client.ts";
+} from "@intheloop-studio/hermes-remote-react";
+import { keyedClient } from "./lib/client.ts";
 import { ErrorNote, Panel, Shell } from "./lib/ui.tsx";
 
 interface ProfileRow {
@@ -47,18 +47,14 @@ function ProfilePanels(props: { client: HermesClient; profile: string }) {
 export default function App() {
   const profiles = useProfiles({ client: keyedClient });
   const [selected, setSelected] = useState("default");
-  const scoped = useMemo(
-    () =>
-      new HermesClient({ baseUrl, token: SANDBOX_KEY }).withProfile(selected),
-    [selected],
-  );
+  const scoped = useMemo(() => keyedClient.withProfile(selected), [selected]);
   const rows = (profiles.data ?? []) as ProfileRow[];
 
   return (
     <Shell
       title="profiles"
       slug="profiles"
-      blurb="Isolated agent instances behind one server — one header switches everything."
+      blurb="Isolated agent instances behind one server. One header switches everything."
     >
       <Panel title="profiles (hermes profile list)">
         <div className="flex flex-wrap gap-2">
@@ -77,7 +73,7 @@ export default function App() {
         </div>
         <p className="text-xs text-zinc-500">
           Selecting a profile rebuilds the client with{" "}
-          <code className="font-mono">withProfile("{selected}")</code> — every
+          <code className="font-mono">withProfile("{selected}")</code>, so every
           request below now carries{" "}
           <code className="font-mono">X-Hermes-Profile: {selected}</code>.
         </p>

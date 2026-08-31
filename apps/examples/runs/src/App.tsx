@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRunEvents, useRuns } from "@in-th3-l00p/hermes-remote-react";
+import { useRunEvents, useRuns } from "@intheloop-studio/hermes-remote-react";
 import { client } from "./lib/client.ts";
 import { ErrorNote, Panel, Shell } from "./lib/ui.tsx";
 
@@ -85,11 +85,11 @@ export default function App() {
               </li>
             ))}
             {runs.runs.length === 0 ? (
-              <li className="text-zinc-600">no runs yet — submit a task</li>
+              <li className="text-zinc-600">no runs yet. submit a task</li>
             ) : null}
           </ul>
           <p className="text-xs text-zinc-600">
-            Anonymous visitors only ever see runs they created — ownership is
+            Anonymous visitors only ever see runs they created; ownership is
             tracked per principal on the server.
           </p>
         </Panel>
@@ -103,7 +103,7 @@ export default function App() {
                 </span>
               </li>
             ))}
-            {events.done ? <li className="text-zinc-500">— stream closed —</li> : null}
+            {events.done ? <li className="text-zinc-500">stream closed</li> : null}
             {activeRun === null ? (
               <li className="text-zinc-600">select or create a run</li>
             ) : null}

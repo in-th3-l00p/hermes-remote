@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useChat, useSessions } from "@in-th3-l00p/hermes-remote-react";
-import type { ChatMessage } from "@in-th3-l00p/hermes-remote-client";
+import { useChat, useSessions } from "@intheloop-studio/hermes-remote-react";
+import type { ChatMessage } from "@intheloop-studio/hermes-remote-client";
 import { client } from "./lib/client.ts";
 import { ErrorNote, Panel, Shell } from "./lib/ui.tsx";
 
@@ -114,7 +114,7 @@ export default function App() {
     <Shell
       title="chat"
       slug="chat"
-      blurb="Streaming conversations through useChat — edit, react, regenerate, stop."
+      blurb="Streaming conversations through useChat: edit, react, regenerate, stop."
     >
       <div className="grid flex-1 gap-4 md:grid-cols-[220px_1fr]">
         <Panel
@@ -171,7 +171,7 @@ export default function App() {
             ))}
             {chat.messages.length === 0 ? (
               <p className="m-auto text-sm text-zinc-600">
-                say hello — the reply streams token by token
+                say hello and the reply streams token by token
               </p>
             ) : null}
           </div>
@@ -185,7 +185,7 @@ export default function App() {
           >
             <input
               className="input"
-              placeholder="message the sandbox agent…"
+              placeholder="message your agent…"
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
             />

@@ -1,15 +1,33 @@
 import { useEffect, useMemo, useState } from "react";
-import { createClient, type Session } from "@supabase/supabase-js";
-import { HermesClient, HermesApiError } from "@in-th3-l00p/hermes-remote-client";
-import { baseUrl, SANDBOX_KEY } from "./lib/client.ts";
-import { ErrorNote, Panel, Shell } from "./lib/ui.tsx";
-
-const supabase = createClient(
-  import.meta.env["VITE_SUPABASE_URL"] as string,
-  import.meta.env["VITE_SUPABASE_ANON_KEY"] as string,
-);
+import { HermesClient, HermesApiError } from "@intheloop-studio/hermes-remote-client";
+import { API_KEY, baseUrl, demoFetch } from "./lib/client.ts";
+import { Panel, Shell } from "./lib/ui.tsx";
 
 type PrincipalKind = "anonymous" | "user" | "api_key";
+
+interface UserSession {
+  token: string;
+  sub: string;
+  email: string;
+}
+
+/**
+ * A signed-in user is a bearer JWT. A real deployment gets this token from an
+ * identity provider (Supabase, Clerk, or any JWT issuer) through the client's
+ * tokenProvider. This example mints one in the browser so it runs on its own,
+ * with no provider to sign up for; the in-page backend reads the same sub and
+ * email claims a real server would verify.
+ */
+function mintUserToken(sub: string, email: string): string {
+  const encode = (value: unknown): string =>
+    btoa(JSON.stringify(value)).replace(/=+$/, "");
+  const header = encode({ alg: "none", typ: "JWT" });
+  const payload = encode({ sub, email });
+  return `${header}.${payload}.demo`;
+}
+
+// The signed-in token, read live by the user client's tokenProvider.
+let currentToken = "";
 
 interface ProbeResult {
   path: string;
@@ -20,15 +38,15 @@ const PROBES = ["/v1/auth/whoami", "/v1/models", "/v1/memory", "/v1/agent/status
 
 function clientFor(kind: PrincipalKind): HermesClient {
   if (kind === "anonymous") {
-    return new HermesClient({ baseUrl });
+    return new HermesClient({ baseUrl, fetch: demoFetch });
   }
   if (kind === "api_key") {
-    return new HermesClient({ baseUrl, token: SANDBOX_KEY });
+    return new HermesClient({ baseUrl, token: API_KEY, fetch: demoFetch });
   }
   return new HermesClient({
     baseUrl,
-    tokenProvider: async () =>
-      (await supabase.auth.getSession()).data.session?.access_token ?? "",
+    fetch: demoFetch,
+    tokenProvider: async () => currentToken,
   });
 }
 
@@ -105,53 +123,36 @@ function Whoami(props: { kind: PrincipalKind; refreshKey: number }) {
   );
 }
 
+const DEMO_USER = { sub: "user_9f2c1a", email: "developer@example.com" };
+
 export default function App() {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<UserSession | null>(null);
   const [kind, setKind] = useState<PrincipalKind>("anonymous");
-  const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  useEffect(() => {
-    void supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data } = supabase.auth.onAuthStateChange((_event, next) => {
-      setSession(next);
-      setRefreshKey((k) => k + 1);
-    });
-    return () => data.subscription.unsubscribe();
-  }, []);
-
-  const signInAnonymously = async () => {
-    setError(null);
-    const { error: cause } = await supabase.auth.signInAnonymously();
-    if (cause !== null) {
-      setError(cause.message);
-    } else {
-      setKind("user");
-    }
+  const signIn = () => {
+    const token = mintUserToken(DEMO_USER.sub, DEMO_USER.email);
+    currentToken = token;
+    setSession({ token, ...DEMO_USER });
+    setKind("user");
+    setRefreshKey((k) => k + 1);
   };
 
-  const signInGithub = async () => {
-    setError(null);
-    const { error: cause } = await supabase.auth.signInWithOAuth({
-      provider: "github",
-      options: { redirectTo: window.location.href },
-    });
-    if (cause !== null) {
-      setError(cause.message);
-    }
+  const signOut = () => {
+    currentToken = "";
+    setSession(null);
+    setKind("anonymous");
+    setRefreshKey((k) => k + 1);
   };
 
-  const claims = session?.access_token
-    ? JSON.parse(atob(session.access_token.split(".")[1] ?? "")) as Record<string, unknown>
-    : null;
+  const claims = session === null ? null : { sub: session.sub, email: session.email };
 
   return (
     <Shell
       title="auth"
       slug="auth"
-      blurb="Three principals — anonymous, Supabase user, API key — and what each may touch."
+      blurb="Three principals (anonymous, signed-in user, API key) and what each may touch."
     >
-      <ErrorNote error={error} />
       <div className="grid gap-4 md:grid-cols-3">
         {(["anonymous", "user", "api_key"] as const).map((option) => (
           <button
@@ -165,45 +166,42 @@ export default function App() {
             <p className="font-medium">{option.replace("_", " ")}</p>
             <p className="mt-1 text-xs text-zinc-500">
               {option === "anonymous"
-                ? "no token — per-IP identity, tier 1"
+                ? "no token, per-IP identity, tier 1"
                 : option === "user"
-                  ? "Supabase JWT via tokenProvider, tier 1 + owned sessions"
-                  : "public sandbox key with management scopes"}
+                  ? "user JWT via tokenProvider, tier 1 plus owned sessions"
+                  : "API key with management scopes"}
             </p>
           </button>
         ))}
       </div>
       <div className="grid gap-4 md:grid-cols-2">
-        <Panel title="sign in (supabase)">
+        <Panel title="sign in">
           {session === null ? (
-            <div className="flex gap-2">
-              <button className="btn btn-primary" onClick={() => void signInAnonymously()}>
-                anonymous sign-in
-              </button>
-              <button className="btn" onClick={() => void signInGithub()}>
-                github oauth
-              </button>
+            <div className="flex flex-col gap-2 text-sm">
+              <p className="text-zinc-500 text-xs">
+                Signs you in as a demo user. The client attaches the token
+                through its tokenProvider on every request.
+              </p>
+              <div>
+                <button className="btn btn-primary" onClick={signIn}>
+                  sign in as a user
+                </button>
+              </div>
             </div>
           ) : (
             <div className="flex flex-col gap-2 text-sm">
               <p className="text-zinc-300">
                 signed in as{" "}
-                <span className="font-mono text-xs">
-                  {session.user.email ?? session.user.id}
-                </span>
+                <span className="font-mono text-xs">{session.email}</span>
               </p>
-              <div className="flex gap-2">
-                <button className="btn" onClick={() => void supabase.auth.signOut()}>
+              <div>
+                <button className="btn" onClick={signOut}>
                   sign out
                 </button>
               </div>
               {claims === null ? null : (
                 <pre className="overflow-x-auto rounded-lg bg-zinc-950 p-3 font-mono text-xs text-zinc-400">
-                  {JSON.stringify(
-                    { sub: claims["sub"], email: claims["email"], is_anonymous: claims["is_anonymous"], exp: claims["exp"] },
-                    null,
-                    2,
-                  )}
+                  {JSON.stringify(claims, null, 2)}
                 </pre>
               )}
             </div>

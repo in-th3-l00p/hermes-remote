@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "bun run build:function && bun run build:examples && vite build && vitepress build docs && bun scripts/copy-examples.ts",
-    "build:function": "bun build api-src/hermes.ts --target=bun --outfile=api/hermes.mjs",
+    "build": "bun run build:examples && vite build && vitepress build docs && bun scripts/copy-examples.ts",
     "build:examples": "for d in chat auth configuration runs profiles command-center; do (cd ../examples/$d && bun run build) || exit 1; done",
     "preview": "vite preview",
     "docs:dev": "vitepress dev docs"
@@ -14,7 +13,6 @@
   "dependencies": {
     "@base-ui/react": "^1.7.0",
     "@fontsource-variable/geist": "^5.3.0",
-    "@in-th3-l00p/hermes-remote-examples-backend": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.33.0",

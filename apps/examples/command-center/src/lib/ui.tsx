@@ -27,18 +27,8 @@ export function Shell(props: {
           </a>
         </nav>
       </header>
-      <SandboxBanner />
       <main className="flex flex-1 flex-col gap-4">{props.children}</main>
     </div>
-  );
-}
-
-export function SandboxBanner() {
-  return (
-    <p className="rounded-lg border border-amber-900/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-200/90">
-      Live sandbox — a real hermes-remote server on a free fast model. Shared
-      state, tight rate limits, resets periodically. Be nice.
-    </p>
   );
 }
 

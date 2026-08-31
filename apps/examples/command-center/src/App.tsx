@@ -9,7 +9,7 @@ import {
   useRunEvents,
   useRuns,
   useSoul,
-} from "@in-th3-l00p/hermes-remote-react";
+} from "@intheloop-studio/hermes-remote-react";
 import { client, keyedClient } from "./lib/client.ts";
 import { ErrorNote, Panel, Shell } from "./lib/ui.tsx";
 
@@ -36,7 +36,7 @@ function ChatPane() {
           </p>
         ))}
         {chat.messages.length === 0 ? (
-          <p className="m-auto text-xs text-zinc-600">talk to the sandbox agent</p>
+          <p className="m-auto text-xs text-zinc-600">talk to your agent</p>
         ) : null}
       </div>
       <ErrorNote error={chat.error} />
@@ -215,7 +215,7 @@ function EventsTicker() {
           ))}
         {events.events.length === 0 ? (
           <p className="text-zinc-600">
-            waiting for lifecycle events — send a message or launch a run
+            waiting for lifecycle events: send a message or launch a run
           </p>
         ) : null}
       </div>

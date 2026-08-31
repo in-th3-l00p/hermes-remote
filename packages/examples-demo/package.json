@@ -1,0 +1,13 @@
+{
+  "name": "@intheloop-studio/hermes-remote-examples-demo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "In-browser fake hermes-remote backend behind the hosted examples",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

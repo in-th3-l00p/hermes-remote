@@ -10,8 +10,9 @@
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",
-    "@in-th3-l00p/hermes-remote-client": "workspace:*",
-    "@in-th3-l00p/hermes-remote-react": "workspace:*",
+    "@intheloop-studio/hermes-remote-client": "workspace:*",
+    "@intheloop-studio/hermes-remote-examples-demo": "workspace:*",
+    "@intheloop-studio/hermes-remote-react": "workspace:*",
     "@tailwindcss/vite": "^4.3.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

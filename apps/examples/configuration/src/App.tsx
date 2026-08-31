@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useConfig, useMemory, useSoul } from "@in-th3-l00p/hermes-remote-react";
+import { useConfig, useMemory, useSoul } from "@intheloop-studio/hermes-remote-react";
 import { keyedClient } from "./lib/client.ts";
 import { ErrorNote, Panel, Shell } from "./lib/ui.tsx";
 
@@ -93,7 +93,7 @@ function MemoryTab() {
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <Panel title="MEMORY.md — the agent's notes">
+      <Panel title="MEMORY.md: the agent's notes">
         {memory.data === null ? null : (
           <Budget chars={memory.data.chars} limit={memory.data.limit} />
         )}
@@ -118,7 +118,7 @@ function MemoryTab() {
       <Panel title="add an entry">
         <p className="text-xs text-zinc-500">
           Entries append lines; overflow past the char budget is rejected by
-          the server, forcing consolidation — exactly like the real agent.
+          the server, forcing consolidation, exactly like the real agent.
         </p>
         <textarea
           className="input min-h-24"
@@ -151,7 +151,7 @@ function SoulTab() {
 
   return (
     <Panel
-      title="SOUL.md — the agent's identity"
+      title="SOUL.md: the agent's identity"
       actions={
         <button
           className="btn btn-primary"
@@ -184,7 +184,7 @@ export default function App() {
     <Shell
       title="configuration"
       slug="configuration"
-      blurb="The agent's config, memory, and soul — edited through the CLI and filesystem bridges."
+      blurb="The agent's config, memory, and soul, edited through the CLI and filesystem bridges."
     >
       <div className="flex gap-2">
         {(["config", "memory", "soul"] as const).map((option) => (
