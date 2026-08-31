@@ -11,7 +11,7 @@ npm i @intheloop-studio/hermes-remote-client
 ## Usage
 
 ```ts
-import { HermesClient } from "@intheloop-studio/hermes-web-ts";
+import { HermesClient } from "@intheloop-studio/hermes-remote-client";
 
 const client = new HermesClient({
   baseUrl: "https://agent.example.com",

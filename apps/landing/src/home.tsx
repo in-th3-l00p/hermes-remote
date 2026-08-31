@@ -129,7 +129,7 @@ export function Home() {
           {PACKAGES.map((pkg) => (
             <li key={pkg.name} className="max-w-xl leading-relaxed">
               <a
-                href="https://github.com/in-th3-l00p/hermes-remote/packages"
+                href={`https://www.npmjs.com/package/@intheloop-studio/${pkg.name}`}
                 className="font-mono text-sm text-foreground hover:underline underline-offset-4"
               >
                 @intheloop-studio/{pkg.name}

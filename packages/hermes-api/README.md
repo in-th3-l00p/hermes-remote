@@ -28,4 +28,4 @@ State lives in `~/.hermes-api/` (override with `HERMES_API_HOME`).
 
 ## Client
 
-Use [`@intheloop-studio/hermes-web-ts`](https://github.com/in-th3-l00p/hermes-web/packages) or [`@intheloop-studio/hermes-web-react`](https://github.com/in-th3-l00p/hermes-web/packages) to consume the API.
+Use [`@intheloop-studio/hermes-remote-client`](https://www.npmjs.com/package/@intheloop-studio/hermes-remote-client) or [`@intheloop-studio/hermes-remote-react`](https://www.npmjs.com/package/@intheloop-studio/hermes-remote-react) to consume the API.

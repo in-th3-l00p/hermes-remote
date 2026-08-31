@@ -9,7 +9,7 @@ hermes-web/
 ├── packages/
 │   ├── hermes-api/       # Bun HTTP server — authenticated facade over a local Hermes instance
 │   ├── cli/              # Management CLI (bins hermes-remote/hermes-api) built on hermes-api
-│   ├── hermes-ts/        # "hermes.ts" — typed TypeScript client (@intheloop-studio/hermes-web-ts)
+│   ├── hermes-ts/        # "hermes.ts" — typed TypeScript client (@intheloop-studio/hermes-remote-client)
 │   └── react-hermes/     # React hooks built on hermes-ts
 ├── CLAUDE.md             # Hermes feature reference + project conventions
 └── ARCHITECTURE.md       # This file

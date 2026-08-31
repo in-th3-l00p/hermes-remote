@@ -11,7 +11,7 @@ npm i @intheloop-studio/hermes-remote-react @intheloop-studio/hermes-remote-clie
 ## Usage
 
 ```tsx
-import { HermesClient, HermesProvider, useHermesClient } from "@intheloop-studio/hermes-web-react";
+import { HermesClient, HermesProvider, useHermesClient } from "@intheloop-studio/hermes-remote-react";
 
 const client = new HermesClient({
   baseUrl: "https://agent.example.com",
