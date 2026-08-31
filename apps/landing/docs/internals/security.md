@@ -1,4 +1,4 @@
-# 4.2 Security model
+# Security model
 
 The threat model starts from one fact: `chat:invoke` is remote access to an agent that can run terminal commands. Everything below exists to make that safe to expose.
 
@@ -8,17 +8,21 @@ API keys are `hk_<id>.<secret>`; the server stores only an argon2 hash of the se
 
 ## Scopes
 
-Four tiers, enforced per route. User tokens are hard limited to tier 1 and their own resources; tier 3 (host level configuration surfaces) requires an explicit `--dangerous` acknowledgment at grant time. The scope catalog is a closed set: unknown scopes are rejected at key creation, and a generated matrix test asserts every route's allow and deny behavior for every principal type.
+Four tiers, enforced per route. User tokens are hard limited to tier 1 and their own resources; tier 3 (host-level configuration surfaces) requires an explicit `--dangerous` acknowledgment at grant time. The scope catalog is a closed set: unknown scopes are rejected at key creation, and a generated matrix test asserts every route's allow and deny behavior for every principal type.
 
 ## User tokens
 
-Supabase access tokens are verified with the project's public JWKS (ES256, P-256, WebCrypto), so the server holds no signing secret at all. The verifier caches keys and refetches once on an unknown `kid` to survive rotations. Expiry and `sub` are validated after the signature; tampered, expired, or foreign tokens all resolve to null and the request dies with a 401. A legacy HS256 path exists for older projects, implemented with a timing safe comparison.
+Supabase access tokens are verified with the project's public JWKS (ES256, P-256, WebCrypto), so the server holds no signing secret at all. The verifier caches keys and refetches once on an unknown `kid` to survive rotations. Expiry and `sub` are validated after the signature; tampered, expired, or foreign tokens all resolve to null and the request dies with a 401. A legacy HS256 path exists for older projects, implemented with a timing-safe comparison. Clerk tokens go through the official SDK with optional `authorizedParties` pinning.
 
 Why asymmetric wins: with JWKS, compromising the chat server yields nothing that can mint identities. With a shared secret, it would.
 
 ## Ownership and blast radius
 
-Every session row carries its owner. All five mutating routes and both read routes re-check ownership on each request, so an id leaked in a log is not an access grant (except for deliberately anonymous sessions, which are capability URLs by design and carry no user data). Rate limiting is per principal, so one abusive guest cannot starve the rest. The audit log appends the acting principal for every mutation and every auth failure.
+Every session row carries its owner. All mutating routes and both read routes re-check ownership on each request, so an id leaked in a log is not an access grant (except for deliberately anonymous sessions, which are capability URLs by design and carry no user data). Rate limiting is per principal, so one abusive guest cannot starve the rest. The audit log appends the acting principal for every mutation and every auth failure.
+
+## The bridges
+
+The CLI bridge runs only allowlisted argv templates, never a shell, with timeouts and a concurrency cap. The filesystem bridge resolves paths inside the profile home, rejects traversal, and refuses credential files (`.env`, `auth.json`, keys) by construction. Management routes are API-key only; the profile middleware enforces key pinning before any bridge runs.
 
 ## What the agent never sees
 

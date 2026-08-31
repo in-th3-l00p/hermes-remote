@@ -1,4 +1,4 @@
-# 2.3 Clerk provider
+# Clerk provider
 
 Verifies Clerk session tokens with the official `@clerk/backend` SDK. Clerk brings hosted sign-in UI, MFA, organizations, and user management; Hermes Remote consumes the session token your frontend already holds.
 
@@ -22,10 +22,10 @@ Two verification modes:
 }
 ```
 
-* `secretKey` — your Clerk secret key; the SDK fetches and caches your instance's JWKS.
-* `jwtKey` — the PEM public key from the Clerk dashboard (API keys → JWT public key) for fully networkless verification.
+* `secretKey`: your Clerk secret key; the SDK fetches and caches your instance's JWKS.
+* `jwtKey`: the PEM public key from the Clerk dashboard (API keys, JWT public key) for fully networkless verification.
 
-Optional hardening fields pass straight through to the SDK: `audience`, and `authorizedParties` (recommended — the list of origins allowed to hold your session tokens):
+Optional hardening fields pass straight through to the SDK: `audience`, and `authorizedParties` (recommended; the list of origins allowed to hold your session tokens):
 
 ```json
 {
@@ -42,7 +42,7 @@ Shortcut: with no `auth` section at all, setting the `CLERK_SECRET_KEY` environm
 Embedded:
 
 ```ts
-import { ClerkAuthProvider, createApp } from "@in-th3-l00p/hermes-remote";
+import { ClerkAuthProvider, createApp } from "@intheloop-studio/hermes-remote";
 
 const app = createApp({
   authProvider: new ClerkAuthProvider({
@@ -54,7 +54,7 @@ const app = createApp({
 
 ## Making the email visible
 
-Clerk's default session token carries the user id (`sub`) but not the email. The agent will know the caller's stable id either way; to introduce users by email too, add a claim to the session token in the Clerk dashboard (Sessions → Customize session token):
+Clerk's default session token carries the user id (`sub`) but not the email. The agent will know the caller's stable id either way; to introduce users by email too, add a claim to the session token in the Clerk dashboard (Sessions, Customize session token):
 
 ```json
 { "email": "{{user.primary_email_address}}" }
@@ -62,11 +62,11 @@ Clerk's default session token carries the user id (`sub`) but not the email. The
 
 ## Client
 
-Use Clerk's `getToken()` as the token provider — it returns a fresh short-lived session token on every call:
+Use Clerk's `getToken()` as the token provider. It returns a fresh short-lived session token on every call:
 
 ```tsx
 import { useAuth } from "@clerk/clerk-react";
-import { HermesClient } from "@in-th3-l00p/hermes-remote-client";
+import { HermesClient } from "@intheloop-studio/hermes-remote-client";
 
 function useHermes(): HermesClient {
   const { getToken } = useAuth();

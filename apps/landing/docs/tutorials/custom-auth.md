@@ -1,6 +1,6 @@
-# 3.4 Custom auth providers
+# Custom auth providers
 
-Supabase and Clerk are the packaged paths, but the server's user auth is one small interface. Any JWT issuer (Auth0, Firebase, or your own backend) can plug in. The full reference lives in [Authentication → Custom providers](/auth/custom); this page is the short version.
+Supabase and Clerk are the packaged paths, but the server's user auth is one small interface. Any JWT issuer (Auth0, Firebase, or your own backend) can plug in. The full reference lives in [Custom providers](/auth/custom); this page is the short version.
 
 ## Standard JWTs: no code needed
 
@@ -22,7 +22,7 @@ ES256 via JWKS or HS256 via `hs256Secret`, with `exp` always enforced and `iss`/
 ## Everything else: implement AuthProvider
 
 ```ts
-import type { AuthProvider, VerifiedUser } from "@in-th3-l00p/hermes-remote";
+import type { AuthProvider, VerifiedUser } from "@intheloop-studio/hermes-remote";
 
 const myProvider: AuthProvider = {
   name: "my-issuer",
@@ -44,7 +44,7 @@ import {
   ChatStore,
   HermesAgent,
   KeyStore,
-} from "@in-th3-l00p/hermes-remote";
+} from "@intheloop-studio/hermes-remote";
 
 await startServer({
   port: 8643,
@@ -65,7 +65,7 @@ await startServer({
 If your platform has its own backend and does not want to expose its IdP tokens to the browser, broker access instead:
 
 1. The user logs into your platform normally.
-2. Your backend (holding an `hk_` API key) verifies them and mints a short-lived JWT of your own, signed with a secret only you and the server share.
+2. Your backend verifies them and mints a short-lived JWT of your own, signed with a secret only you and the server share.
 3. The browser talks to Hermes Remote with that JWT, verified by `{ "provider": "jwt", "hs256Secret": "..." }`.
 
 This keeps the platform IdP entirely out of the chat path and lets you decide exactly which claims the agent may see.

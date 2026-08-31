@@ -1,4 +1,4 @@
-# 2.4 Custom providers
+# Custom providers
 
 Two paths, depending on how far from a standard JWT your issuer is.
 
@@ -23,14 +23,14 @@ Any issuer of standard JWTs works with the built-in, zero-dependency `jwt` provi
 }
 ```
 
-Claims mapping: `sub` (required) becomes the owning user id, `email` and `is_anonymous` are passed through when present. Expired tokens, missing `sub`, wrong algorithm, and issuer/audience mismatches all verify to `null` — the request gets a 401.
+Claims mapping: `sub` (required) becomes the owning user id, `email` and `is_anonymous` are passed through when present. Expired tokens, missing `sub`, wrong algorithm, and issuer or audience mismatches all verify to `null`, and the request gets a 401.
 
 ## Path 2: implement `AuthProvider`
 
-For anything else — opaque tokens, a session lookup against your own backend, custom claim shapes — implement the interface:
+For anything else, such as opaque tokens or a session lookup against your own backend, implement the interface:
 
 ```ts
-import type { AuthProvider, VerifiedUser } from "@in-th3-l00p/hermes-remote";
+import type { AuthProvider, VerifiedUser } from "@intheloop-studio/hermes-remote";
 
 class MyBackendProvider implements AuthProvider {
   readonly name = "my-backend";
@@ -54,7 +54,7 @@ class MyBackendProvider implements AuthProvider {
 }
 ```
 
-Return `null` for anything invalid — never throw for a merely bad token. `sub` owns the sessions; `email` (when present) is included in the identity context the agent sees; `isAnonymous: true` introduces the caller to the agent as a guest with a stable id.
+Return `null` for anything invalid; never throw for a merely bad token. `sub` owns the sessions; `email` (when present) is included in the identity context the agent sees; `isAnonymous: true` introduces the caller to the agent as a guest with a stable id.
 
 Wire it in by embedding the server:
 
@@ -64,7 +64,7 @@ import {
   ChatStore,
   HermesAgent,
   KeyStore,
-} from "@in-th3-l00p/hermes-remote";
+} from "@intheloop-studio/hermes-remote";
 
 await startServer({
   port: 8643,
@@ -85,7 +85,7 @@ await startServer({
 If your platform has its own backend and does not want to expose its IdP tokens to the browser, broker access instead:
 
 1. The user logs into your platform normally.
-2. Your backend (holding an `hk_` API key) verifies them and mints a short-lived JWT of your own, signed with a secret only you and the server share.
+2. Your backend verifies them and mints a short-lived JWT of your own, signed with a secret only you and the server share.
 3. The browser talks to Hermes Remote with that JWT, verified by `{ "provider": "jwt", "hs256Secret": "..." }`.
 
 This keeps the platform IdP entirely out of the chat path and lets you decide exactly which claims the agent may see.

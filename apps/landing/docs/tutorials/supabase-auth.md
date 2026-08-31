@@ -1,10 +1,10 @@
-# 3.2 Authentication with Supabase
+# Authentication with Supabase
 
-Hermes Remote verifies Supabase access tokens directly, so a Supabase project is a complete identity layer: OAuth providers, email OTP, and anonymous guests, all with stable user ids. Reference: [Authentication → Supabase provider](/auth/supabase).
+Hermes Remote verifies Supabase access tokens directly, so a Supabase project is a complete identity layer: OAuth providers, email OTP, and anonymous guests, all with stable user ids. Reference: [the Supabase provider](/auth/supabase).
 
 ## Server side
 
-The quickest path needs no extra dependency — point the server at your project and drop `--anonymous`:
+The quickest path needs no extra dependency. Point the server at your project and drop `--anonymous`:
 
 ```bash
 hermes-remote serve --supabase-url https://YOUR_PROJECT.supabase.co \
@@ -30,7 +30,7 @@ To verify through the official SDK instead (`bun add @supabase/supabase-js`), se
 
 ```ts
 import { createClient } from "@supabase/supabase-js";
-import { HermesClient } from "@in-th3-l00p/hermes-remote-client";
+import { HermesClient } from "@intheloop-studio/hermes-remote-client";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -44,20 +44,20 @@ const client = new HermesClient({
 Sign in however your product wants:
 
 ```ts
-await supabase.auth.signInAnonymously();                        // guests with stable ids
-await supabase.auth.signInWithOtp({ email });                    // email codes
-await supabase.auth.signInWithOAuth({ provider: "github" });    // OAuth
+await supabase.auth.signInAnonymously();                      // guests with stable ids
+await supabase.auth.signInWithOtp({ email });                 // email codes
+await supabase.auth.signInWithOAuth({ provider: "github" });  // OAuth
 ```
 
-Enable anonymous sign ins and your OAuth providers in the Supabase dashboard (Authentication settings), and add your app origin to the redirect allowlist.
+Enable anonymous sign-ins and your OAuth providers in the Supabase dashboard (Authentication settings), and add your app origin to the redirect allowlist.
 
 ## What the server does with the identity
 
-* Sessions created by a user are owned by their Supabase `sub`; other users get 404s on them, listing shows only their own.
-* Every agent turn carries the identity: signed in users are introduced with their user id and email, anonymous guests with their stable id.
-* Ask the agent "who am I?" and it answers with the caller's identity, and nothing else, because the injected context contains nothing else.
+* Sessions created by a user are owned by their Supabase `sub`. Other users get 404s on them; listing shows only their own.
+* Every agent turn carries the identity: signed-in users are introduced with their user id and email, anonymous guests with their stable id.
+* Ask the agent "who am I?" and it answers with the caller's identity and nothing else, because the injected context contains nothing else.
 
 ## Notes
 
-* Email OTP uses Supabase's built in mailer by default, which is rate limited to a handful of emails per hour; configure custom SMTP before production.
+* Email OTP uses Supabase's built-in mailer by default, which is rate limited to a handful of emails per hour; configure custom SMTP before production.
 * Anonymous users can later be upgraded (linked to an email or OAuth identity) without losing their id, so their sessions survive the upgrade.

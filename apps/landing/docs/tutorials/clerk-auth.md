@@ -1,15 +1,15 @@
-# 3.3 Authentication with Clerk
+# Authentication with Clerk
 
 End to end: a Clerk application signing users in, Hermes Remote verifying their session tokens, and the agent greeting each caller by their verified identity.
 
 ## 1. Create the Clerk application
 
-In the [Clerk dashboard](https://dashboard.clerk.com), create an application and pick your sign-in options (email, Google, GitHub, passkeys — anything works; Hermes Remote only sees the resulting session token). Collect two values from **API keys**:
+In the [Clerk dashboard](https://dashboard.clerk.com), create an application and pick your sign-in options (email, Google, GitHub, passkeys; anything works, Hermes Remote only sees the resulting session token). Collect two values from **API keys**:
 
 * the **publishable key** (`pk_...`) for the frontend,
 * the **secret key** (`sk_...`) for the server.
 
-So the agent can greet users by email, add the claim under **Sessions → Customize session token**:
+So the agent can greet users by email, add the claim under **Sessions, Customize session token**:
 
 ```json
 { "email": "{{user.primary_email_address}}" }
@@ -40,20 +40,20 @@ bun add @clerk/backend
 hermes-remote serve
 ```
 
-`authorizedParties` pins tokens to your app's origin — set it in production. For fully networkless verification swap `secretKey` for the dashboard's PEM `jwtKey`.
+`authorizedParties` pins tokens to your app's origin; set it in production. For fully networkless verification swap `secretKey` for the dashboard's PEM `jwtKey`.
 
 ## 3. Wire the React client
 
 ```bash
-bun add @clerk/clerk-react @in-th3-l00p/hermes-remote-client @in-th3-l00p/hermes-remote-react
+bun add @clerk/clerk-react @intheloop-studio/hermes-remote-client @intheloop-studio/hermes-remote-react
 ```
 
-Wrap the app in both providers — Clerk supplies the token, Hermes Remote consumes it:
+Wrap the app in both providers. Clerk supplies the token, Hermes Remote consumes it:
 
 ```tsx
-import { ClerkProvider, SignedIn, SignedOut, SignIn, UserButton, useAuth } from "@clerk/clerk-react";
-import { HermesClient } from "@in-th3-l00p/hermes-remote-client";
-import { HermesProvider } from "@in-th3-l00p/hermes-remote-react";
+import { ClerkProvider, SignedIn, SignedOut, SignIn, useAuth } from "@clerk/clerk-react";
+import { HermesClient } from "@intheloop-studio/hermes-remote-client";
+import { HermesProvider } from "@intheloop-studio/hermes-remote-react";
 import { useMemo } from "react";
 
 function Providers({ children }: { children: React.ReactNode }) {
@@ -85,10 +85,10 @@ function WithHermes({ children }: { children: React.ReactNode }) {
 
 `getToken()` returns a fresh short-lived session token on each call, so streams never start with a stale credential; on a 401 the client retries once with a new token automatically.
 
-From here the chat itself is the standard hooks — see [the React chat tutorial](/tutorials/react-chat):
+From here the chat itself is the standard hooks; see [the React chat tutorial](/tutorials/react-chat):
 
 ```tsx
-import { useChat, useHermesClient } from "@in-th3-l00p/hermes-remote-react";
+import { useChat, useHermesClient } from "@intheloop-studio/hermes-remote-react";
 
 function Chat() {
   const client = useHermesClient();
@@ -119,7 +119,7 @@ curl -H "authorization: Bearer $CLERK_SESSION_TOKEN" \
 { "type": "user", "id": "user_2abc...", "email": "ada@example.com" }
 ```
 
-Then ask the agent "who am I?" in the chat. It answers with the Clerk user id (and email, if you added the session claim) — and nothing else, because the injected identity context contains nothing else. Sessions created while signed in belong to that user id; other users get 404s on them.
+Then ask the agent "who am I?" in the chat. It answers with the Clerk user id (and email, if you added the session claim) and nothing else, because the injected identity context contains nothing else. Sessions created while signed in belong to that user id; other users get 404s on them.
 
 ## Notes
 

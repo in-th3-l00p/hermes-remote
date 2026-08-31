@@ -1,4 +1,4 @@
-# 2.2 Supabase provider
+# Supabase provider
 
 Verifies Supabase access tokens with the official SDK (`supabase.auth.getClaims`), which checks signatures locally against your project's signing keys. One Supabase project gives you OAuth providers, email OTP, and anonymous guests with stable ids.
 
@@ -20,12 +20,12 @@ bun add @supabase/supabase-js
 }
 ```
 
-The publishable (anon) key is not a secret — it is the same key your frontend uses. No Supabase secret is ever stored on the server.
+The publishable (anon) key is not a secret; it is the same key your frontend uses. No Supabase secret is ever stored on the server.
 
 Embedded instead of the CLI:
 
 ```ts
-import { SupabaseAuthProvider, createApp } from "@in-th3-l00p/hermes-remote";
+import { SupabaseAuthProvider, createApp } from "@intheloop-studio/hermes-remote";
 
 const app = createApp({
   authProvider: new SupabaseAuthProvider({
@@ -54,7 +54,7 @@ This is exactly what the legacy `--supabase-url` flag configures. Projects still
 
 ```ts
 import { createClient } from "@supabase/supabase-js";
-import { HermesClient } from "@in-th3-l00p/hermes-remote-client";
+import { HermesClient } from "@intheloop-studio/hermes-remote-client";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -65,7 +65,7 @@ const client = new HermesClient({
 });
 ```
 
-Sign in however your product wants — anonymous guests keep a stable `sub`, and can later be linked to an email or OAuth identity without losing their sessions:
+Sign in however your product wants. Anonymous guests keep a stable `sub` and can later be linked to an email or OAuth identity without losing their sessions:
 
 ```ts
 await supabase.auth.signInAnonymously();

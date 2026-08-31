@@ -1,4 +1,4 @@
-# 3.5 Deploying
+# Deploying
 
 Hermes Remote runs on the same machine as the agent. The deployment story is: enable the agent's API server, run hermes-remote as a service, then expose it deliberately.
 
@@ -16,7 +16,7 @@ Restart the gateway (`hermes gateway restart`). The agent now listens on `127.0.
 ## 2. Configure and install the service
 
 ```bash
-npm i -g @in-th3-l00p/hermes-remote-cli
+npm i -g @intheloop-studio/hermes-remote-cli
 
 hermes-remote init \
   --port 8643 \
@@ -40,11 +40,12 @@ Put TLS in front; never expose the raw HTTP port directly. Any of these work:
 
 ## 4. Lock it down
 
-* Do not run `--anonymous` on anything public. Every caller should be a Supabase user or an API key.
-* Give keys the minimum scopes; a chat frontend's backend needs `chat:invoke`, `sessions:read`, `sessions:write` and nothing else. Use `--cidr` to pin server side keys to your infrastructure.
-* Remember that `chat:invoke` is agent access: what a turn can do is bounded by the Hermes profile's toolsets. Serve a locked down profile (web only, no terminal) to strangers; keep powerful profiles for yourself.
+* Do not run `--anonymous` on anything public. Every caller should be an authenticated user or an API key.
+* Give keys the minimum scopes; a chat frontend's backend needs `chat:invoke`, `sessions:read`, `sessions:write` and nothing else. Use `--cidr` to pin server-side keys to your infrastructure.
+* Remember that `chat:invoke` is agent access: what a turn can do is bounded by the Hermes profile's toolsets. Serve a locked-down profile (web only, no terminal) to strangers; keep powerful profiles for yourself, and pin public keys with `--profile`.
 * The audit log (`~/.hermes-remote/audit.log`) records every auth failure and mutation with the acting principal; ship it to your log pipeline.
 * Rotate keys with `hermes-remote keys rotate <id>` on any suspicion; the id and scopes survive, the old secret dies instantly.
+* Tier 3 scopes (config, hooks, installs, profiles) are host-level access. Grant them only to keys that stay inside your infrastructure.
 
 ## What never to expose
 

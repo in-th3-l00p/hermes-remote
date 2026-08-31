@@ -1,13 +1,13 @@
-# 1.3 The React hooks
+# The React hooks
 
-`@in-th3-l00p/hermes-remote-react` wraps the client in two hooks. React 18+ is a peer dependency; the client is re-exported so one import covers most apps.
+`@intheloop-studio/hermes-remote-react` wraps the client in hooks. React 18+ is a peer dependency; the client package is re-exported, so one import covers most apps.
 
 ## useChat
 
 The whole conversation state machine in one hook:
 
 ```tsx
-import { HermesClient, useChat } from "@in-th3-l00p/hermes-remote-react";
+import { HermesClient, useChat } from "@intheloop-studio/hermes-remote-react";
 
 const client = new HermesClient({ baseUrl: "http://localhost:8643", token: "hk_..." });
 
@@ -37,20 +37,20 @@ function Chat() {
 | `react(messageId, emoji)` | Toggles a reaction |
 | `open(sessionId)` | Loads an existing session's history |
 | `reset()` | Clears state so the next send starts a new session |
-| `stop()` | Aborts the in flight turn, keeping the partial reply |
+| `stop()` | Aborts the in-flight turn, keeping the partial reply |
 
-The hook takes any object matching `ChatClientLike`, so tests can pass a fake without network access.
+The hook accepts any object matching `ChatClientLike`, so tests can pass a fake without network access.
 
 ## useSessions
 
 The sidebar logic:
 
 ```tsx
-import { useSessions } from "@in-th3-l00p/hermes-remote-react";
+import { useSessions } from "@intheloop-studio/hermes-remote-react";
 
 function Sidebar({ onOpen }: { onOpen: (id: string) => void }) {
   const { sessions, loading, error, refresh, remove } = useSessions({ client });
-  if (loading) return <p>loading…</p>;
+  if (loading) return <p>loading</p>;
   return (
     <ul>
       {sessions.map((s) => (
@@ -69,13 +69,13 @@ For anonymous principals pass `ids` (for example from localStorage); authenticat
 ## useAgentInfo, useRuns, useRunEvents
 
 ```tsx
-import { useAgentInfo, useRunEvents, useRuns } from "@in-th3-l00p/hermes-remote-react";
+import { useAgentInfo, useRunEvents, useRuns } from "@intheloop-studio/hermes-remote-react";
 
 function AgentStatus({ client }: { client: HermesClient }) {
   const { health, models, loading } = useAgentInfo({ client });
   const { runs, create } = useRuns({ client });
   const { events, done } = useRunEvents({ client, runId: runs[0]?.id ?? null });
-  if (loading) return <p>checking the agent…</p>;
+  if (loading) return <p>checking the agent</p>;
   return (
     <div>
       <p>agent: {(health as { status: string }).status}</p>
@@ -92,17 +92,35 @@ function AgentStatus({ client }: { client: HermesClient }) {
 
 ## Management hooks
 
-Every management surface has a hook for dashboard building: `useProfiles`, `useAgentStatus`, `useConfig`, `useMemory`, `useSoul`, `useSkills`, `useBundles`, `useJobsAdmin`, `useCheckpoints`, `useHooksInfo`, `useGateway`, `useKanban`, `useProjects`, `useToolsets`, `useMcp`, `usePlugins`, `useAgentSessions`, `useCommands` — each takes `{ client }` and returns `{ data, loading, error, refresh }`. They are built on two exported generics you can reuse for anything else: `useResource(fetcher, deps)` and `useAction(fn)`.
+Every management surface has a hook for dashboard building: `useProfiles`, `useAgentStatus`, `useConfig`, `useMemory`, `useSoul`, `useSkills`, `useBundles`, `useJobsAdmin`, `useCheckpoints`, `useHooksInfo`, `useGateway`, `useKanban`, `useProjects`, `useToolsets`, `useMcp`, `usePlugins`, `useAgentSessions`, `useCommands`. Each takes `{ client }` and returns `{ data, loading, error, refresh }`. They are built on two exported generics you can reuse for anything else: `useResource(fetcher, deps)` and `useAction(fn)`.
 
 Two richer hooks:
 
 ```tsx
 const { goal, set, pause, resume, addGate, addSubgoal } = useGoal({ client, sessionId });
-const { events, connected } = useEvents({ client });          // /v1/events SSE
+const { events, connected } = useEvents({ client }); // the /v1/events SSE firehose
 ```
 
-`useGoal` reads the Ralph-loop state (text, contract, gates, subgoals, turns, verdict) and refreshes after every mutation; `useEvents` keeps a live subscription while mounted.
+`useGoal` reads the goal state (text, contract, gates, subgoals, turns, verdict) and refreshes after every mutation. `useEvents` keeps a live subscription while mounted.
 
 ## Provider
 
-`HermesProvider` and `useHermesClient()` put one client in context for component trees that need it in many places.
+`HermesProvider` and `useHermesClient()` put one client in context for component trees that need it in many places:
+
+```tsx
+import { HermesProvider, useHermesClient, useChat } from "@intheloop-studio/hermes-remote-react";
+
+function App() {
+  return (
+    <HermesProvider client={client}>
+      <Chat />
+    </HermesProvider>
+  );
+}
+
+function Chat() {
+  const c = useHermesClient();
+  const { messages } = useChat({ client: c });
+  return <p>{messages.length} messages</p>;
+}
+```
