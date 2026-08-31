@@ -1,22 +1,10 @@
 import type { ReactNode } from "react";
 
-export function CodeCard({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
+export function Code({ children }: { children: ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-xl border">
-      <div className="bg-muted/50 text-muted-foreground flex items-center justify-between border-b px-4 py-2 font-mono text-xs">
-        <span>{title}</span>
-        <span>✧</span>
-      </div>
-      <pre className="bg-card overflow-x-auto p-4 font-mono text-[13px] leading-relaxed">
-        {children}
-      </pre>
-    </div>
+    <pre className="overflow-x-auto rounded-md bg-white/[0.03] px-5 py-4 font-mono text-[13px] leading-relaxed">
+      {children}
+    </pre>
   );
 }
 
@@ -24,48 +12,53 @@ export function Comment({ children }: { children: ReactNode }) {
   return <span className="text-muted-foreground">{children}</span>;
 }
 
+export function Prompt({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <span className="text-brand select-none">$ </span>
+      {children}
+    </>
+  );
+}
+
+export function Out({ children }: { children: ReactNode }) {
+  return <span className="text-muted-foreground">{children}</span>;
+}
+
+const NAV_LINKS = [
+  { href: "/docs/", label: "docs" },
+  { href: "/examples/", label: "examples" },
+  { href: "https://github.com/in-th3-l00p/hermes-remote", label: "github" },
+  { href: "https://hermes-agent.nousresearch.com", label: "hermes agent" },
+];
+
 export function SiteNav() {
   return (
-    <div className="border-b">
-      <nav className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
-        <a href="/" className="text-sm font-semibold">
-          ✧ hermes<span className="text-muted-foreground">remote</span>
-        </a>
-        <div className="flex items-center gap-5 text-sm">
+    <nav className="mx-auto flex max-w-2xl items-baseline justify-between px-6 pt-8 font-mono text-sm">
+      <a href="/" className="text-foreground">
+        hermes<span className="text-muted-foreground">-remote</span>
+      </a>
+      <div className="flex items-baseline gap-4">
+        {NAV_LINKS.map((link) => (
           <a
-            href="/docs/"
+            key={link.href}
+            href={link.href}
             className="text-muted-foreground hover:text-foreground"
           >
-            Docs
+            {link.label}
           </a>
-          <a
-            href="/examples/"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            Examples
-          </a>
-          <a
-            href="https://github.com/in-th3-l00p/hermes-remote"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            GitHub
-          </a>
-          <a
-            href="https://hermes-agent.nousresearch.com"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            Hermes Agent
-          </a>
-        </div>
-      </nav>
-    </div>
+        ))}
+      </div>
+    </nav>
   );
 }
 
 export function SiteFooter() {
   return (
-    <footer className="text-muted-foreground mt-16 border-t py-8 text-center text-sm">
-      <a href="https://www.tiscacatalin.com">✧ tiscacatalin.com ✧</a>
+    <footer className="mx-auto max-w-2xl px-6 pt-20 pb-10 font-mono text-xs text-muted-foreground">
+      <a href="https://www.tiscacatalin.com" className="hover:text-foreground">
+        tiscacatalin.com
+      </a>
     </footer>
   );
 }
@@ -74,7 +67,7 @@ export function Page({ children }: { children: ReactNode }) {
   return (
     <div className="bg-background text-foreground min-h-dvh">
       <SiteNav />
-      <main className="mx-auto max-w-4xl px-6">{children}</main>
+      <main className="mx-auto max-w-2xl px-6">{children}</main>
       <SiteFooter />
     </div>
   );

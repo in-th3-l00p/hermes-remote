@@ -10,7 +10,7 @@ export const EXAMPLES: ExampleCard[] = [
     slug: "chat",
     title: "Chat",
     blurb:
-      "Streaming conversations with a live agent — edit, react, regenerate, and stop mid-stream.",
+      "Streaming conversations: edit, react, regenerate, and stop mid-stream.",
     tags: ["useChat", "useSessions", "SSE"],
   },
   {
@@ -31,7 +31,7 @@ export const EXAMPLES: ExampleCard[] = [
     slug: "runs",
     title: "Runs",
     blurb:
-      "Submit long-running agent tasks, stream their event feeds, and stop them — with per-visitor ownership.",
+      "Submit long-running agent tasks, stream their event feeds, and stop them, with per-visitor ownership.",
     tags: ["useRuns", "useRunEvents"],
   },
   {
