@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "dependencies": {
-    "@in-th3-l00p/hermes-remote-client": "workspace:*"
+    "@intheloop-studio/hermes-remote": "workspace:*",
+    "@intheloop-studio/hermes-remote-client": "workspace:*"
   }
 }

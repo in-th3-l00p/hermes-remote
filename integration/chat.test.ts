@@ -1,25 +1,30 @@
 /**
- * Integration suite: requires a live hermes-remote server wired to a real
- * Hermes agent. Run with:
+ * Chat integration: full HTTP round trips through a hermes-remote server.
  *
- *   HERMES_INTEGRATION=1 HERMES_REMOTE_URL=http://localhost:8643 \
- *     HERMES_REMOTE_TOKEN=<supabase-or-api-key-token> bun test
- *
- * Skipped entirely (and excluded from coverage) unless HERMES_INTEGRATION=1.
+ * Runs against the in-process local stack by default; set HERMES_INTEGRATION=1
+ * with HERMES_REMOTE_URL and HERMES_REMOTE_TOKEN to target a live server
+ * wired to a real Hermes agent instead. See harness.ts.
  */
-import { describe, expect, test } from "bun:test";
-import { HermesClient } from "@in-th3-l00p/hermes-remote-client";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { HermesClient } from "@intheloop-studio/hermes-remote-client";
+import { startStack, type TestStack } from "./harness.ts";
 
-const enabled = process.env["HERMES_INTEGRATION"] === "1";
-const baseUrl = process.env["HERMES_REMOTE_URL"] ?? "http://localhost:8643";
-const token = process.env["HERMES_REMOTE_TOKEN"];
+let stack: TestStack;
+let client: HermesClient;
 
-describe.skipIf(!enabled)("hermes-remote integration", () => {
-  const client = new HermesClient({
-    baseUrl,
-    ...(token === undefined ? {} : { token }),
+beforeAll(async () => {
+  stack = await startStack();
+  client = new HermesClient({
+    baseUrl: stack.baseUrl,
+    ...(stack.token === undefined ? {} : { token: stack.token }),
   });
+});
 
+afterAll(async () => {
+  await stack.stop();
+});
+
+describe("hermes-remote chat", () => {
   test("status responds", async () => {
     const status = await client.status();
     expect(status.ok).toBe(true);
@@ -64,10 +69,10 @@ describe.skipIf(!enabled)("hermes-remote integration", () => {
   }, 120_000);
 
   test("unauthenticated requests are rejected when auth is enforced", async () => {
-    if (token === undefined) {
+    if (stack.token === undefined) {
       return;
     }
-    const anonymous = new HermesClient({ baseUrl });
+    const anonymous = new HermesClient({ baseUrl: stack.baseUrl });
     await expect(anonymous.createSession()).rejects.toThrow();
-  });
+  }, 30_000);
 });

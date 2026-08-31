@@ -1,21 +1,29 @@
 /**
- * Management integration: requires a live hermes-remote with management
- * wiring (CLI + profiles) and an API key holding status:read, config:read,
- * memory:read, and events:subscribe. Same env as chat.test.ts.
+ * Management integration: profiles, CLI-backed routes, and profile-home file
+ * routes. Local stack by default, live stack with HERMES_INTEGRATION=1; live
+ * mode needs an API key holding status:read, config:read, memory:read, and
+ * events:subscribe.
  */
-import { describe, expect, test } from "bun:test";
-import { HermesClient } from "@in-th3-l00p/hermes-remote-client";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { HermesClient } from "@intheloop-studio/hermes-remote-client";
+import { startStack, type TestStack } from "./harness.ts";
 
-const enabled = process.env["HERMES_INTEGRATION"] === "1";
-const baseUrl = process.env["HERMES_REMOTE_URL"] ?? "http://localhost:8643";
-const token = process.env["HERMES_REMOTE_TOKEN"];
+let stack: TestStack;
+let client: HermesClient;
 
-describe.skipIf(!enabled)("management integration", () => {
-  const client = new HermesClient({
-    baseUrl,
-    ...(token === undefined ? {} : { token }),
+beforeAll(async () => {
+  stack = await startStack();
+  client = new HermesClient({
+    baseUrl: stack.baseUrl,
+    ...(stack.token === undefined ? {} : { token: stack.token }),
   });
+});
 
+afterAll(async () => {
+  await stack.stop();
+});
+
+describe("management", () => {
   test("profiles enumerate", async () => {
     const profiles = await client.profiles.list();
     expect(profiles.length).toBeGreaterThan(0);

@@ -1,20 +1,27 @@
 /**
- * Discovery integration: requires a live hermes-remote wired to a real Hermes
- * agent, same environment as chat.test.ts.
+ * Discovery integration: health, capabilities, and model listing through the
+ * upstream facade. Local stack by default, live stack with HERMES_INTEGRATION=1.
  */
-import { describe, expect, test } from "bun:test";
-import { HermesClient } from "@in-th3-l00p/hermes-remote-client";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { HermesClient } from "@intheloop-studio/hermes-remote-client";
+import { startStack, type TestStack } from "./harness.ts";
 
-const enabled = process.env["HERMES_INTEGRATION"] === "1";
-const baseUrl = process.env["HERMES_REMOTE_URL"] ?? "http://localhost:8643";
-const token = process.env["HERMES_REMOTE_TOKEN"];
+let stack: TestStack;
+let client: HermesClient;
 
-describe.skipIf(!enabled)("discovery integration", () => {
-  const client = new HermesClient({
-    baseUrl,
-    ...(token === undefined ? {} : { token }),
+beforeAll(async () => {
+  stack = await startStack();
+  client = new HermesClient({
+    baseUrl: stack.baseUrl,
+    ...(stack.token === undefined ? {} : { token: stack.token }),
   });
+});
 
+afterAll(async () => {
+  await stack.stop();
+});
+
+describe("discovery", () => {
   test("health reports the upstream agent", async () => {
     const health = await client.discovery.health();
     expect(["ok", "degraded", "unreachable"]).toContain(health.status);
