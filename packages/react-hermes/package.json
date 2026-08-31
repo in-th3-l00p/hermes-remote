@@ -1,5 +1,5 @@
 {
-  "name": "@in-th3-l00p/hermes-remote-react",
+  "name": "@intheloop-studio/hermes-remote-react",
   "version": "1.2.0",
   "description": "React hooks for Hermes Remote",
   "license": "MIT",
@@ -30,11 +30,11 @@
     "agent"
   ],
   "scripts": {
-    "build": "rm -rf dist && bun build src/index.ts --outdir dist --target node --external react --external @in-th3-l00p/hermes-remote-client && tsc -p tsconfig.build.json",
+    "build": "rm -rf dist && bun build src/index.ts --outdir dist --target node --external react --external @intheloop-studio/hermes-remote-client && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@in-th3-l00p/hermes-remote-client": "^1.2.0"
+    "@intheloop-studio/hermes-remote-client": "^1.2.0"
   },
   "peerDependencies": {
     "react": ">=18"
@@ -47,6 +47,7 @@
     "react-dom": "^19.0.0"
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   }
 }

@@ -1,7 +1,7 @@
 import type {
   ChatEvent,
   ChatMessage,
-} from "@in-th3-l00p/hermes-remote-client";
+} from "@intheloop-studio/hermes-remote-client";
 
 function placeholder(id: string): ChatMessage {
   return {

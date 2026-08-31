@@ -11,7 +11,7 @@ import {
   ProfileRegistry,
   RunStore,
   startServer,
-} from "@in-th3-l00p/hermes-remote";
+} from "@intheloop-studio/hermes-remote";
 
 const homeDir =
   process.env["HERMES_REMOTE_HOME"] ?? join(homedir(), ".hermes-remote");

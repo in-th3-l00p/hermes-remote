@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { applyChatEvent, chatEventError } from "./chat-events.ts";
-import type { ChatMessage } from "@in-th3-l00p/hermes-remote-client";
+import type { ChatMessage } from "@intheloop-studio/hermes-remote-client";
 
 const msg = (
   id: string,

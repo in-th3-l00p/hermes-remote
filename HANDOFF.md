@@ -9,7 +9,7 @@ This document exists so that any agent (or human) can pick up development cold. 
 
 ## What this project is, in one paragraph
 
-Hermes Remote turns a local [Hermes agent](https://hermes-agent.nousresearch.com) into a secure web product. A Bun server (`packages/hermes-api`, published as `@in-th3-l00p/hermes-remote`, managed by the CLI in `packages/cli` → `@in-th3-l00p/hermes-remote-cli`) sits in front of the agent's built-in OpenAI-compatible API server (127.0.0.1:8642), adds authentication (scoped API keys + user JWTs), authorization, persistence (SQLite chat sessions), rate limiting, and identity injection, and exposes streaming chat over SSE. A typed client (`packages/hermes-ts` → `@in-th3-l00p/hermes-remote-client`) and React hooks (`packages/react-hermes` → `@in-th3-l00p/hermes-remote-react`) consume it. A reference chat app (`apps/chat`) and a marketing/docs site (`apps/landing`) complete the product. Released at v1.0.0, live at https://hermes-remote.tiscacatalin.com.
+Hermes Remote turns a local [Hermes agent](https://hermes-agent.nousresearch.com) into a secure web product. A Bun server (`packages/hermes-api`, published as `@intheloop-studio/hermes-remote`, managed by the CLI in `packages/cli` → `@intheloop-studio/hermes-remote-cli`) sits in front of the agent's built-in OpenAI-compatible API server (127.0.0.1:8642), adds authentication (scoped API keys + user JWTs), authorization, persistence (SQLite chat sessions), rate limiting, and identity injection, and exposes streaming chat over SSE. A typed client (`packages/hermes-ts` → `@intheloop-studio/hermes-remote-client`) and React hooks (`packages/react-hermes` → `@intheloop-studio/hermes-remote-react`) consume it. A reference chat app (`apps/chat`) and a marketing/docs site (`apps/landing`) complete the product. Released at v1.0.0, live at https://hermes-remote.tiscacatalin.com.
 
 ## Design vs reality
 
@@ -18,7 +18,7 @@ Hermes Remote turns a local [Hermes agent](https://hermes-agent.nousresearch.com
 ## Repository map
 
 ```
-packages/hermes-api/          @in-th3-l00p/hermes-remote — server library (no bins since 2.0.0)
+packages/hermes-api/          @intheloop-studio/hermes-remote — server library (no bins since 2.0.0)
                               (one directory per concern; deps flow scopes/limits → auth → chat → http)
   src/scopes/                 closed scope catalog + 4 tiers (no admin scope, by design)
   src/limits/                 DEFAULT_LIMITS, RateLimitOptions, ipInCidr
@@ -51,32 +51,39 @@ packages/hermes-api/          @in-th3-l00p/hermes-remote — server library (no 
   src/http/middleware.ts      cors/auth/audit middleware + both hono-rate-limiter instances
   src/http/whoami.ts          whoami body helper
   src/http/server.ts          startServer — Bun.serve, requestIP → app.fetch(request, ip), audit JSONL append
-packages/cli/                 @in-th3-l00p/hermes-remote-cli — management CLI (bins: hermes-remote, hermes-api)
+packages/cli/                 @intheloop-studio/hermes-remote-cli — management CLI (bins: hermes-remote, hermes-api)
   src/run.ts                  thin dispatcher over commands/
   src/commands/               keys.ts, serve.ts, service.ts, init.ts, logs.ts — one file per command family
   src/context.ts, config.ts   CliContext/CliResult/USAGE; config file load
   src/args.ts                 flag parsing
   src/cli.ts                  bin entry — wires config, HERMES_REMOTE_HOME ?? ~/.hermes-remote, real verifiers
-packages/hermes-ts/           @in-th3-l00p/hermes-remote-client — isomorphic client
+packages/hermes-ts/           @intheloop-studio/hermes-remote-client — isomorphic client
   src/http.ts                 HTTP/auth core: fetch wrapper, token|tokenProvider (401 single retry), SSE stream
   src/client.ts               HermesClient resource methods: sendMessage/editMessage (AsyncIterable<ChatEvent>,
                               AbortSignal), stopTurn, sessions CRUD, whoami
   src/sse.ts                  SSE parser (async iterator over fetch body)
-packages/react-hermes/        @in-th3-l00p/hermes-remote-react — hooks
+packages/react-hermes/        @intheloop-studio/hermes-remote-react — hooks
   src/use-chat.ts             useChat: React state wiring for messages, streaming, send/edit/react/open/reset/stop
   src/chat-events.ts          pure chat-event → message-list reducer used by useChat
   src/use-sessions.ts         useSessions: list/refresh/remove (note idsKey join — see gotchas)
   src/context.ts              HermesProvider + useHermesClient
+packages/examples-demo/       @intheloop-studio/hermes-remote-examples-demo (private) — browser-safe,
+                              dependency-free in-memory fake of the hermes-remote routes the example
+                              apps call; createDemoFetch() plugs into HermesClient's fetch option
 apps/chat/                    Reference chat app: Vite + React + shadcn (zinc dark), Supabase auth
                               (GitHub OAuth, email OTP, anonymous), sessions sidebar, markdown, attachments
 apps/landing/                 Marketing site (Vite multi-page: / and /examples/) + VitePress docs at /docs/
   docs/.vitepress/config.ts   base "/docs/", outDir "../dist/docs" — docs build INTO the landing dist
   vercel.json                 host-based 308 redirect hermes-web.* → hermes-remote.* (pattern "/(.*)" + "$1")
-integration/                  Live-stack tests, own workspace, coverage OFF, gated by HERMES_INTEGRATION=1
+integration/                  Integration suite, own workspace, coverage OFF. harness.ts picks the target:
+                              local mode (default, boots a real server in-process over DemoAgent/DemoUpstream/
+                              FakeCliBridge, runs in CI) or live mode (HERMES_INTEGRATION=1 + URL/TOKEN against
+                              a real agent). See integration/README.md
 scripts/check-snippets.ts     Bun.Transpiler parse-check of every ts/tsx fence in the docs (runs in CI)
 assets/                       logo.svg, wordmark.svg, og.png (1200x630), announcement.md (X thread, unposted)
-.github/workflows/test.yml    push/PR: install, build clients, typecheck, bun test packages (100% gate), snippets
-.github/workflows/release.yml on v* tag: test, publish 4 packages to npm.pkg.github.com, tarballs on GH release
+.github/workflows/test.yml    push/PR: install, build clients, typecheck, bun test packages (100% gate),
+                              integration suite in local mode, snippets, example builds
+.github/workflows/release.yml on v* tag: test, publish 4 packages to npm (registry.npmjs.org), tarballs on GH release
 ```
 
 Directory names predate the rename (hermes-api/hermes-ts/react-hermes); the published npm names are the hermes-remote ones. Do not rename directories casually — imports, workspaces, and CI reference them.
@@ -96,19 +103,19 @@ Directory names predate the rename (hermes-api/hermes-ts/react-hermes); the publ
 ## Conventions (non-negotiable)
 
 1. **100% line AND function coverage**, enforced by `bunfig.toml` `coverageThreshold = 1.0` and CI. `bun run test` = `bun test packages`. Every new feature ships with tests in the same commit. Side effects (fs, network, time, Bun.serve) go behind injectable seams — see how `CliContext`, `now`, `AgentBackend`, and `UserTokenVerifier` are injected. The docs page `internals/engineering.md` explains the approach.
-2. **Two test tiers:** unit (no external deps, fakes for the agent) in `packages/*`; integration in `integration/` (`describe.skipIf(!process.env.HERMES_INTEGRATION)`), needs a live Hermes agent + running hermes-remote, env `HERMES_REMOTE_URL`/`HERMES_REMOTE_TOKEN`.
+2. **Two test tiers:** unit (no external deps, fakes for the agent) in `packages/*`; integration in `integration/` via `harness.ts`. Local mode (`bun run test:integration:local`, the default and what CI runs on every push/PR) boots a real hermes-remote in-process over the demo agent; live mode (`bun run test:integration` with `HERMES_INTEGRATION=1`, `HERMES_REMOTE_URL`, `HERMES_REMOTE_TOKEN`) targets a running server wired to a real Hermes agent and validates the CLI argv templates.
 3. **Commits:** a few plain words, lowercase, no decoration, no "---", never a Co-Authored-By line. Examples in `git log`: "domain redirect", "jwks verification", "shadcn chat app".
 4. **TypeScript strict everywhere; Bun everywhere** (`bun install`, `bun test`, `bun run`). Build clients before typecheck (`bun run --cwd packages/hermes-ts build`, same for react-hermes) — cross-package types resolve from `dist`.
-5. **UI is shadcn only** (zinc dark theme, Tailwind v4 via @tailwindcss/vite). No hand-written CSS beyond tokens. Both apps/chat and apps/landing follow this.
+5. **UI:** apps/chat is shadcn (zinc dark theme, Tailwind v4 via @tailwindcss/vite). apps/landing keeps the shadcn theme tokens and Tailwind but is deliberately minimal: prose, plain links, and unchromed code blocks instead of cards, buttons, and borders. Keep it that way.
 6. `bun run typecheck` and `bun scripts/check-snippets.ts` must stay green; CI runs both.
 
 ## External infrastructure (accounts, projects, secrets)
 
 * **GitHub:** repo `in-th3-l00p/hermes-remote` (renamed from hermes-web; old URL redirects). The machine's `gh` has TWO accounts and **keeps flipping to `catalin-george-tisca-fortech`** (work account) causing push 403s and publish failures. Before pushing or publishing: `gh auth switch --user in-th3-l00p`; for package publishes use `gh auth token --user in-th3-l00p` (token needs `write:packages`).
-* **GitHub Packages:** all four packages published under scope `@in-th3-l00p` to `npm.pkg.github.com` (a stray 0.2.0 also exists from a failed `&&` chain — harmless). Release workflow publishes automatically on `v*` tags using `GITHUB_TOKEN`. Since the 2.0.0 split, the CLI ships as `@in-th3-l00p/hermes-remote-cli` (`packages/cli`) and the server package has no bins.
-* **Release process:** bump versions in the four package.json files (hermes-api and cli stay in lockstep; cli's dependency on `@in-th3-l00p/hermes-remote` is a plain `^x.0.0` range, NOT `workspace:*`, because CI publishes with `npm publish` which does not rewrite workspace protocols — keep it in sync when bumping) → commit → `git tag vx.y.z` → push tag → `release.yml` tests, publishes, packs tarballs, creates/updates the GitHub release.
-* **Vercel:** project `hermes-web` (team inth3loop), Root Directory `apps/landing` with source-files-outside-root enabled — **deploy from the repo root** (`bunx vercel deploy --prod`), never from apps/landing. Build: `bun run build` = bundle the sandbox function (`bun build api-src/hermes.ts --target=bun --outfile=api/hermes.mjs`, gitignored output) → build the six example apps → vite build → vitepress docs → copy example dists into `dist/examples/<name>/app/`. The sandbox API runs as a Bun-runtime Vercel Function (`vercel.json`: `bunVersion 1.x`, rewrite `/api/hermes/:path*` → `/api/hermes`; the function must be a prebundled `.mjs` with a named `fetch` export — TS entries get type-checked by Vercel's builder with the wrong config, default exports are treated as (req,res), and un-bundled workspace imports fail at runtime). `GROQ_API_KEY` env var enables real inference (Groq `llama-3.1-8b-instant`); without it the sandbox answers with the demo agent. Vercel's Bun (1.3.x) logs "Unknown lockfile version" for our 1.4 lockfile and resolves fresh — harmless today, hermetic once Vercel's Bun catches up. Domains: `hermes-remote.tiscacatalin.com` (primary) and `hermes-web.tiscacatalin.com` (308 redirect via vercel.json host rule). Wildcard DNS for tiscacatalin.com already points at Vercel.
-* **Live examples:** `/examples/` grid index → per-example articles (`apps/landing/examples/articles/*.md`, rendered by `src/examples/article.tsx`, snippet-checked) and live apps (`apps/examples/<name>`, individual Vite projects, base `/examples/<name>/app/`). The sandbox backend is `packages/examples-backend` (in the 100% coverage gate): `SandboxUpstream` (Groq chat/runs, seeded demo sessions/jobs/discovery), seeded profile homes, `FakeCliBridge` management fixtures, public sandbox key `hk_sandb0x.live-examples-public-token` (finite scopes, deliberately public), per-IP rate limit 30/min, state resets on instance recycle.
+* **npm (npmjs.org):** all four packages are public on npm under the `@intheloop-studio` org (`registry.npmjs.org`): `@intheloop-studio/hermes-remote`, `-cli`, `-client`, `-react`. Consumers need no registry setup because the packages are public. The release workflow publishes automatically on `v*` tags using the `NPM_TOKEN` GitHub Actions secret (`npm publish --access public`); `publishConfig` in each package pins the registry and public access. Since the 2.0.0 split, the CLI ships as `@intheloop-studio/hermes-remote-cli` (`packages/cli`) and the server package has no bins. History: the packages were previously on GitHub Packages under the `@in-th3-l00p` scope; that scope and registry are retired.
+* **Release process:** bump versions in the four package.json files (hermes-api and cli stay in lockstep; cli's dependency on `@intheloop-studio/hermes-remote` is a plain `^x.0.0` range, NOT `workspace:*`, because CI publishes with `npm publish` which does not rewrite workspace protocols — keep it in sync when bumping) → commit → `git tag vx.y.z` → push tag → `release.yml` tests, publishes, packs tarballs, creates/updates the GitHub release.
+* **Vercel:** project `hermes-web` (team inth3loop), Root Directory `apps/landing` with source-files-outside-root enabled — **deploy from the repo root** (`bunx vercel deploy --prod`), never from apps/landing. Build: `bun run build` = build the six example apps → vite build → vitepress docs → copy example dists into `dist/examples/<name>/app/`. The deployment is fully static: there are no Vercel Functions, no rewrites, and no server-side env vars. Vercel's Bun (1.3.x) logs "Unknown lockfile version" for our 1.4 lockfile and resolves fresh — harmless today, hermetic once Vercel's Bun catches up. Domains: `hermes-remote.tiscacatalin.com` (primary) and `hermes-web.tiscacatalin.com` (308 redirect via vercel.json host rule). Wildcard DNS for tiscacatalin.com already points at Vercel.
+* **Live examples:** `/examples/` grid index → per-example articles (`apps/landing/examples/articles/*.md`, rendered by `src/examples/article.tsx`, snippet-checked) and live apps (`apps/examples/<name>`, individual Vite projects, base `/examples/<name>/app/`). The apps are fully static demos: no server, no shared state. Each app's `src/lib/client.ts` calls `createDemoFetch()` from `packages/examples-demo` (`@intheloop-studio/hermes-remote-examples-demo`, in the 100% coverage gate) and passes it to `HermesClient` via the `fetch` option. The package is a browser-safe, in-memory fake of the hermes-remote routes the apps use — seeded sessions/runs/jobs/profiles/memory/soul/config, streaming chat over the real SSE protocol with canned replies, a working stop endpoint, and an event firehose — with mutable state per page load. The `hk_` token in the apps is a demo credential the fake fetch recognizes, not a real key. The auth example still verifies real Supabase sign-in in the browser; the fake backend decodes the JWT payload without signature verification (it guards nothing).
 * **Supabase:** project `jhvuzxmhyyyovzgtdwvl` (eu-central-1). Signs tokens with **ES256** (JWKS at `https://jhvuzxmhyyyovzgtdwvl.supabase.co/auth/v1/.well-known/jwks.json`) — this is why `SupabaseJwksVerifier` exists; there is no shared HS256 secret for this project. Enabled: anonymous sign-ins, email OTP (built-in SMTP only — **needs custom SMTP before real production traffic**), GitHub OAuth (client `Ov23li7SAcVnYVbqn30n`; the secret passed through a chat session, so **rotating it is recommended**). Management API access worked via the CLI token in the macOS keychain (`security find-generic-password -l "Supabase CLI" -w`).
 * **Local dev stack on this machine:** the Hermes agent runs under profile `indra` (`~/.hermes/profiles/indra/.env` holds its `API_SERVER_KEY`; gateway API on 127.0.0.1:8642). hermes-remote serves on **:8643**, chat app on **:5173** (`apps/chat/.env.local` has `VITE_HERMES_API_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`). Server state in `~/.hermes-remote/` (config.json, keys.json, chat.db, audit.log), overridable via `HERMES_REMOTE_HOME`.
 
@@ -126,7 +133,7 @@ Directory names predate the rename (hermes-api/hermes-ts/react-hermes); the publ
 
 ## Verification status at handoff
 
-148 unit tests, 100% line+function coverage, strict typecheck clean, 15 doc snippets parse-checked, CI green on main, integration suite 4/4 against the live stack (real streamed turn, persistence round trip, live stop cancellation, auth rejection with a real Supabase ES256 token). Identity verified end to end: the agent answered with the authenticated user's email and Supabase user id, and with the stable anonymous id for guests.
+457 unit tests, 100% line+function coverage, strict typecheck clean, 45 doc snippets parse-checked, integration suite 11/11 in local mode (in-process server over the demo agent; also runs in CI on every push and PR). The live-mode integration suite was last verified against the real stack before the harness rework (real streamed turn, persistence round trip, live stop cancellation, auth rejection with a real Supabase ES256 token); rerun it with HERMES_INTEGRATION=1 next time the agent is up. Identity verified end to end: the agent answered with the authenticated user's email and Supabase user id, and with the stable anonymous id for guests.
 
 ## Roadmap / open work
 

@@ -5,7 +5,7 @@ import {
   isUserGrantableScope,
   type ApiKeyRecord,
   type KeyStore,
-} from "@in-th3-l00p/hermes-remote";
+} from "@intheloop-studio/hermes-remote";
 import { USAGE, fail, ok, type CliResult } from "../context.ts";
 
 function describeKey(record: ApiKeyRecord): string {

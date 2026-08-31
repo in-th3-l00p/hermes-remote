@@ -18,7 +18,7 @@ One Vercel project (the existing landing deployment, domain
 `hermes-remote.tiscacatalin.com`):
 
 - `apps/landing/api/[[...route]].ts` — hermes-remote as a Vercel Function:
-  `createApp` from `@in-th3-l00p/hermes-remote` exported as the fetch
+  `createApp` from `@intheloop-studio/hermes-remote` exported as the fetch
   handler. Anonymous mode, per-IP rate limits, sandbox upstream + sandbox
   management. Same-origin `/api/*`... the function serves `/api/hermes/*`
   and the example clients use `baseUrl: "/api/hermes"` (a path-prefix strip

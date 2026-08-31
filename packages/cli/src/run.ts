@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { KeyStore } from "@in-th3-l00p/hermes-remote";
+import { KeyStore } from "@intheloop-studio/hermes-remote";
 import { initCommand } from "./commands/init.ts";
 import { keysCommand } from "./commands/keys.ts";
 import { logsCommand } from "./commands/logs.ts";

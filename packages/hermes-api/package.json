@@ -1,5 +1,5 @@
 {
-  "name": "@in-th3-l00p/hermes-remote",
+  "name": "@intheloop-studio/hermes-remote",
   "version": "3.2.0",
   "description": "Secure web API for a local Hermes agent (Hermes Remote server)",
   "license": "MIT",
@@ -44,7 +44,8 @@
     }
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   },
   "dependencies": {
     "hono": "^4.13.5",

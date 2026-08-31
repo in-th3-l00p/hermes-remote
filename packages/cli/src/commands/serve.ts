@@ -1,4 +1,4 @@
-import type { AuthProviderConfig, KeyStore } from "@in-th3-l00p/hermes-remote";
+import type { AuthProviderConfig, KeyStore } from "@intheloop-studio/hermes-remote";
 import { flag, flagAll, parseArgs, type ParsedArgs } from "../args.ts";
 import { loadConfig, type ConfigFile } from "../config.ts";
 import {

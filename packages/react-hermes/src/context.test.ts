@@ -8,7 +8,7 @@ afterAll(async () => {
 });
 import { createElement } from "react";
 import { renderHook } from "@testing-library/react";
-import { HermesClient } from "@in-th3-l00p/hermes-remote-client";
+import { HermesClient } from "@intheloop-studio/hermes-remote-client";
 import { HermesProvider, useHermesClient } from "./index.ts";
 import type { ReactNode } from "react";
 

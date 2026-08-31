@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { createClient } from "@supabase/supabase-js";
-import { HermesClient, useChat } from "@in-th3-l00p/hermes-remote-react";
+import { HermesClient, useChat } from "@intheloop-studio/hermes-remote-react";
 import type {
   Attachment,
   ChatMessage,
   ChatSessionMeta,
-} from "@in-th3-l00p/hermes-remote-react";
+} from "@intheloop-studio/hermes-remote-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

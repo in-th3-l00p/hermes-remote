@@ -1,4 +1,4 @@
-import type { AuthProviderConfig, KeyStore } from "@in-th3-l00p/hermes-remote";
+import type { AuthProviderConfig, KeyStore } from "@intheloop-studio/hermes-remote";
 
 export interface CliResult {
   exitCode: number;

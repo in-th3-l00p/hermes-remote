@@ -4,7 +4,6 @@ on:
     tags: ["v*"]
 permissions:
   contents: write
-  packages: write
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -17,15 +16,14 @@ jobs:
       - run: bun test packages
       - run: bun run --cwd packages/hermes-ts build
       - run: bun run --cwd packages/react-hermes build
-      - name: publish to GitHub Packages
+      - name: publish to npm
         run: |
-          echo "@in-th3-l00p:registry=https://npm.pkg.github.com" > ~/.npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
           for p in hermes-ts react-hermes hermes-api cli; do
             (cd packages/$p
-             if ! npm publish --registry https://npm.pkg.github.com 2>/tmp/publish-err.log; then
+             if ! npm publish --access public 2>/tmp/publish-err.log; then
                cat /tmp/publish-err.log
-               grep -qiE "cannot publish over|EPUBLISHCONFLICT|409" /tmp/publish-err.log || exit 1
+               grep -qiE "cannot publish over|EPUBLISHCONFLICT|409|previously published" /tmp/publish-err.log || exit 1
              fi)
           done
       - name: pack tarballs

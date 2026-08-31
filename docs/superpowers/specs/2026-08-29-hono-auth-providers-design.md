@@ -134,7 +134,7 @@ Packaging: `@supabase/supabase-js` and `@clerk/backend` are
 
 Old exports (`SupabaseJwksVerifier`, `hs256Verifier`, `verifySupabaseJwt`,
 `UserTokenVerifier`, `SupabaseUser`) are removed — major version bump to
-3.0.0 for `@in-th3-l00p/hermes-remote` and the CLI (lockstep).
+3.0.0 for `@intheloop-studio/hermes-remote` and the CLI (lockstep).
 
 ## Part 3 — CLI
 

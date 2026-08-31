@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { SseEvent } from "@in-th3-l00p/hermes-remote-client";
+import type { SseEvent } from "@intheloop-studio/hermes-remote-client";
 
 export interface EventsClientLike {
   events: {

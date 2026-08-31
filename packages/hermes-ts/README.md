@@ -1,24 +1,17 @@
-# @in-th3-l00p/hermes-web-ts
+# @intheloop-studio/hermes-remote-client
 
-TypeScript client for the [hermes-web](https://github.com/in-th3-l00p/hermes-web) API — put your [Hermes agent](https://hermes-agent.nousresearch.com) on the web.
+TypeScript client for the [hermes-remote](https://github.com/in-th3-l00p/hermes-remote) API. Put your [Hermes agent](https://hermes-agent.nousresearch.com) on the web.
 
 ## Install
 
-Packages are published to GitHub Packages. Point the `@in-th3-l00p` scope at it once (a GitHub token with `read:packages` is required):
-
 ```
-echo "@in-th3-l00p:registry=https://npm.pkg.github.com" >> ~/.npmrc
-echo "//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN" >> ~/.npmrc
-```
-
-```
-npm i @in-th3-l00p/hermes-web-ts
+npm i @intheloop-studio/hermes-remote-client
 ```
 
 ## Usage
 
 ```ts
-import { HermesClient } from "@in-th3-l00p/hermes-web-ts";
+import { HermesClient } from "@intheloop-studio/hermes-web-ts";
 
 const client = new HermesClient({
   baseUrl: "https://agent.example.com",

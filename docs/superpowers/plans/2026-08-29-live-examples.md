@@ -55,7 +55,7 @@ export default async function handler(request: Request): Promise<Response> {
 
 ### Task 1: packages/examples-backend — stores + sandbox home + CLI fixtures
 
-**Files:** Create `packages/examples-backend/package.json` (private, deps: `@in-th3-l00p/hermes-remote` `workspace:*`), `tsconfig.json` (copy pattern from hermes-api), `src/stores.ts`, `src/home.ts`, `src/cli.ts`, tests alongside.
+**Files:** Create `packages/examples-backend/package.json` (private, deps: `@intheloop-studio/hermes-remote` `workspace:*`), `tsconfig.json` (copy pattern from hermes-api), `src/stores.ts`, `src/home.ts`, `src/cli.ts`, tests alongside.
 
 **Produces:**
 
@@ -105,21 +105,21 @@ export function vercelHandler(options: SandboxOptions): (request: Request) => Pr
 **Files:** Create `apps/landing/api/hermes/[[...route]].ts`:
 
 ```ts
-import { vercelHandler } from "@in-th3-l00p/hermes-remote-examples-backend";
+import { vercelHandler } from "@intheloop-studio/hermes-remote-examples-backend";
 const handler = vercelHandler({ groqKey: process.env["GROQ_API_KEY"] });
 export default handler;
 ```
 
-Modify `apps/landing/vercel.json` (runtime from spike; function maxDuration 60), `apps/landing/package.json` (dep on the backend package), `packages/examples-backend/package.json` name `@in-th3-l00p/hermes-remote-examples-backend`. Add `scripts/dev-sandbox.ts` at repo root (Bun.serve wrapping `createSandboxApp` on :8644 for local example dev).
+Modify `apps/landing/vercel.json` (runtime from spike; function maxDuration 60), `apps/landing/package.json` (dep on the backend package), `packages/examples-backend/package.json` name `@intheloop-studio/hermes-remote-examples-backend`. Add `scripts/dev-sandbox.ts` at repo root (Bun.serve wrapping `createSandboxApp` on :8644 for local example dev).
 
 - [ ] Typecheck; `bun scripts/dev-sandbox.ts` + curl status/chat locally; commit: `sandbox vercel function`
 
 ### Task 4: chat example app
 
-**Files:** Create `apps/examples/chat/` — `package.json` (react, react-dom, `@in-th3-l00p/hermes-remote-client` + `-react` `workspace:*`, vite, @vitejs/plugin-react, tailwindcss + @tailwindcss/vite, typescript), `vite.config.ts` (`base: "/examples/chat/app/"`, dedupe react), `index.html`, `src/main.tsx`, `src/App.tsx`, `src/lib/client.ts`, `src/components/*` (message list with markdown-lite rendering, composer, sandbox banner, header linking to article + index). `src/lib/client.ts`:
+**Files:** Create `apps/examples/chat/` — `package.json` (react, react-dom, `@intheloop-studio/hermes-remote-client` + `-react` `workspace:*`, vite, @vitejs/plugin-react, tailwindcss + @tailwindcss/vite, typescript), `vite.config.ts` (`base: "/examples/chat/app/"`, dedupe react), `index.html`, `src/main.tsx`, `src/App.tsx`, `src/lib/client.ts`, `src/components/*` (message list with markdown-lite rendering, composer, sandbox banner, header linking to article + index). `src/lib/client.ts`:
 
 ```ts
-import { HermesClient } from "@in-th3-l00p/hermes-remote-client";
+import { HermesClient } from "@intheloop-studio/hermes-remote-client";
 export const client = new HermesClient({
   baseUrl: import.meta.env["VITE_HERMES_API_URL"] ?? "/api/hermes",
 });

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { RunRef, SseEvent } from "@in-th3-l00p/hermes-remote-client";
+import type { RunRef, SseEvent } from "@intheloop-studio/hermes-remote-client";
 
 export interface RunsClientLike {
   runs: {

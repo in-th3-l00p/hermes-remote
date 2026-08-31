@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-* Live examples platform: six example React apps (chat, auth, configuration, runs, profiles, command-center) under `apps/examples/*`, each hosted at `/examples/<name>/app/` with an architecture article at `/examples/<name>/`; `/examples/` is a grid index. A sandbox hermes-remote backend (`packages/examples-backend`) runs as a Vercel Function on the Bun runtime at `/api/hermes/*` — real `createApp` with anonymous access, a public sandbox API key, Supabase JWKS user auth, seeded profiles (default/atlas/nova), demo management fixtures, and Groq `llama-3.1-8b-instant` inference when `GROQ_API_KEY` is set (demo echo otherwise).
+* The live examples are now fully static demo apps. A new browser-safe package (`packages/examples-demo`, `@intheloop-studio/hermes-remote-examples-demo`) exports `createDemoFetch()`, an in-memory fake of the hermes-remote HTTP routes the six example apps call: seeded chat sessions, runs in several states with SSE event feeds, profiles (default/work/research), config, memory and soul files, jobs, discovery data, and an event firehose. Chat streams over the real SSE protocol with canned, prompt-keyed replies, and state is mutable per page load. Each example app wires the fake in through the client's `fetch` option; the served sandbox backend (`packages/examples-backend`), the Vercel Function at `/api/hermes/*`, the Groq integration, and the public sandbox key are all removed. The landing deployment is static files only.
+* Live examples platform: six example React apps (chat, auth, configuration, runs, profiles, command-center) under `apps/examples/*`, each hosted at `/examples/<name>/app/` with an architecture article at `/examples/<name>/`; `/examples/` is a grid index.
 
 ## Unreleased (3.2.0)
 
@@ -33,10 +34,10 @@
 
 ## 2.0.0
 
-* **Breaking:** the management CLI moved out of `@in-th3-l00p/hermes-remote` into its own package, `@in-th3-l00p/hermes-remote-cli` (`packages/cli`). The `hermes-remote` and `hermes-api` bins are now installed via `npm i -g @in-th3-l00p/hermes-remote-cli`. The server package no longer ships bins and is a pure library; its exports are unchanged.
+* **Breaking:** the management CLI moved out of `@intheloop-studio/hermes-remote` into its own package, `@intheloop-studio/hermes-remote-cli` (`packages/cli`). The `hermes-remote` and `hermes-api` bins are now installed via `npm i -g @intheloop-studio/hermes-remote-cli`. The server package no longer ships bins and is a pure library; its exports are unchanged.
 * Internal restructure: every package is split into one module per concern (server: scopes/limits → auth → chat → http; cli: one file per command family) with no behavior change; code-structure rules added to CONTRIBUTING.md.
 
-### Server (`@in-th3-l00p/hermes-remote`)
+### Server (`@intheloop-studio/hermes-remote`)
 
 * Failed authentication attempts are now rate limited per IP (default 30/60s, configurable via `authFailureLimit`); over-limit attempts get 429 with `retry-after` before any key verification work.
 * Anonymous principals are rate-limited per client IP instead of one shared bucket; audit entries log them as `anonymous:<ip>`.
@@ -46,20 +47,20 @@
 * `keys.json` is written 0600 in a 0700 home dir (existing files are tightened on next write).
 * User-influenced strings (email, user id, key name) are sanitized before entering the agent identity turn.
 
-### CLI (`@in-th3-l00p/hermes-remote-cli`)
+### CLI (`@intheloop-studio/hermes-remote-cli`)
 
 * `service install` units now use absolute binary paths with PATH/`HERMES_REMOTE_HOME` env, service log files, and restart delays — generated units actually start under launchd/systemd.
 * `init` merges over the existing config instead of overwriting it, and writes `config.json` 0600.
 * A malformed `config.json` fails `serve`/`init` loudly instead of silently booting unconfigured.
 * A busy port fails with `port <n> already in use` instead of a stack trace.
 
-### Client (`@in-th3-l00p/hermes-remote-client`)
+### Client (`@intheloop-studio/hermes-remote-client`)
 
 * The SSE parser closes the connection on early consumer exit, handles CRLF and multi-line `data:` frames, strips BOMs, and skips malformed JSON payloads instead of aborting the stream.
 * Streaming methods validate events at runtime (`narrowChatEvent`, newly exported) and drop malformed or unknown frames.
 * A 401 with a static token fails immediately; the single retry now only happens when a `tokenProvider` is configured.
 
-### React (`@in-th3-l00p/hermes-remote-react`)
+### React (`@intheloop-studio/hermes-remote-react`)
 
 * `useChat` aborts in-flight streams on unmount, `open()`, and `reset()` — no more cross-session message bleed or leaked connections; stream failures mark interrupted assistant messages as `error` instead of leaving them streaming forever.
 * Editing a message that is no longer in the list appends instead of deleting the last message; unknown SSE event names are ignored.
@@ -68,7 +69,7 @@
 
 First stable release, under the new name Hermes Remote (previously hermes-web).
 
-### Server (`@in-th3-l00p/hermes-remote`)
+### Server (`@intheloop-studio/hermes-remote`)
 
 * Secure HTTP facade over a local Hermes agent's API server with SSE streaming chat.
 * SQLite persisted sessions with per user ownership, auto titles, pagination.
@@ -78,11 +79,11 @@ First stable release, under the new name Hermes Remote (previously hermes-web).
 * Agent identity injection: every turn tells the agent who it is speaking with.
 * CLI: `init` (config file), `serve`, `keys` (create, list, show, revoke, rotate, grant, ungrant), `service` (launchd and systemd units), `logs`.
 
-### Client (`@in-th3-l00p/hermes-remote-client`)
+### Client (`@intheloop-studio/hermes-remote-client`)
 
 * Isomorphic, zero dependency client with typed SSE streaming, abort signals, `stopTurn`, automatic 401 retry via `tokenProvider`, typed `HermesApiError`.
 
-### React (`@in-th3-l00p/hermes-remote-react`)
+### React (`@intheloop-studio/hermes-remote-react`)
 
 * `useChat` (send, edit, react, open, reset, stop, streaming state) and `useSessions` (list, refresh, remove), plus `HermesProvider`.
 

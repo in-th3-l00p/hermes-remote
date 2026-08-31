@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import type { GoalState } from "@in-th3-l00p/hermes-remote-client";
+import type { GoalState } from "@intheloop-studio/hermes-remote-client";
 import { useResource } from "./use-resource.ts";
 
 export interface GoalClientLike {

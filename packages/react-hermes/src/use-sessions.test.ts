@@ -8,7 +8,7 @@ afterAll(async () => {
 });
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { useSessions, type SessionsClientLike } from "./index.ts";
-import type { ChatSessionMeta } from "@in-th3-l00p/hermes-remote-client";
+import type { ChatSessionMeta } from "@intheloop-studio/hermes-remote-client";
 
 const meta = (id: string): ChatSessionMeta => ({
   id,

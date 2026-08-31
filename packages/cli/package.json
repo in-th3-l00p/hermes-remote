@@ -1,5 +1,5 @@
 {
-  "name": "@in-th3-l00p/hermes-remote-cli",
+  "name": "@intheloop-studio/hermes-remote-cli",
   "version": "3.2.0",
   "description": "Management CLI for Hermes Remote (serve, keys, config, service)",
   "license": "MIT",
@@ -36,9 +36,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@in-th3-l00p/hermes-remote": "^3.2.0"
+    "@intheloop-studio/hermes-remote": "^3.2.0"
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   }
 }

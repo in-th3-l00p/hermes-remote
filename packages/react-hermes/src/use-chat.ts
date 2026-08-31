@@ -5,7 +5,7 @@ import type {
   ChatMessage,
   ChatSession,
   SendMessageInput,
-} from "@in-th3-l00p/hermes-remote-client";
+} from "@intheloop-studio/hermes-remote-client";
 import { applyChatEvent, chatEventError } from "./chat-events.ts";
 
 /** Structural subset of HermesClient used by useChat (easy to fake in tests). */

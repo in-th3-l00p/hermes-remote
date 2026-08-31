@@ -1,5 +1,5 @@
 {
-  "name": "@in-th3-l00p/hermes-remote-client",
+  "name": "@intheloop-studio/hermes-remote-client",
   "version": "1.2.0",
   "description": "Typed TypeScript client for Hermes Remote",
   "license": "MIT",
@@ -33,6 +33,7 @@
     "typecheck": "tsc --noEmit"
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   }
 }

@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import type { AuthProviderConfig } from "@in-th3-l00p/hermes-remote";
+import type { AuthProviderConfig } from "@intheloop-studio/hermes-remote";
 
 export interface ConfigFile {
   port?: number;

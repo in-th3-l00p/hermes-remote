@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { ChatSessionMeta } from "@in-th3-l00p/hermes-remote-client";
+import type { ChatSessionMeta } from "@intheloop-studio/hermes-remote-client";
 
 export interface SessionsClientLike {
   listSessions(ids?: string[]): Promise<ChatSessionMeta[]>;

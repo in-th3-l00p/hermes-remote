@@ -1,20 +1,13 @@
-# @in-th3-l00p/hermes-web-api
+# @intheloop-studio/hermes-remote
 
-Authenticated web API and management CLI for a local [Hermes agent](https://hermes-agent.nousresearch.com) instance. Part of [hermes-web](https://github.com/in-th3-l00p/hermes-web).
+Authenticated web API server for a local [Hermes agent](https://hermes-agent.nousresearch.com) instance. Part of [hermes-remote](https://github.com/in-th3-l00p/hermes-remote).
 
-Requires the [Bun](https://bun.sh) runtime.
+Requires the [Bun](https://bun.sh) runtime. The management CLI ships separately as `@intheloop-studio/hermes-remote-cli`.
 
 ## Install
 
-Packages are published to GitHub Packages. Point the `@in-th3-l00p` scope at it once (a GitHub token with `read:packages` is required):
-
 ```
-echo "@in-th3-l00p:registry=https://npm.pkg.github.com" >> ~/.npmrc
-echo "//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN" >> ~/.npmrc
-```
-
-```
-npm i -g @in-th3-l00p/hermes-web-api
+npm i @intheloop-studio/hermes-remote
 ```
 
 ## Usage
@@ -35,4 +28,4 @@ State lives in `~/.hermes-api/` (override with `HERMES_API_HOME`).
 
 ## Client
 
-Use [`@in-th3-l00p/hermes-web-ts`](https://github.com/in-th3-l00p/hermes-web/packages) or [`@in-th3-l00p/hermes-web-react`](https://github.com/in-th3-l00p/hermes-web/packages) to consume the API.
+Use [`@intheloop-studio/hermes-web-ts`](https://github.com/in-th3-l00p/hermes-web/packages) or [`@intheloop-studio/hermes-web-react`](https://github.com/in-th3-l00p/hermes-web/packages) to consume the API.

@@ -15,7 +15,7 @@ Naming decisions (proposed, confirm before executing):
 * Product name: **Hermes Remote**. Lowercase wordmark "hermes remote" in UI.
 * Tagline: **"Your Hermes agent, anywhere."** Long description: "Hermes Remote turns a local Hermes agent into a secure web product: an authenticated API, a typed TypeScript client, and React hooks, with streaming chat, persistent sessions, and user identity built in."
 * GitHub repo: rename to `in-th3-l00p/hermes-remote` (GitHub redirects the old URL automatically).
-* npm packages: `@in-th3-l00p/hermes-remote` (server and CLI, bin `hermes-remote`, keep `hermes-api` as an alias bin for one release), `@in-th3-l00p/hermes-remote-client`, `@in-th3-l00p/hermes-remote-react`. Old names get a final deprecation release pointing at the new ones.
+* npm packages: `@intheloop-studio/hermes-remote` (server and CLI, bin `hermes-remote`, keep `hermes-api` as an alias bin for one release), `@intheloop-studio/hermes-remote-client`, `@intheloop-studio/hermes-remote-react`. Old names get a final deprecation release pointing at the new ones.
 * Domain: `hermes-remote.tiscacatalin.com` (the wildcard DNS already points at Vercel, so this is a Vercel domain add plus redirect from the old subdomain).
 
 Tasks:

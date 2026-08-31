@@ -5,7 +5,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
-import type { HermesClient } from "@in-th3-l00p/hermes-remote-client";
+import type { HermesClient } from "@intheloop-studio/hermes-remote-client";
 
 const HermesContext = createContext<HermesClient | null>(null);
 
