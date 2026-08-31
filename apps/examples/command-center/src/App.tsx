@@ -1,200 +1,243 @@
-import { useEffect, useState } from "react";
-import { useChat, useSessions } from "@in-th3-l00p/hermes-remote-react";
-import type { ChatMessage } from "@in-th3-l00p/hermes-remote-client";
-import { client } from "./lib/client.ts";
+import { useState } from "react";
+import {
+  useAgentInfo,
+  useChat,
+  useConfig,
+  useEvents,
+  useJobsAdmin,
+  useMemory,
+  useRunEvents,
+  useRuns,
+  useSoul,
+} from "@in-th3-l00p/hermes-remote-react";
+import { client, keyedClient } from "./lib/client.ts";
 import { ErrorNote, Panel, Shell } from "./lib/ui.tsx";
 
-const IDS_KEY = "hermes-example-chat-sessions";
-
-function storedIds(): string[] {
-  try {
-    return JSON.parse(localStorage.getItem(IDS_KEY) ?? "[]") as string[];
-  } catch {
-    return [];
-  }
-}
-
-function rememberId(id: string): void {
-  const ids = storedIds();
-  if (!ids.includes(id)) {
-    localStorage.setItem(IDS_KEY, JSON.stringify([id, ...ids].slice(0, 20)));
-  }
-}
-
-function Message(props: {
-  message: ChatMessage;
-  onReact: (id: string, emoji: string) => void;
-  onEdit: (id: string, content: string) => void;
-}) {
-  const { message } = props;
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(message.content);
-  const mine = message.role === "user";
+function ChatPane() {
+  const chat = useChat({ client });
+  const [draft, setDraft] = useState("");
   return (
-    <div className={mine ? "flex justify-end" : "flex justify-start"}>
-      <div
-        className={
-          "max-w-[85%] rounded-xl px-3 py-2 text-sm " +
-          (mine ? "bg-zinc-100 text-zinc-900" : "card text-zinc-100")
-        }
-      >
-        {editing ? (
-          <span className="flex gap-2">
-            <input
-              className="input min-w-48"
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-            />
-            <button
-              className="btn"
-              onClick={() => {
-                setEditing(false);
-                props.onEdit(message.id, draft);
-              }}
-            >
-              save
-            </button>
-          </span>
-        ) : (
-          <span className="whitespace-pre-wrap">
-            {message.content}
-            {message.status === "streaming" ? "▍" : ""}
-          </span>
-        )}
-        <span className="mt-1 flex items-center gap-2 text-xs text-zinc-500">
-          {Object.entries(message.reactions).map(([emoji, count]) => (
-            <span key={emoji}>
-              {emoji} {count}
-            </span>
-          ))}
-          <button
-            className="hover:text-zinc-300"
-            onClick={() => props.onReact(message.id, "🔥")}
-          >
-            🔥
+    <Panel
+      title="chat"
+      actions={
+        chat.streaming ? (
+          <button className="btn" onClick={() => void chat.stop()}>
+            stop
           </button>
-          {mine && message.status === "done" ? (
-            <button
-              className="hover:text-zinc-300"
-              onClick={() => setEditing(true)}
-            >
-              edit
-            </button>
-          ) : null}
-        </span>
+        ) : undefined
+      }
+    >
+      <div className="flex max-h-64 min-h-40 flex-col gap-1 overflow-y-auto text-sm">
+        {chat.messages.map((m) => (
+          <p key={m.id} className={m.role === "user" ? "text-zinc-100" : "text-zinc-400"}>
+            <span className="label mr-2">{m.role}</span>
+            {m.content}
+            {m.status === "streaming" ? "▍" : ""}
+          </p>
+        ))}
+        {chat.messages.length === 0 ? (
+          <p className="m-auto text-xs text-zinc-600">talk to the sandbox agent</p>
+        ) : null}
       </div>
-    </div>
+      <ErrorNote error={chat.error} />
+      <form
+        className="flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const content = draft.trim();
+          if (content !== "" && !chat.streaming) {
+            setDraft("");
+            void chat.send(content);
+          }
+        }}
+      >
+        <input
+          className="input"
+          value={draft}
+          placeholder="message…"
+          onChange={(e) => setDraft(e.target.value)}
+        />
+        <button className="btn btn-primary" disabled={chat.streaming}>
+          send
+        </button>
+      </form>
+    </Panel>
+  );
+}
+
+function RunsPane() {
+  const runs = useRuns({ client });
+  const [task, setTask] = useState("");
+  const [activeRun, setActiveRun] = useState<string | null>(null);
+  const events = useRunEvents({ client, runId: activeRun });
+  return (
+    <Panel title="runs">
+      <form
+        className="flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const input = task.trim();
+          if (input === "") {
+            return;
+          }
+          setTask("");
+          void runs
+            .create({ input })
+            .then((created) =>
+              setActiveRun((created as { id?: string } | null)?.id ?? null),
+            );
+        }}
+      >
+        <input
+          className="input"
+          value={task}
+          placeholder="launch an agent task…"
+          onChange={(e) => setTask(e.target.value)}
+        />
+        <button className="btn btn-primary">run</button>
+      </form>
+      <ul className="flex flex-col gap-1 font-mono text-xs">
+        {runs.runs.slice(0, 4).map((run) => (
+          <li key={run.id}>
+            <button
+              className={run.id === activeRun ? "text-white" : "text-zinc-500 hover:text-zinc-300"}
+              onClick={() => setActiveRun(run.id)}
+            >
+              {run.id}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <div className="max-h-32 overflow-y-auto font-mono text-xs text-zinc-400">
+        {events.events.map((event, index) => (
+          <p key={index}>
+            <span className="text-emerald-400">{event.event}</span>{" "}
+            {JSON.stringify(event.data).slice(0, 120)}
+          </p>
+        ))}
+      </div>
+      <ErrorNote error={runs.error ?? events.error} />
+    </Panel>
+  );
+}
+
+function MemorySoulPane() {
+  const memory = useMemory({ client: keyedClient });
+  const soul = useSoul({ client: keyedClient });
+  const [entry, setEntry] = useState("");
+  return (
+    <Panel title="memory + soul">
+      <p className="label">SOUL.md</p>
+      <pre className="max-h-24 overflow-y-auto whitespace-pre-wrap rounded-lg bg-zinc-950 p-2 font-mono text-xs text-zinc-400">
+        {soul.data?.content ?? "…"}
+      </pre>
+      <p className="label">
+        MEMORY.md · {memory.data?.chars ?? 0}/{memory.data?.limit ?? 2200}
+      </p>
+      <pre className="max-h-24 overflow-y-auto whitespace-pre-wrap rounded-lg bg-zinc-950 p-2 font-mono text-xs text-zinc-400">
+        {memory.data?.content ?? "…"}
+      </pre>
+      <form
+        className="flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const text = entry.trim();
+          if (text !== "") {
+            setEntry("");
+            void keyedClient.memory.add(text).then(() => memory.refresh());
+          }
+        }}
+      >
+        <input
+          className="input"
+          value={entry}
+          placeholder="remember something…"
+          onChange={(e) => setEntry(e.target.value)}
+        />
+        <button className="btn">add</button>
+      </form>
+      <ErrorNote error={memory.error ?? soul.error} />
+    </Panel>
+  );
+}
+
+function OpsPane() {
+  const info = useAgentInfo({ client: keyedClient });
+  const config = useConfig({ client: keyedClient });
+  const jobs = useJobsAdmin({ client: keyedClient });
+  const health = info.health as { status?: string; upstream?: { model?: string } } | null;
+  const jobList =
+    (jobs.data as { jobs?: { name: string; schedule?: string }[] } | null)?.jobs ?? [];
+  return (
+    <Panel title="health · config · jobs">
+      <p className="text-sm">
+        <span
+          className={
+            health?.status === "ok" ? "text-emerald-400" : "text-amber-400"
+          }
+        >
+          ● {health?.status ?? "…"}
+        </span>{" "}
+        <span className="text-zinc-500">
+          model {health?.upstream?.model ?? "…"}
+        </span>
+      </p>
+      <p className="label">cron jobs</p>
+      <ul className="text-xs text-zinc-400">
+        {jobList.map((job) => (
+          <li key={job.name}>
+            {job.name} <span className="text-zinc-600">{job.schedule}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="label">config</p>
+      <pre className="max-h-28 overflow-y-auto rounded-lg bg-zinc-950 p-2 font-mono text-xs text-zinc-400">
+        {config.data?.raw ?? "…"}
+      </pre>
+      <ErrorNote error={info.error ?? config.error ?? jobs.error} />
+    </Panel>
+  );
+}
+
+function EventsTicker() {
+  const events = useEvents({ client: keyedClient });
+  return (
+    <Panel title={`event firehose ${events.connected ? "· live" : ""}`}>
+      <div className="max-h-40 overflow-y-auto font-mono text-xs">
+        {events.events
+          .slice(-30)
+          .reverse()
+          .map((event, index) => (
+            <p key={index} className="text-zinc-400">
+              <span className="text-sky-400">{event.event}</span>{" "}
+              {JSON.stringify(event.data).slice(0, 110)}
+            </p>
+          ))}
+        {events.events.length === 0 ? (
+          <p className="text-zinc-600">
+            waiting for lifecycle events — send a message or launch a run
+          </p>
+        ) : null}
+      </div>
+      <ErrorNote error={events.error} />
+    </Panel>
   );
 }
 
 export default function App() {
-  const [ids, setIds] = useState<string[]>(storedIds());
-  const chat = useChat({ client });
-  const sessions = useSessions({ client, ids });
-  const [draft, setDraft] = useState("");
-
-  useEffect(() => {
-    if (chat.sessionId !== null) {
-      rememberId(chat.sessionId);
-      setIds(storedIds());
-    }
-  }, [chat.sessionId]);
-
-  const send = async () => {
-    const content = draft.trim();
-    if (content === "" || chat.streaming) {
-      return;
-    }
-    setDraft("");
-    await chat.send(content);
-    await sessions.refresh();
-  };
-
   return (
     <Shell
-      title="chat"
-      slug="chat"
-      blurb="Streaming conversations through useChat — edit, react, regenerate, stop."
+      title="command center"
+      slug="command-center"
+      blurb="Every surface at once: chat, runs, memory, soul, config, health, and the live event stream."
     >
-      <div className="grid flex-1 gap-4 md:grid-cols-[220px_1fr]">
-        <Panel
-          title="sessions"
-          actions={
-            <button className="btn btn-ghost" onClick={() => chat.reset()}>
-              new
-            </button>
-          }
-        >
-          <ul className="flex flex-col gap-1 text-sm">
-            {sessions.sessions.map((s) => (
-              <li key={s.id} className="flex items-center justify-between gap-1">
-                <button
-                  className={
-                    "truncate text-left hover:text-white " +
-                    (s.id === chat.sessionId ? "text-white" : "text-zinc-400")
-                  }
-                  onClick={() => void chat.open(s.id)}
-                >
-                  {s.title ?? s.id.slice(0, 8)}
-                </button>
-                <button
-                  className="text-zinc-600 hover:text-red-400"
-                  onClick={() => void sessions.remove(s.id)}
-                >
-                  ×
-                </button>
-              </li>
-            ))}
-            {sessions.sessions.length === 0 ? (
-              <li className="text-zinc-600">no sessions yet</li>
-            ) : null}
-          </ul>
-        </Panel>
-        <Panel
-          title="conversation"
-          actions={
-            chat.streaming ? (
-              <button className="btn" onClick={() => void chat.stop()}>
-                stop
-              </button>
-            ) : undefined
-          }
-        >
-          <div className="flex min-h-[50vh] flex-1 flex-col gap-2 overflow-y-auto">
-            {chat.messages.map((m) => (
-              <Message
-                key={m.id}
-                message={m}
-                onReact={(id, emoji) => void chat.react(id, emoji)}
-                onEdit={(id, content) => void chat.edit(id, content)}
-              />
-            ))}
-            {chat.messages.length === 0 ? (
-              <p className="m-auto text-sm text-zinc-600">
-                say hello — the reply streams token by token
-              </p>
-            ) : null}
-          </div>
-          <ErrorNote error={chat.error} />
-          <form
-            className="flex gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void send();
-            }}
-          >
-            <input
-              className="input"
-              placeholder="message the sandbox agent…"
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-            />
-            <button className="btn btn-primary" disabled={chat.streaming}>
-              send
-            </button>
-          </form>
-        </Panel>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ChatPane />
+        <RunsPane />
+        <MemorySoulPane />
+        <OpsPane />
       </div>
+      <EventsTicker />
     </Shell>
   );
 }
