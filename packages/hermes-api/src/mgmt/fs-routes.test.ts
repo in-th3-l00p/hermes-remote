@@ -224,6 +224,73 @@ describe("bundles, cron output, subagents", () => {
     ).toBe(400);
   });
 
+  test("malformed json bodies are rejected", async () => {
+    const { app } = await makeApp(["memory:write", "skills:write"]);
+    const badJson = (path: string, method: string): Request =>
+      new Request(`http://x${path}`, {
+        method,
+        headers: {
+          authorization: "Bearer hk_good",
+          "content-type": "application/json",
+        },
+        body: "{not json",
+      });
+    expect((await app.fetch(badJson("/v1/memory", "PUT"))).status).toBe(400);
+    expect(
+      (await app.fetch(badJson("/v1/memory/entries", "POST"))).status,
+    ).toBe(400);
+    expect((await app.fetch(badJson("/v1/skills", "POST"))).status).toBe(400);
+  });
+
+  test("deleting a missing skill is a 404", async () => {
+    const { app } = await makeApp(["skills:write"]);
+    expect((await app.fetch(req("/v1/skills/ghost", "DELETE"))).status).toBe(404);
+  });
+
+  test("every fs route requires its scope", async () => {
+    const { app } = await makeApp(["status:read"]);
+    const cases: [string, string?][] = [
+      ["/v1/memory"],
+      ["/v1/memory", "PUT"],
+      ["/v1/memory/user"],
+      ["/v1/memory/user", "PUT"],
+      ["/v1/memory/entries", "POST"],
+      ["/v1/soul"],
+      ["/v1/soul", "PUT"],
+      ["/v1/skills", "POST"],
+      ["/v1/skills/notes"],
+      ["/v1/skills/notes", "PATCH"],
+      ["/v1/skills/notes", "DELETE"],
+      ["/v1/skills/notes/files/tips.md"],
+      ["/v1/skills/notes/files/tips.md", "PUT"],
+      ["/v1/bundles"],
+      ["/v1/bundles/research"],
+      ["/v1/bundles/research", "PUT"],
+      ["/v1/bundles/research", "DELETE"],
+      ["/v1/jobs/579a/output"],
+      ["/v1/jobs/579a/output/run1.md"],
+      ["/v1/subagents"],
+    ];
+    for (const [path, method = "GET"] of cases) {
+      const res = await app.fetch(
+        req(path, method, method === "GET" ? undefined : {}),
+      );
+      expect(`${method} ${path} ${res.status}`).toBe(`${method} ${path} 403`);
+    }
+  });
+
+  test("unexpected bridge failures propagate as server errors", async () => {
+    const { app, home } = await makeApp(["skills:write"]);
+    await writeFile(join(home, "skills"), "not a directory");
+    expect(
+      (
+        await app.fetch(
+          req("/v1/skills", "POST", { name: "notes", content: "# notes" }),
+        )
+      ).status,
+    ).toBe(500);
+  });
+
   test("cron outputs and subagent transcripts list from the home", async () => {
     const { app, home } = await makeApp(["crons:read", "subagents:read"]);
     await mkdir(join(home, "cron/output/579a"), { recursive: true });

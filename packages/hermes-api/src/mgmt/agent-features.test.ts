@@ -13,6 +13,8 @@ import {
   type KeyVerifier,
 } from "../index.ts";
 import type { ApiKeyRecord } from "../auth/index.ts";
+import type { Upstream } from "../upstream/types.ts";
+import { relayCommand } from "./commands.ts";
 
 function keyStore(scopes: string[]): KeyVerifier {
   const record: ApiKeyRecord = {
@@ -194,6 +196,71 @@ describe("commands", () => {
     ).toBe(403);
   });
 
+  test("malformed json bodies are rejected", async () => {
+    const { app } = await makeApp(["goals:write"]);
+    const res = await app.fetch(
+      new Request("http://x/v1/agent/sessions/sess1/commands", {
+        method: "POST",
+        headers: {
+          authorization: "Bearer hk_good",
+          "content-type": "application/json",
+        },
+        body: "{not json",
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  test("relay failures map to upstream errors", async () => {
+    const { app } = await makeApp(["goals:write"]);
+    const res = await app.fetch(
+      req("/v1/agent/sessions/ghost/commands", "POST", {
+        command: "/goal status",
+      }),
+    );
+    expect(res.status).toBe(502);
+  });
+
+  test("relay keeps non-json frames verbatim", async () => {
+    const upstream = {
+      sessions: {
+        chatStream: async () =>
+          new Response(
+            "event: note\ndata: plain words\n\nevent: done\ndata: {\"ok\":true}\n\n",
+          ).body,
+      },
+    } as unknown as Upstream;
+    const events = await relayCommand(
+      { upstream, commandRelay: true },
+      "sess1",
+      "/status",
+    );
+    expect(events).toEqual([
+      { event: "note", data: "plain words" },
+      { event: "done", data: { ok: true } },
+    ]);
+  });
+
+  test("relay aborts slow upstreams after the timeout", async () => {
+    const upstream = {
+      sessions: {
+        chatStream: (_id: string, _body: unknown, signal: AbortSignal) =>
+          new Promise((_resolve, reject) => {
+            signal.addEventListener("abort", () =>
+              reject(new Error("relay aborted")),
+            );
+          }),
+      },
+    } as unknown as Upstream;
+    expect(
+      relayCommand(
+        { upstream, commandRelay: true, relayTimeoutMs: 5 },
+        "sess1",
+        "/status",
+      ),
+    ).rejects.toThrow("relay aborted");
+  });
+
   test("relay disabled returns 501", async () => {
     const { app } = await makeApp(["goals:write", "sessions:write-all"], false);
     const created = await app.fetch(
@@ -301,6 +368,30 @@ describe("goals", () => {
     expect(
       (await app.fetch(req(`${base}/subgoals`, "POST", {}))).status,
     ).toBe(400);
+  });
+
+  test("malformed goal bodies are rejected", async () => {
+    const { app } = await makeApp(["goals:write"]);
+    const base = "/v1/agent/sessions/sess1/goal";
+    const cases: [string, string][] = [
+      ["PUT", base],
+      ["POST", `${base}/wait`],
+      ["POST", `${base}/gates`],
+      ["POST", `${base}/subgoals`],
+    ];
+    for (const [method, path] of cases) {
+      const res = await app.fetch(
+        new Request(`http://x${path}`, {
+          method,
+          headers: {
+            authorization: "Bearer hk_good",
+            "content-type": "application/json",
+          },
+          body: "{not json",
+        }),
+      );
+      expect(`${method} ${path} ${res.status}`).toBe(`${method} ${path} 400`);
+    }
   });
 
   test("toGoalState tolerates junk", () => {

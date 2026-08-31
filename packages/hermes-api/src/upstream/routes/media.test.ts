@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { createApp, DemoUpstream, RunStore, type KeyVerifier } from "../../index.ts";
+import {
+  createApp,
+  DemoUpstream,
+  HermesUpstreamError,
+  RunStore,
+  type KeyVerifier,
+} from "../../index.ts";
 import type { ApiKeyRecord } from "../../auth/index.ts";
 import type { Upstream } from "../types.ts";
 
@@ -163,6 +169,136 @@ describe("browser tasks", () => {
     const { runId } = (await res.json()) as { runId: string };
     expect(runStore.get(runId)?.principal).toContain("anonymous");
     expect((await app.fetch(post("/v1/browser/tasks", {}))).status).toBe(400);
+  });
+});
+
+const rawPost = (path: string, body: string, token?: string): Request =>
+  new Request(`http://x${path}`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(token === undefined ? {} : { authorization: `Bearer ${token}` }),
+    },
+    body,
+  });
+
+function scopedApp(scopes: string[], upstream: Upstream = new DemoUpstream()) {
+  return createApp({
+    anonymous: false,
+    store: keyStore(scopes),
+    upstream: { upstream, pollMs: 1, toolRunTimeoutMs: 100 },
+  });
+}
+
+describe("media scope enforcement", () => {
+  test("every media surface requires chat:invoke on api keys", async () => {
+    const app = scopedApp(["sessions:read"]);
+    expect((await app.fetch(post("/v1/media/tts", { input: "hi" }, "hk_good"))).status).toBe(403);
+    expect(
+      (await app.fetch(post("/v1/web/search", { query: "x" }, "hk_good"))).status,
+    ).toBe(403);
+    expect(
+      (await app.fetch(post("/v1/browser/tasks", { task: "x" }, "hk_good"))).status,
+    ).toBe(403);
+    expect(
+      (await app.fetch(post("/v1/chat/completions", { messages: [] }, "hk_good"))).status,
+    ).toBe(403);
+  });
+});
+
+describe("media error branches", () => {
+  test("tts reports null capabilities when discovery fails", async () => {
+    const demo = new DemoUpstream();
+    const failing = {
+      ...demo,
+      raw: demo.raw.bind(demo),
+      discovery: {
+        ...demo.discovery,
+        capabilities: async () => {
+          throw new HermesUpstreamError(500, "down");
+        },
+      },
+    } as Upstream;
+    const res = await demoApp(failing).fetch(post("/v1/media/tts", { input: "hi" }));
+    expect(res.status).toBe(501);
+    expect(await res.json()).toEqual({
+      error: {
+        code: "not_supported",
+        message: "The upstream agent does not expose an audio API",
+      },
+      capabilities: null,
+    });
+  });
+
+  test("tool runs map upstream failures to 502", async () => {
+    const demo = new DemoUpstream();
+    const throwing = {
+      ...demo,
+      raw: demo.raw.bind(demo),
+      runs: {
+        ...demo.runs,
+        create: async () => {
+          throw new HermesUpstreamError(503, "busy");
+        },
+      },
+    } as Upstream;
+    const res = await demoApp(throwing).fetch(post("/v1/web/search", { query: "x" }));
+    expect(res.status).toBe(502);
+    expect(await res.json()).toEqual({
+      error: { code: "upstream_error", message: "busy", upstreamStatus: 503 },
+    });
+  });
+
+  test("browser tasks surface idless creations and upstream failures", async () => {
+    const demo = new DemoUpstream();
+    const idless = {
+      ...demo,
+      raw: demo.raw.bind(demo),
+      runs: { ...demo.runs, create: async () => ({}) },
+    } as Upstream;
+    expect(
+      (await demoApp(idless).fetch(post("/v1/browser/tasks", { task: "t" }))).status,
+    ).toBe(502);
+    const throwing = {
+      ...demo,
+      raw: demo.raw.bind(demo),
+      runs: {
+        ...demo.runs,
+        create: async () => {
+          throw new HermesUpstreamError(500, "no browser");
+        },
+      },
+    } as Upstream;
+    const res = await demoApp(throwing).fetch(post("/v1/browser/tasks", { task: "t" }));
+    expect(res.status).toBe(502);
+    expect(await res.json()).toEqual({
+      error: { code: "upstream_error", message: "no browser", upstreamStatus: 500 },
+    });
+  });
+
+  test("malformed json bodies are rejected or defaulted per surface", async () => {
+    const app = demoApp();
+    for (const path of ["/v1/media/images", "/v1/web/search", "/v1/web/extract", "/v1/browser/tasks"]) {
+      expect((await app.fetch(rawPost(path, "{{{"))).status).toBe(400);
+    }
+    const demo = new DemoUpstream();
+    const audio = {
+      ...demo,
+      raw: demo.raw.bind(demo),
+      discovery: {
+        ...demo.discovery,
+        capabilities: async () => ({ features: { audio_api: true } }),
+      },
+    } as Upstream;
+    const tts = await demoApp(audio).fetch(rawPost("/v1/media/tts", "{{{"));
+    expect(tts.status).toBe(200);
+    expect(await tts.text()).toBe("DEMOAUDIO");
+    const keyed = scopedApp(["chat:invoke"]);
+    const passthrough = await keyed.fetch(
+      rawPost("/v1/chat/completions", "{{{", "hk_good"),
+    );
+    expect(passthrough.status).toBe(200);
+    expect(((await passthrough.json()) as { echo: unknown }).echo).toEqual({});
   });
 });
 

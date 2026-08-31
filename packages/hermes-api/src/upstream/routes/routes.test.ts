@@ -10,6 +10,7 @@ import {
 } from "../../index.ts";
 import type { ApiKeyRecord } from "../../auth/index.ts";
 import type { Upstream } from "../types.ts";
+import { upstreamFailure } from "./shared.ts";
 
 const SECRET = "sb-secret";
 
@@ -317,6 +318,184 @@ describe("run routes", () => {
     const idlessApp = demoApp({ upstream: { upstream: idless } });
     expect((await idlessApp.fetch(send("/v1/runs", { input: "x" }))).status).toBe(502);
   });
+
+  test("accepts upstreams that answer with run_id instead of id", async () => {
+    const demo = new DemoUpstream();
+    const runStore = new RunStore();
+    const renamed = {
+      ...demo,
+      raw: demo.raw.bind(demo),
+      runs: { ...demo.runs, create: async () => ({ run_id: "rr-7" }) },
+    } as Upstream;
+    const app = demoApp({ upstream: { upstream: renamed, runStore } });
+    const created = await app.fetch(send("/v1/runs", { input: "x" }));
+    expect(created.status).toBe(201);
+    expect(await created.json()).toEqual({ run_id: "rr-7" });
+    expect(runStore.get("rr-7")).not.toBeNull();
+  });
+
+  test("every run surface enforces the chat scope on api keys", async () => {
+    const app = demoApp({ anonymous: false, store: keyStore(["sessions:read"]) });
+    expect((await app.fetch(get("/v1/runs", "hk_good"))).status).toBe(403);
+    expect((await app.fetch(get("/v1/runs/r1", "hk_good"))).status).toBe(403);
+    expect((await app.fetch(get("/v1/runs/r1/events", "hk_good"))).status).toBe(403);
+    for (const action of ["stop", "steer", "approval"]) {
+      expect(
+        (await app.fetch(send(`/v1/runs/r1/${action}`, {}, "POST", "hk_good"))).status,
+      ).toBe(403);
+    }
+  });
+
+  test("event stream failures map to 502", async () => {
+    const demo = new DemoUpstream();
+    const broken = {
+      ...demo,
+      raw: demo.raw.bind(demo),
+      runs: {
+        ...demo.runs,
+        events: async () => {
+          throw new HermesUpstreamError(503, "stream gone");
+        },
+      },
+    } as Upstream;
+    const app = demoApp({ upstream: { upstream: broken } });
+    const created = await app.fetch(send("/v1/runs", { input: "x" }));
+    const { id } = (await created.json()) as { id: string };
+    const res = await app.fetch(get(`/v1/runs/${id}/events`));
+    expect(res.status).toBe(502);
+    expect(await res.json()).toEqual({
+      error: {
+        code: "upstream_error",
+        message: "stream gone",
+        upstreamStatus: 503,
+      },
+    });
+  });
+});
+
+const rawSend = (path: string, method: string, token?: string) =>
+  new Request(`http://x${path}`, {
+    method,
+    headers: {
+      "content-type": "application/json",
+      ...(token === undefined ? {} : { authorization: `Bearer ${token}` }),
+    },
+    body: "{{{",
+  });
+
+describe("malformed json bodies default to empty objects", () => {
+  test("run steer and approval tolerate malformed bodies", async () => {
+    const app = demoApp();
+    const created = await app.fetch(send("/v1/runs", { input: "x" }));
+    const { id } = (await created.json()) as { id: string };
+    expect(
+      (await app.fetch(rawSend(`/v1/runs/${id}/steer`, "POST"))).status,
+    ).toBe(200);
+    expect(
+      (await app.fetch(rawSend(`/v1/runs/${id}/approval`, "POST"))).status,
+    ).toBe(200);
+  });
+
+  test("job create and update tolerate malformed bodies", async () => {
+    const app = demoApp({
+      anonymous: false,
+      store: keyStore(["crons:read", "crons:write"]),
+    });
+    const created = await app.fetch(rawSend("/v1/jobs", "POST", "hk_good"));
+    expect(created.status).toBe(200);
+    const { id } = (await created.json()) as { id: string };
+    expect(
+      (await app.fetch(rawSend(`/v1/jobs/${id}`, "PATCH", "hk_good"))).status,
+    ).toBe(200);
+  });
+
+  test("agent session writes tolerate malformed bodies", async () => {
+    const app = demoApp({
+      anonymous: false,
+      store: keyStore(["sessions:write-all", "chat:invoke"]),
+    });
+    const created = await app.fetch(rawSend("/v1/agent/sessions", "POST", "hk_good"));
+    expect(created.status).toBe(200);
+    const { session } = (await created.json()) as { session: { id: string } };
+    const base = `/v1/agent/sessions/${session.id}`;
+    expect((await app.fetch(rawSend(base, "PATCH", "hk_good"))).status).toBe(200);
+    expect(
+      (await app.fetch(rawSend(`${base}/fork`, "POST", "hk_good"))).status,
+    ).toBe(200);
+    expect(
+      (await app.fetch(rawSend(`${base}/model`, "POST", "hk_good"))).status,
+    ).toBe(200);
+    expect(
+      (await app.fetch(rawSend(`${base}/chat`, "POST", "hk_good"))).status,
+    ).toBe(200);
+    const stream = await app.fetch(
+      rawSend(`${base}/chat/stream`, "POST", "hk_good"),
+    );
+    expect(stream.status).toBe(200);
+    expect(stream.headers.get("content-type")).toBe("text/event-stream");
+    await stream.text();
+  });
+});
+
+describe("upstream failure helper", () => {
+  test("rethrows causes that are not upstream errors", () => {
+    const cause = new Error("boom");
+    expect(() => upstreamFailure(cause)).toThrow("boom");
+  });
+});
+
+describe("agent session routes", () => {
+  test("write surfaces deny callers without the write-all key scope", async () => {
+    const app = demoApp();
+    const writes: [string, string][] = [
+      ["POST", "/v1/agent/sessions"],
+      ["PATCH", "/v1/agent/sessions/s1"],
+      ["POST", "/v1/agent/sessions/s1/fork"],
+      ["POST", "/v1/agent/sessions/s1/model"],
+      ["POST", "/v1/agent/sessions/s1/chat"],
+      ["POST", "/v1/agent/sessions/s1/chat/stream"],
+    ];
+    for (const [method, path] of writes) {
+      const res = await app.fetch(send(path, { title: "x" }, method));
+      expect(res.status).toBe(403);
+      expect(await res.json()).toEqual({
+        error: {
+          code: "api_key_required",
+          message: "This surface requires an API key",
+        },
+      });
+    }
+  });
+
+  test("chat stream failures map to 502", async () => {
+    const demo = new DemoUpstream();
+    const broken = {
+      ...demo,
+      raw: demo.raw.bind(demo),
+      sessions: {
+        ...demo.sessions,
+        chatStream: async () => {
+          throw new HermesUpstreamError(500, "stream down");
+        },
+      },
+    } as Upstream;
+    const app = demoApp({
+      anonymous: false,
+      store: keyStore(["sessions:write-all", "chat:invoke"]),
+      upstream: { upstream: broken },
+    });
+    const res = await app.fetch(
+      send("/v1/agent/sessions/s1/chat/stream", { message: "hi" }, "POST", "hk_good"),
+    );
+    expect(res.status).toBe(502);
+    expect(await res.json()).toEqual({
+      error: {
+        code: "upstream_error",
+        message: "stream down",
+        upstreamStatus: 500,
+      },
+    });
+  });
 });
 
 describe("job routes", () => {
@@ -374,6 +553,9 @@ describe("job routes", () => {
     expect((await readOnly.fetch(get("/v1/jobs", "hk_good"))).status).toBe(200);
     expect(
       (await readOnly.fetch(send("/v1/jobs", { name: "x" }, "POST", "hk_good"))).status,
+    ).toBe(403);
+    expect(
+      (await readOnly.fetch(send("/v1/jobs/j1", { name: "y" }, "PATCH", "hk_good"))).status,
     ).toBe(403);
     const noScopes = demoApp({ anonymous: false, store: keyStore(["chat:invoke"]) });
     expect((await noScopes.fetch(get("/v1/jobs", "hk_good"))).status).toBe(403);

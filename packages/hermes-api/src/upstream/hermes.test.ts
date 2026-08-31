@@ -157,6 +157,94 @@ describe("HermesUpstream", () => {
     );
   });
 
+  test("sessions map to the /api/sessions endpoints", async () => {
+    const calls: Recorded[] = [];
+    const upstream = upstreamWith((path) => Response.json({ path }), calls);
+    await upstream.sessions.list();
+    await upstream.sessions.create({ title: "t" });
+    await upstream.sessions.get("s1");
+    await upstream.sessions.update("s1", { title: "u" });
+    await upstream.sessions.remove("s1");
+    await upstream.sessions.messages("s1");
+    await upstream.sessions.fork("s1", { title: "f" });
+    await upstream.sessions.chat("s1", { message: "hi" });
+    await upstream.sessions.modelLock("s1", { model: "m" });
+    expect(calls.map((c) => `${c.method} ${c.path}`)).toEqual([
+      "GET /api/sessions",
+      "POST /api/sessions",
+      "GET /api/sessions/s1",
+      "PATCH /api/sessions/s1",
+      "DELETE /api/sessions/s1",
+      "GET /api/sessions/s1/messages",
+      "POST /api/sessions/s1/fork",
+      "POST /api/sessions/s1/chat",
+      "POST /api/sessions/s1/model",
+    ]);
+    expect(calls.every((c) => c.auth === "Bearer sekrit")).toBe(true);
+  });
+
+  test("session chat stream returns the raw body stream", async () => {
+    const calls: Recorded[] = [];
+    const upstream = upstreamWith(
+      (path) =>
+        path === "/api/sessions/s1/chat/stream"
+          ? new Response("event: message.delta\ndata: {}\n\n", {
+              headers: { "content-type": "text/event-stream" },
+            })
+          : Response.json({}),
+      calls,
+    );
+    const controller = new AbortController();
+    const stream = await upstream.sessions.chatStream(
+      "s1",
+      { message: "hi" },
+      controller.signal,
+    );
+    const text = await new Response(stream).text();
+    expect(text).toContain("message.delta");
+    expect(calls).toEqual([
+      {
+        method: "POST",
+        path: "/api/sessions/s1/chat/stream",
+        auth: "Bearer sekrit",
+        body: { message: "hi" },
+      },
+    ]);
+  });
+
+  test("session chat stream rejects on failure or missing body", async () => {
+    const failing = upstreamWith(() => Response.json({}, { status: 500 }));
+    expect(
+      failing.sessions.chatStream("s1", { message: "x" }),
+    ).rejects.toBeInstanceOf(HermesUpstreamError);
+    const empty = upstreamWith(() => new Response(null, { status: 200 }));
+    expect(
+      empty.sessions.chatStream("s1", { message: "x" }),
+    ).rejects.toBeInstanceOf(HermesUpstreamError);
+  });
+
+  test("raw forwards method, path, body, auth, and signal", async () => {
+    const calls: Recorded[] = [];
+    const upstream = upstreamWith(
+      () => Response.json({ ok: true }, { status: 418 }),
+      calls,
+    );
+    const withBody = await upstream.raw("POST", "/v1/audio/speech", { input: "x" });
+    expect(withBody.status).toBe(418);
+    expect(await withBody.json()).toEqual({ ok: true });
+    const controller = new AbortController();
+    await upstream.raw("GET", "/v1/models", undefined, controller.signal);
+    expect(calls).toEqual([
+      {
+        method: "POST",
+        path: "/v1/audio/speech",
+        auth: "Bearer sekrit",
+        body: { input: "x" },
+      },
+      { method: "GET", path: "/v1/models", auth: "Bearer sekrit", body: undefined },
+    ]);
+  });
+
   test("uses the real fetch by default", () => {
     const upstream = new HermesUpstream({ baseUrl: "http://127.0.0.1:1", apiKey: "k" });
     expect(upstream.discovery.models()).rejects.toBeDefined();

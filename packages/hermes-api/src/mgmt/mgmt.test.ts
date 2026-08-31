@@ -186,6 +186,22 @@ describe("management catalog", () => {
     expect(dash.status).toBe(400);
   });
 
+  test("malformed json bodies are rejected", async () => {
+    const fake = new FakeCliBridge({ "profile list": { stdout: PROFILE_TABLE } });
+    const app = makeApp(fake, keyStore(["config:write", "toolsets:manage"]));
+    const badJson = (path: string): Request =>
+      new Request(`http://x${path}`, {
+        method: "PUT",
+        headers: {
+          authorization: "Bearer hk_good",
+          "content-type": "application/json",
+        },
+        body: "{not json",
+      });
+    expect((await app.fetch(badJson("/v1/config/model.name"))).status).toBe(400);
+    expect((await app.fetch(badJson("/v1/toolsets/cli"))).status).toBe(400);
+  });
+
   test("tier-two surfaces reject user and anonymous principals", async () => {
     const fake = new FakeCliBridge({
       "profile list": { stdout: PROFILE_TABLE },
@@ -221,6 +237,21 @@ describe("management catalog", () => {
       );
     expect(await (await putToolset(true)).json()).toEqual({ ok: true, raw: "on" });
     expect(await (await putToolset(false)).json()).toEqual({ ok: true, raw: "off" });
+    const denied = makeApp(fake, keyStore(["status:read"]));
+    expect(
+      (
+        await denied.fetch(
+          new Request("http://x/v1/toolsets/cli", {
+            method: "PUT",
+            headers: {
+              authorization: "Bearer hk_good",
+              "content-type": "application/json",
+            },
+            body: JSON.stringify({ name: "web", enabled: true }),
+          }),
+        )
+      ).status,
+    ).toBe(403);
     const invalid = await app.fetch(
       new Request("http://x/v1/toolsets/cli", {
         method: "PUT",
