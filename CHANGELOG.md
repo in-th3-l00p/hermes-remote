@@ -1,5 +1,17 @@
 # Changelog
 
+## 4.0.0 (unreleased)
+
+Delivers what ARCHITECTURE.md promised. Server and CLI 4.0.0, client and React 2.0.0.
+
+* **Token exchange and users.** `POST /v1/auth/token` lets a platform backend (a key with `auth:users`) exchange a verified external identity for a short-lived, scoped hermes-remote user token. Scopes are limited to the key's `--user-grantable` list; disabling a user revokes its tokens immediately; `agent_visibility` (`anonymous`, `pseudonymous`, `full`) controls what the agent learns and `metadata` never reaches it. `/v1/users` routes manage users and identities. See the new [token exchange guide](apps/landing/docs/auth/token-exchange.md).
+* **CLI.** `users`, `audit tail` and `doctor`; `serve` creates an owner-only `signing.key` for user tokens.
+* **OpenAPI.** `GET /v1/openapi.json` documents every route (scope, audience, request and response schemas), committed as `packages/hermes-api/openapi.json` and kept current by a snapshot test. Request bodies are validated with the published zod schemas.
+* **Chat sessions.** Rename and archive (`PATCH /v1/sessions/:id`), fork, owner-scoped search (`GET /v1/sessions/search`, the `sessions:search` scope), and export as JSON or Markdown. Archived sessions leave the default listing.
+* **Subagents.** `GET /v1/subagents/:id` returns a parsed transcript; steer and stop answer 501 (they live in the parent session).
+* **Client 2.0.0.** `whoami()`, session tools, `subagents.transcript()`, retries with backoff for idempotent requests (`retry` option, on by default), `conversation.send` takes the object form too, and generated `paths`/`components` types. **Breaking:** `Attachment.type` is the union of accepted image types.
+* **React 2.0.0.** `useHermesAuth`, `useSession`, `useInsights`, `useJourney`, `useSubagents`, `useSkillHub`. Hooks key effects on the client's base URL, so inline clients no longer cause refetch loops, and `useAction` always calls the newest function.
+
 ## 3.3.0 (unreleased)
 
 Hardening release. Includes security fixes; details will be published as GitHub security advisories once the release is out.
