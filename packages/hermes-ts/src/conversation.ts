@@ -1,4 +1,5 @@
 import type { HermesClient } from "./client.ts";
+import type { SendMessageInput } from "./client.ts";
 import type { Attachment, ChatEvent, ChatMessage } from "./types.ts";
 
 export interface ConversationSendOptions {
@@ -24,20 +25,24 @@ export class Conversation {
     return this.sessionId;
   }
 
+  /**
+   * Sends a message: a plain string, or the same `{ content, attachments }`
+   * object `client.sendMessage` takes.
+   */
   send(
-    content: string,
+    input: string | SendMessageInput,
     options: ConversationSendOptions = {},
   ): AsyncIterable<ChatEvent> {
     const conversation = this;
+    const message: SendMessageInput = typeof input === "string" ? { content: input } : input;
+    const attachments = options.attachments ?? message.attachments;
     return (async function* () {
       conversation.sessionId ??= (await conversation.client.createSession()).id;
       yield* conversation.client.sendMessage(
         conversation.sessionId,
         {
-          content,
-          ...(options.attachments === undefined
-            ? {}
-            : { attachments: options.attachments }),
+          content: message.content,
+          ...(attachments === undefined ? {} : { attachments }),
         },
         options.signal === undefined ? {} : { signal: options.signal },
       );

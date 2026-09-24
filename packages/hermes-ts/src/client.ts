@@ -45,6 +45,7 @@ import type {
   ChatMessage,
   ChatSession,
   ChatSessionMeta,
+  WhoAmI,
 } from "./types.ts";
 
 export interface SendMessageInput {
@@ -162,6 +163,11 @@ export class HermesClient {
 
   status(): Promise<{ ok: boolean; version: string }> {
     return this.request("GET", "/v1/status");
+  }
+
+  /** The principal the server resolved for this client's credentials. */
+  whoami(): Promise<WhoAmI> {
+    return this.request("GET", "/v1/auth/whoami");
   }
 
   createSession(): Promise<ChatSession> {

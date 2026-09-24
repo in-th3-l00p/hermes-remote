@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { clientKey, useLatest } from "./client-ref.ts";
 import type { ChatSessionMeta } from "@intheloop-studio/hermes-remote-client";
 
 export interface SessionsClientLike {
@@ -21,7 +22,9 @@ export interface UseSessions {
 }
 
 export function useSessions(options: UseSessionsOptions): UseSessions {
-  const { client, ids } = options;
+  const { ids } = options;
+  const clientRef = useLatest(options.client);
+  const key = clientKey(options.client);
   const [sessions, setSessions] = useState<ChatSessionMeta[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,21 +36,22 @@ export function useSessions(options: UseSessionsOptions): UseSessions {
     try {
       const lookup =
         idsKey === null ? undefined : idsKey.split(",").filter(Boolean);
-      setSessions(await client.listSessions(lookup));
+      setSessions(await clientRef.current.listSessions(lookup));
       setError(null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
       setLoading(false);
     }
-  }, [client, idsKey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, idsKey]);
 
   const remove = useCallback(
     async (sessionId: string) => {
-      await client.deleteSession(sessionId);
+      await clientRef.current.deleteSession(sessionId);
       setSessions((prev) => prev.filter((s) => s.id !== sessionId));
     },
-    [client],
+    [clientRef],
   );
 
   useEffect(() => {

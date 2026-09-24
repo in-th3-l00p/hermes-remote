@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { clientKey, useLatest } from "./client-ref.ts";
 import type { SseEvent } from "@intheloop-studio/hermes-remote-client";
 
 export interface EventsClientLike {
@@ -17,7 +18,9 @@ export function useEvents(options: {
   client: EventsClientLike;
   enabled?: boolean;
 }): UseEvents {
-  const { client, enabled = true } = options;
+  const { enabled = true } = options;
+  const clientRef = useLatest(options.client);
+  const key = clientKey(options.client);
   const [events, setEvents] = useState<SseEvent[]>([]);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +36,7 @@ export function useEvents(options: {
     setConnected(true);
     void (async () => {
       try {
-        for await (const event of client.events.subscribe(controller.signal)) {
+        for await (const event of clientRef.current.events.subscribe(controller.signal)) {
           setEvents((prev) => [...prev, event]);
         }
       } catch (cause) {
@@ -47,7 +50,8 @@ export function useEvents(options: {
     return () => {
       controller.abort();
     };
-  }, [client, enabled]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, enabled]);
 
   return { events, connected, error };
 }

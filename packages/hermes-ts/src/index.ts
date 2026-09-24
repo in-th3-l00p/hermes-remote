@@ -66,4 +66,5 @@ export type {
   ChatMessage,
   ChatSession,
   ChatSessionMeta,
+  WhoAmI,
 } from "./types.ts";

@@ -98,6 +98,13 @@ describe("HermesClient", () => {
     expect(calls[4]?.url).toBe("http://x/v1/sessions?archived=true");
   });
 
+  test("whoami asks the server who the caller is", async () => {
+    const { calls, fetch } = mockFetch(() => Response.json({ type: "anonymous" }));
+    const client = new HermesClient({ baseUrl: "http://x", fetch });
+    expect(await client.whoami()).toEqual({ type: "anonymous" });
+    expect(calls[0]?.url).toBe("http://x/v1/auth/whoami");
+  });
+
   test("renames, archives, forks, searches and exports sessions", async () => {
     const { calls, fetch } = mockFetch((url) =>
       url.includes("/export")

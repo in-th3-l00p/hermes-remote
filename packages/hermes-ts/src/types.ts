@@ -15,6 +15,12 @@ export interface ChatMessage {
   status: "streaming" | "done" | "error";
 }
 
+/** Who the server says the caller is (`GET /v1/auth/whoami`). */
+export type WhoAmI =
+  | { type: "api_key"; id: string; name: string; scopes: string[] }
+  | { type: "user"; id: string; email?: string }
+  | { type: "anonymous" };
+
 export interface ChatSessionMeta {
   id: string;
   userId: string | null;

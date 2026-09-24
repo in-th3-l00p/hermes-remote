@@ -167,3 +167,84 @@ describe("HttpClient", () => {
     expect(err.code).toBe("no_body");
   });
 });
+
+describe("retries", () => {
+  const counting = (responses: (() => Response | Promise<Response>)[]) => {
+    const calls: string[] = [];
+    const fetchImpl = (async (_url: string | URL | Request, init?: RequestInit) => {
+      calls.push(init?.method ?? "GET");
+      const next = responses.shift();
+      if (next === undefined) {
+        throw new Error("no more responses");
+      }
+      return next();
+    }) as unknown as typeof fetch;
+    return { calls, fetchImpl };
+  };
+
+  test("idempotent requests retry transient failures with backoff", async () => {
+    const { calls, fetchImpl } = counting([
+      () => new Response("busy", { status: 503 }),
+      () => {
+        throw new TypeError("connection reset");
+      },
+      () => Response.json({ ok: true }),
+    ]);
+    const http = new HttpClient({ baseUrl: "http://x", fetch: fetchImpl, retry: { baseDelayMs: 1 } });
+    expect(await http.request<{ ok: boolean }>("GET", "/v1/status")).toEqual({ ok: true });
+    expect(calls).toEqual(["GET", "GET", "GET"]);
+  });
+
+  test("gives up after the configured attempts with the last error", async () => {
+    const { calls, fetchImpl } = counting([
+      () => new Response("", { status: 502 }),
+      () => new Response("", { status: 502 }),
+    ]);
+    const http = new HttpClient({
+      baseUrl: "http://x",
+      fetch: fetchImpl,
+      retry: { attempts: 1, baseDelayMs: 1 },
+    });
+    const error = await http.request("GET", "/v1/x").catch((e: unknown) => e);
+    expect((error as HermesApiError).status).toBe(502);
+    expect(calls).toHaveLength(2);
+    const failing = counting([
+      () => {
+        throw new TypeError("down");
+      },
+      () => {
+        throw new TypeError("still down");
+      },
+    ]);
+    const net = new HttpClient({ baseUrl: "http://x", fetch: failing.fetchImpl, retry: { attempts: 1, baseDelayMs: 1 } });
+    expect(net.request("GET", "/v1/x")).rejects.toThrow("still down");
+  });
+
+  test("mutations, client errors, aborts and retry: false are never retried", async () => {
+    const post = counting([() => new Response("", { status: 503 })]);
+    const http = new HttpClient({ baseUrl: "http://x", fetch: post.fetchImpl, retry: { baseDelayMs: 1 } });
+    expect(http.request("POST", "/v1/sessions", {})).rejects.toBeInstanceOf(HermesApiError);
+    await Promise.resolve();
+    expect(post.calls).toEqual(["POST"]);
+
+    const notFound = counting([() => new Response("", { status: 404 })]);
+    const four = new HttpClient({ baseUrl: "http://x", fetch: notFound.fetchImpl, retry: { baseDelayMs: 1 } });
+    expect(four.request("GET", "/v1/x")).rejects.toBeInstanceOf(HermesApiError);
+
+    const disabled = counting([() => new Response("", { status: 503 })]);
+    const off = new HttpClient({ baseUrl: "http://x", fetch: disabled.fetchImpl, retry: false });
+    expect(off.request("GET", "/v1/x")).rejects.toBeInstanceOf(HermesApiError);
+
+    const controller = new AbortController();
+    const aborted = counting([
+      () => {
+        controller.abort();
+        throw new DOMException("aborted", "AbortError");
+      },
+    ]);
+    const cancelling = new HttpClient({ baseUrl: "http://x", fetch: aborted.fetchImpl, retry: { baseDelayMs: 1 } });
+    expect(cancelling.raw("GET", "/v1/x", undefined, controller.signal)).rejects.toThrow("aborted");
+    await new Promise((r) => setTimeout(r, 20));
+    expect([disabled.calls.length, aborted.calls.length, notFound.calls.length]).toEqual([1, 1, 1]);
+  });
+});
