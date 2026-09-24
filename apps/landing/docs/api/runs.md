@@ -9,7 +9,7 @@ All routes require `chat:invoke`.
 | `POST /v1/runs` | Start a run; returns the upstream run object with its id |
 | `GET /v1/runs` | List runs visible to the caller |
 | `GET /v1/runs/:id` | Poll one run's status |
-| `GET /v1/runs/:id/events` | SSE event stream for the run, proxied |
+| `GET /v1/runs/:id/events` | SSE event stream for the run, proxied; `: keepalive` comments are added after 15 s of silence |
 | `POST /v1/runs/:id/stop` | Stop the run |
 | `POST /v1/runs/:id/steer` | Send steering input to the run |
 | `POST /v1/runs/:id/approval` | Answer a pending tool approval |

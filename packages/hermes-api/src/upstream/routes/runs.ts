@@ -1,3 +1,4 @@
+import { keepAlive } from "../../http/keepalive.ts";
 import type { Hono } from "hono";
 import { principalKey } from "../../auth/index.ts";
 import { error, json, requireScope, type ChatEnv } from "../../chat/routes/shared.ts";
@@ -81,7 +82,7 @@ export function registerRunRoutes(
     }
     try {
       const stream = await runs.events(c.req.param("id"), c.req.raw.signal);
-      return new Response(stream, {
+      return new Response(keepAlive(stream), {
         headers: { "content-type": "text/event-stream" },
       });
     } catch (cause) {

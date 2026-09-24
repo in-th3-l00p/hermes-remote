@@ -75,6 +75,13 @@ describe("error envelope", () => {
     );
   });
 
+  test("a body cut off by the server's size cap is 413", async () => {
+    const res = await throwingApp(
+      new Error("Request body exceeded maxRequestBodySize"),
+    ).fetch(get("/v1/models"));
+    expect(res.status).toBe(413);
+  });
+
   test("HTTP exceptions keep their own response", async () => {
     const res = await throwingApp(
       new HTTPException(418, { res: new Response("teapot", { status: 418 }) }),

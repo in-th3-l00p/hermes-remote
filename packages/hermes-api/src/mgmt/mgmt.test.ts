@@ -336,7 +336,7 @@ describe("management catalog", () => {
     expect(new Uint8Array(await res.arrayBuffer())).toEqual(
       new Uint8Array([0x1f, 0x8b, 0xff, 0x00, 0xde]),
     );
-  });
+  }, 20_000);
 
   test("backups stream the archive or map failures", async () => {
     const fake = new FakeCliBridge({

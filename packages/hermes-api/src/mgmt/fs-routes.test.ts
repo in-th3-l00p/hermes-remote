@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -303,16 +303,19 @@ describe("bundles, cron output, subagents", () => {
     }
   });
 
-  test("unexpected bridge failures propagate as server errors", async () => {
+  test("unexpected bridge failures become a logged internal_error", async () => {
     const { app, home } = await makeApp(["skills:write"]);
     await writeFile(join(home, "skills"), "not a directory");
-    expect(
-      (
-        await app.fetch(
-          req("/v1/skills", "POST", { name: "notes", content: "# notes" }),
-        )
-      ).status,
-    ).toBe(500);
+    const log = spyOn(console, "error").mockImplementation(() => {});
+    const res = await app.fetch(
+      req("/v1/skills", "POST", { name: "notes", content: "# notes" }),
+    );
+    expect(res.status).toBe(500);
+    expect(((await res.json()) as { error: { code: string } }).error.code).toBe(
+      "internal_error",
+    );
+    expect(log).toHaveBeenCalled();
+    log.mockRestore();
   });
 
   test("cron outputs and subagent transcripts list from the home", async () => {

@@ -38,6 +38,8 @@ Put TLS in front; never expose the raw HTTP port directly. By default the server
 * A Cloudflare Tunnel from the agent machine, which avoids opening inbound ports at all.
 * A VPN or tailnet if the audience is private.
 
+Streaming responses must not be buffered: with nginx set `proxy_buffering off;` (and a `proxy_read_timeout` above 60 s) for the hermes-remote location. Caddy streams by default.
+
 For health checks, point the proxy or load balancer at `GET /v1/status`: it needs no token and returns `{ ok, version }`.
 
 ## 4. Lock it down

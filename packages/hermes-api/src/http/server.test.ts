@@ -26,6 +26,36 @@ describe("startServer", () => {
     expect(log).toContain("server stopped");
   });
 
+  test("a turn survives an upstream that is silent longer than the idle timeout", async () => {
+    const slowAgent = {
+      async *stream() {
+        await new Promise((r) => setTimeout(r, 1_600));
+        yield "finally";
+      },
+    };
+    const server = await startServer({
+      port: 0,
+      logPath: await tempLogPath(),
+      idleTimeoutSeconds: 1,
+      anonymous: true,
+      chat: { store: new ChatStore(), agent: slowAgent, turns: new Map(), keepAliveMs: 300 },
+    });
+    const base = `http://127.0.0.1:${server.port}`;
+    const session = (await (await fetch(`${base}/v1/sessions`, { method: "POST" })).json()) as {
+      id: string;
+    };
+    const res = await fetch(`${base}/v1/sessions/${session.id}/messages`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content: "hi" }),
+    });
+    const text = await res.text();
+    server.stop();
+    expect(text).toContain(": keepalive");
+    expect(text).toContain('"text":"finally"');
+    expect(text).toContain("event: done");
+  }, 10_000);
+
   test("uses the real clock by default", async () => {
     const logPath = await tempLogPath();
     const server = await startServer({ port: 0, logPath });

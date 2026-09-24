@@ -2,6 +2,7 @@ import { history } from "../identity.ts";
 import type { ChatMessage } from "../store/index.ts";
 import type { Principal } from "../../auth/index.ts";
 import { error, type ChatOptions } from "./shared.ts";
+import { keepAlive } from "../../http/keepalive.ts";
 
 export function streamTurn(
   options: ChatOptions,
@@ -77,7 +78,7 @@ export function streamTurn(
       controller.abort();
     },
   });
-  return new Response(stream, {
+  return new Response(keepAlive(stream, options.keepAliveMs), {
     headers: {
       "content-type": "text/event-stream",
       "cache-control": "no-cache",

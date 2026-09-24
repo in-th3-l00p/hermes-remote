@@ -8,6 +8,11 @@ export interface StartServerOptions extends AppOptions {
   port: number;
   /** Interface to listen on. Defaults to loopback; "0.0.0.0" exposes it. */
   hostname?: string;
+  /**
+   * Seconds a connection may stay silent (default 60, max 255). Streams send
+   * keepalive comments well inside this window.
+   */
+  idleTimeoutSeconds?: number;
   logPath: string;
   /** JSONL audit log destination; enables auditing when set. */
   auditPath?: string;
@@ -48,6 +53,7 @@ export async function startServer(
   const server = Bun.serve({
     port: options.port,
     hostname,
+    idleTimeout: options.idleTimeoutSeconds ?? 60,
     // Closes the chunked-transfer bypass of the content-length check.
     maxRequestBodySize: options.limits?.maxBodyBytes ?? DEFAULT_LIMITS.maxBodyBytes,
     async fetch(request, bunServer) {

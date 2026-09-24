@@ -51,6 +51,8 @@ data: {"id":"a1","role":"assistant","content":"Hi there.","status":"done"}
 
 ## The SSE events
 
+While the agent is thinking and no tokens arrive, the stream carries a `: keepalive` comment every 15 seconds, always between events. SSE parsers ignore comment lines, so clients need no special handling.
+
 | Event | Payload |
 | ----- | ------- |
 | `user` | The stored user message, echoed back |

@@ -186,6 +186,10 @@ export function createApp(options: AppOptions = {}): App {
     if (err instanceof BridgeDenied) {
       return errorResponse(c, 400, "path_denied", err.reason);
     }
+    // Bun aborts a streamed body that outgrows maxRequestBodySize mid-read.
+    if (err.message.includes("maxRequestBodySize")) {
+      return errorResponse(c, 413, "payload_too_large", "Request body too large");
+    }
     console.error("hermes-remote: unhandled error", err);
     return errorResponse(c, 500, "internal_error", "Internal server error");
   });
