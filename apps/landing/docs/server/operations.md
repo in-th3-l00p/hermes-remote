@@ -70,3 +70,12 @@ scrape_configs:
 ```
 
 Worth alerting on: a rising share of 5xx responses (the agent or the `hermes` CLI is unavailable), `hermes_chat_turns_total{outcome="failed"}`, and 401/429 bursts (credential guessing).
+
+## Topology: one instance per agent
+
+hermes-remote is designed to run as **one process next to one Hermes agent**. Run it on the agent's machine (or in a container beside it) and scale by adding agents, not replicas:
+
+* **State is local by design.** Chat history, users and run ownership live in SQLite files under `~/.hermes-remote/`; rate-limit buckets, the event stream and in-flight turn tracking live in memory. Two replicas would each see half the sessions, enforce half the rate limit, and not know about each other's turns.
+* **The agent is the bottleneck anyway.** Every chat turn and run is served by the single agent process behind it, so extra hermes-remote replicas would add no throughput.
+* **To serve more users,** run more agents (for example one per team or tenant, possibly with a Hermes profile each), each with its own hermes-remote, and route to them by hostname at your proxy. Token exchange keys and signing keys are per instance.
+* **For availability,** run it under the service manager (`hermes-remote service install`) or `restart: unless-stopped` in Docker, back up `~/.hermes-remote/` (it is small), and watch `/v1/status` from your load balancer. A restart loses only in-flight turns; their messages are marked `error` on startup.
