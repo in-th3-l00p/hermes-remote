@@ -1,6 +1,7 @@
 import { Database } from "bun:sqlite";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
+import { HermesUpstreamError } from "../chat/index.ts";
 
 export interface RunRecord {
   id: string;
@@ -39,12 +40,20 @@ export class RunStore {
     );
   }
 
+  /**
+   * Records who created a run. A run id already owned by someone else is
+   * refused rather than reassigned, so ownership can never move.
+   */
   record(id: string, principal: string): RunRecord {
     const createdAt = this.now().toISOString();
     this.db
-      .query("INSERT INTO runs (id, principal, created_at) VALUES (?, ?, ?)")
+      .query("INSERT OR IGNORE INTO runs (id, principal, created_at) VALUES (?, ?, ?)")
       .run(id, principal, createdAt);
-    return { id, principal, createdAt };
+    const stored = this.get(id) as RunRecord;
+    if (stored.principal !== principal) {
+      throw new HermesUpstreamError(502, "Upstream reused a run id owned by another caller");
+    }
+    return stored;
   }
 
   get(id: string): RunRecord | null {

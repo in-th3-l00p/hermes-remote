@@ -49,7 +49,6 @@ export class DemoUpstream implements Upstream {
   private readonly runStore = new Map<string, DemoRun>();
   private readonly jobStore = new Map<string, DemoJob>();
   private readonly sessionStore = new Map<string, DemoSession>();
-  private nextRun = 1;
   private nextJob = 1;
   private nextSession = 1;
 
@@ -75,7 +74,8 @@ export class DemoUpstream implements Upstream {
     create: async (body) => {
       const input = body["input"];
       const run: DemoRun = {
-        id: `run_${this.nextRun++}`,
+        // Random ids: run ownership outlives this in-memory upstream.
+        id: `run_${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`,
         status: "completed",
         input,
         output:

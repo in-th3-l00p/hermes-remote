@@ -1,3 +1,4 @@
+import { HermesUpstreamError } from "../chat/index.ts";
 import { describe, expect, test } from "bun:test";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -41,5 +42,13 @@ describe("RunStore", () => {
     first.record("r1", "key:k");
     const second = new RunStore(path, () => NOW);
     expect(second.get("r1")?.principal).toBe("key:k");
+  });
+
+  test("a reused run id never changes owner", () => {
+    const store = new RunStore();
+    store.record("run_x", "user:a");
+    expect(store.record("run_x", "user:a").principal).toBe("user:a");
+    expect(() => store.record("run_x", "user:b")).toThrow(HermesUpstreamError);
+    expect(store.get("run_x")?.principal).toBe("user:a");
   });
 });
