@@ -31,9 +31,7 @@ function fakeSdk(
   };
 }
 
-function provider(
-  loadModule: ModuleLoader,
-): SupabaseAuthProvider {
+function provider(loadModule: ModuleLoader): SupabaseAuthProvider {
   return new SupabaseAuthProvider({
     url: "https://proj.supabase.co",
     publishableKey: "pk-1",
@@ -80,19 +78,13 @@ describe("SupabaseAuthProvider", () => {
   test("returns null on sdk error, missing claims, or bad sub", async () => {
     const calls = { tokens: [] as string[] } as Parameters<typeof fakeSdk>[1];
     expect(
-      await provider(
-        fakeSdk({ data: null, error: { message: "bad jwt" } }, calls),
-      ).verify("tok"),
+      await provider(fakeSdk({ data: null, error: { message: "bad jwt" } }, calls)).verify("tok"),
     ).toBeNull();
     expect(
-      await provider(
-        fakeSdk({ data: { claims: { sub: "" } }, error: null }, calls),
-      ).verify("tok"),
+      await provider(fakeSdk({ data: { claims: { sub: "" } }, error: null }, calls)).verify("tok"),
     ).toBeNull();
     expect(
-      await provider(
-        fakeSdk({ data: { claims: {} }, error: null }, calls),
-      ).verify("tok"),
+      await provider(fakeSdk({ data: { claims: {} }, error: null }, calls)).verify("tok"),
     ).toBeNull();
   });
 

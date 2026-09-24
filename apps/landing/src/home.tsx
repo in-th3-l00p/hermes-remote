@@ -56,8 +56,8 @@ export function Home() {
           <h1 className="display">Put your Hermes agent on the web</h1>
           <p className="lede">
             Hermes Remote is the server between the internet and the Hermes agent on your machine.
-            Every request needs a key or a signed-in user, can use only the routes it was granted, sees
-            only its own chats, and the agent is told exactly who is asking.
+            Every request needs a key or a signed-in user, can use only the routes it was granted,
+            sees only its own chats, and the agent is told exactly who is asking.
           </p>
           <div className="actions">
             <a className="button primary" href="/docs/guide/quick-start.html">
@@ -92,7 +92,9 @@ export function Home() {
               <span className="cmd">npm i -g @intheloop-studio/hermes-remote-cli</span>
               {"\n"}
               <span className="cmd">
-                {"hermes-remote keys create --name web \\\n    --scope chat:invoke --scope sessions:read --scope sessions:write"}
+                {
+                  "hermes-remote keys create --name web \\\n    --scope chat:invoke --scope sessions:read --scope sessions:write"
+                }
               </span>
               {"\n"}
               <span className="dim">{"created key k7f2qw (web)\n  hk_k7f2qw.mR4tYc0jyc9…"}</span>
@@ -106,8 +108,12 @@ export function Home() {
           <div>
             <pre className="code">
               {'import { HermesClient, useChat } from "@intheloop-studio/hermes-remote-react";\n\n'}
-              {'const client = new HermesClient({\n  baseUrl: "https://agent.example.com",\n  tokenProvider: getUserToken,\n});\n\n'}
-              {"function Chat() {\n  const { messages, streaming, send, stop } = useChat({ client });\n  return <Thread messages={messages} onSend={send} onStop={stop} />;\n}"}
+              {
+                'const client = new HermesClient({\n  baseUrl: "https://agent.example.com",\n  tokenProvider: getUserToken,\n});\n\n'
+              }
+              {
+                "function Chat() {\n  const { messages, streaming, send, stop } = useChat({ client });\n  return <Thread messages={messages} onSend={send} onStop={stop} />;\n}"
+              }
             </pre>
             <p className="caption">In your app, with the signed-in user's token.</p>
           </div>
@@ -119,7 +125,9 @@ export function Home() {
           <h2 className="display" id="packages">
             What you install
           </h2>
-          <p>Four packages on npm, released together. Each GitHub release also carries the tarballs.</p>
+          <p>
+            Four packages on npm, released together. Each GitHub release also carries the tarballs.
+          </p>
         </div>
         <dl className="defs">
           {PACKAGES.map((pkg) => (

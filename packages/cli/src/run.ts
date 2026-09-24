@@ -33,10 +33,7 @@ async function recordKeyAction(
   await appendFile(auditPath, `${JSON.stringify(entry)}\n`, { mode: 0o600 });
 }
 
-export async function runCli(
-  args: string[],
-  ctx: CliContext,
-): Promise<CliResult> {
+export async function runCli(args: string[], ctx: CliContext): Promise<CliResult> {
   const command = args[0];
   const store = new KeyStore(join(ctx.homeDir, "keys.json"));
   const logPath = join(ctx.homeDir, "logs", "server.log");

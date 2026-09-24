@@ -19,7 +19,12 @@ const record: ApiKeyRecord = {
   revoked: false,
 };
 const keys: KeyVerifier = {
-  verifyToken: async (t) => (t === "hk_platform" ? record : t === "hk_bare" ? { ...record, id: "bare", scopes: ["auth:users"], userGrantable: [] } : null),
+  verifyToken: async (t) =>
+    t === "hk_platform"
+      ? record
+      : t === "hk_bare"
+        ? { ...record, id: "bare", scopes: ["auth:users"], userGrantable: [] }
+        : null,
 };
 
 function setup(clock = { at: new Date("2026-09-24T12:00:00Z") }) {
@@ -50,20 +55,34 @@ function setup(clock = { at: new Date("2026-09-24T12:00:00Z") }) {
       }),
     );
   const exchange = async (user: Record<string, unknown>, scopes: string[], ttl?: number) =>
-    call("POST", "/v1/auth/token", "hk_platform", { user, scopes, ...(ttl === undefined ? {} : { ttl }) });
+    call("POST", "/v1/auth/token", "hk_platform", {
+      user,
+      scopes,
+      ...(ttl === undefined ? {} : { ttl }),
+    });
   return { app, call, exchange, users, chat, seen, clock };
 }
 
 describe("token exchange", () => {
   test("mints a scoped user token, upserting the user by identity", async () => {
     const { call, exchange } = setup();
-    const res = await exchange({ provider: "auth0", subject: "auth0|a" }, ["chat:invoke", "sessions:read", "sessions:write"]);
+    const res = await exchange({ provider: "auth0", subject: "auth0|a" }, [
+      "chat:invoke",
+      "sessions:read",
+      "sessions:write",
+    ]);
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { token: string; expires_at: string; user: { id: string; generation?: number } };
+    const body = (await res.json()) as {
+      token: string;
+      expires_at: string;
+      user: { id: string; generation?: number };
+    };
     expect(body.user.id).toMatch(/^usr_[0-9a-f]{20}$/);
     expect(body.user.generation).toBeUndefined();
     expect(body.expires_at).toBe("2026-09-24T12:15:00.000Z");
-    const again = (await (await exchange({ provider: "auth0", subject: "auth0|a" }, ["chat:invoke"])).json()) as {
+    const again = (await (
+      await exchange({ provider: "auth0", subject: "auth0|a" }, ["chat:invoke"])
+    ).json()) as {
       user: { id: string };
     };
     expect(again.user.id).toBe(body.user.id);
@@ -81,7 +100,11 @@ describe("token exchange", () => {
 
   test("tokens hold exactly the granted end-user scopes", async () => {
     const { call, exchange } = setup();
-    const token = ((await (await exchange({ provider: "p", subject: "s" }, ["chat:invoke"])).json()) as { token: string }).token;
+    const token = (
+      (await (await exchange({ provider: "p", subject: "s" }, ["chat:invoke"])).json()) as {
+        token: string;
+      }
+    ).token;
     expect((await call("POST", "/v1/sessions", token)).status).toBe(403);
     expect((await call("GET", "/v1/sessions", token)).status).toBe(403);
   });
@@ -90,7 +113,9 @@ describe("token exchange", () => {
     const { call, exchange } = setup();
     const tooMuch = await exchange({ provider: "p", subject: "s" }, ["chat:invoke", "config:read"]);
     expect(tooMuch.status).toBe(403);
-    expect(((await tooMuch.json()) as { error: { code: string } }).error.code).toBe("scope_not_grantable");
+    expect(((await tooMuch.json()) as { error: { code: string } }).error.code).toBe(
+      "scope_not_grantable",
+    );
     const bare = await call("POST", "/v1/auth/token", "hk_bare", {
       user: { provider: "p", subject: "s" },
       scopes: ["chat:invoke"],
@@ -119,10 +144,18 @@ describe("token exchange", () => {
   test("expired, tampered and foreign tokens are refused", async () => {
     const clock = { at: new Date("2026-09-24T12:00:00Z") };
     const { call, exchange } = setup(clock);
-    const { token } = (await (await exchange({ provider: "p", subject: "s" }, ["sessions:read"], 60)).json()) as { token: string };
+    const { token } = (await (
+      await exchange({ provider: "p", subject: "s" }, ["sessions:read"], 60)
+    ).json()) as { token: string };
     const [h, p] = token.split(".");
     expect((await call("GET", "/v1/sessions", `${h}.${p}.AAAA`)).status).toBe(401);
-    const other = new UserTokenIssuer(newSigningSecret()).mint({ userId: "usr_x", scopes: [], generation: 0, ttlSeconds: 60, now: clock.at });
+    const other = new UserTokenIssuer(newSigningSecret()).mint({
+      userId: "usr_x",
+      scopes: [],
+      generation: 0,
+      ttlSeconds: 60,
+      now: clock.at,
+    });
     expect((await call("GET", "/v1/sessions", other.token)).status).toBe(401);
     clock.at = new Date("2026-09-24T12:02:00Z");
     expect((await call("GET", "/v1/sessions", token)).status).toBe(401);
@@ -130,7 +163,9 @@ describe("token exchange", () => {
 
   test("disabling a user revokes outstanding tokens immediately", async () => {
     const { call, exchange } = setup();
-    const minted = (await (await exchange({ provider: "p", subject: "s" }, ["sessions:read"])).json()) as {
+    const minted = (await (
+      await exchange({ provider: "p", subject: "s" }, ["sessions:read"])
+    ).json()) as {
       token: string;
       user: { id: string };
     };
@@ -138,24 +173,38 @@ describe("token exchange", () => {
     await call("POST", `/v1/users/${minted.user.id}/disable`, "hk_platform");
     expect((await call("GET", "/v1/sessions", minted.token)).status).toBe(401);
     expect((await exchange({ provider: "p", subject: "s" }, ["sessions:read"])).status).toBe(403);
-    const enabled = (await (await call("POST", `/v1/users/${minted.user.id}/enable`, "hk_platform")).json()) as { disabled: boolean };
+    const enabled = (await (
+      await call("POST", `/v1/users/${minted.user.id}/enable`, "hk_platform")
+    ).json()) as { disabled: boolean };
     expect(enabled.disabled).toBe(false);
     // The old token stays dead; a fresh exchange works.
     expect((await call("GET", "/v1/sessions", minted.token)).status).toBe(401);
-    const fresh = (await (await exchange({ provider: "p", subject: "s" }, ["sessions:read"])).json()) as { token: string };
+    const fresh = (await (
+      await exchange({ provider: "p", subject: "s" }, ["sessions:read"])
+    ).json()) as { token: string };
     expect((await call("GET", "/v1/sessions", fresh.token)).status).toBe(200);
   });
 
   test("agent_visibility controls what the agent is told", async () => {
     const { call, exchange, seen } = setup();
-    const profile = { name: "Ada Lovelace", locale: "en-GB", timezone: "Europe/London", email: "ada@example.com" };
+    const profile = {
+      name: "Ada Lovelace",
+      locale: "en-GB",
+      timezone: "Europe/London",
+      email: "ada@example.com",
+    };
     const metadata = { plan: "enterprise-secret" };
     for (const visibility of ["anonymous", "pseudonymous", "full"]) {
       const { token, user } = (await (
-        await exchange({ provider: "p", subject: visibility, profile, metadata, agent_visibility: visibility }, ["chat:invoke", "sessions:write"])
+        await exchange(
+          { provider: "p", subject: visibility, profile, metadata, agent_visibility: visibility },
+          ["chat:invoke", "sessions:write"],
+        )
       ).json()) as { token: string; user: { id: string } };
       const session = (await (await call("POST", "/v1/sessions", token)).json()) as { id: string };
-      await (await call("POST", `/v1/sessions/${session.id}/messages`, token, { content: "hi" })).text();
+      await (
+        await call("POST", `/v1/sessions/${session.id}/messages`, token, { content: "hi" })
+      ).text();
       const context = seen.at(-1) ?? "";
       expect(context).not.toContain("enterprise-secret");
       if (visibility === "anonymous") {
@@ -176,37 +225,78 @@ describe("token exchange", () => {
 describe("user administration", () => {
   test("list, get, update, link and unlink identities, delete with cascade", async () => {
     const { call, exchange, chat } = setup();
-    const { user } = (await (await exchange({ provider: "auth0", subject: "a" }, ["chat:invoke"])).json()) as { user: { id: string } };
+    const { user } = (await (
+      await exchange({ provider: "auth0", subject: "a" }, ["chat:invoke"])
+    ).json()) as { user: { id: string } };
     await exchange({ provider: "auth0", subject: "b" }, ["chat:invoke"]);
-    const listed = (await (await call("GET", "/v1/users?limit=1", "hk_platform")).json()) as { users: { id: string }[]; total: number };
+    const listed = (await (await call("GET", "/v1/users?limit=1", "hk_platform")).json()) as {
+      users: { id: string }[];
+      total: number;
+    };
     expect([listed.users.length, listed.total]).toEqual([1, 2]);
-    expect(((await (await call("GET", `/v1/users/${user.id}`, "hk_platform")).json()) as { id: string }).id).toBe(user.id);
-    expect((await call("GET", "/v1/users/usr_00000000000000000000", "hk_platform")).status).toBe(404);
+    expect(
+      ((await (await call("GET", `/v1/users/${user.id}`, "hk_platform")).json()) as { id: string })
+        .id,
+    ).toBe(user.id);
+    expect((await call("GET", "/v1/users/usr_00000000000000000000", "hk_platform")).status).toBe(
+      404,
+    );
     const patched = (await (
-      await call("PATCH", `/v1/users/${user.id}`, "hk_platform", { agent_visibility: "full", profile: { name: "A" } })
+      await call("PATCH", `/v1/users/${user.id}`, "hk_platform", {
+        agent_visibility: "full",
+        profile: { name: "A" },
+      })
     ).json()) as { agentVisibility: string; profile: unknown };
     expect([patched.agentVisibility, patched.profile]).toEqual(["full", { name: "A" }]);
-    expect((await call("PATCH", `/v1/users/${user.id}`, "hk_platform", { agent_visibility: "x" })).status).toBe(400);
+    expect(
+      (await call("PATCH", `/v1/users/${user.id}`, "hk_platform", { agent_visibility: "x" }))
+        .status,
+    ).toBe(400);
     expect((await call("PATCH", `/v1/users/${user.id}`, "hk_platform")).status).toBe(400);
 
     const linked = (await (
-      await call("POST", `/v1/users/${user.id}/identities`, "hk_platform", { provider: "github", subject: "42" })
+      await call("POST", `/v1/users/${user.id}/identities`, "hk_platform", {
+        provider: "github",
+        subject: "42",
+      })
     ).json()) as { identities: unknown[] };
     expect(linked.identities).toEqual([
       { provider: "auth0", subject: "a" },
       { provider: "github", subject: "42" },
     ]);
-    expect((await call("POST", `/v1/users/${user.id}/identities`, "hk_platform", { provider: "auth0", subject: "b" })).status).toBe(409);
-    expect((await call("POST", `/v1/users/${user.id}/identities`, "hk_platform", { provider: "github", subject: "42" })).status).toBe(200);
-    expect((await call("POST", `/v1/users/${user.id}/identities`, "hk_platform", {})).status).toBe(400);
+    expect(
+      (
+        await call("POST", `/v1/users/${user.id}/identities`, "hk_platform", {
+          provider: "auth0",
+          subject: "b",
+        })
+      ).status,
+    ).toBe(409);
+    expect(
+      (
+        await call("POST", `/v1/users/${user.id}/identities`, "hk_platform", {
+          provider: "github",
+          subject: "42",
+        })
+      ).status,
+    ).toBe(200);
+    expect((await call("POST", `/v1/users/${user.id}/identities`, "hk_platform", {})).status).toBe(
+      400,
+    );
     expect((await call("POST", `/v1/users/${user.id}/identities`, "hk_platform")).status).toBe(400);
-    expect((await call("DELETE", `/v1/users/${user.id}/identities/github`, "hk_platform")).status).toBe(200);
-    expect((await call("DELETE", `/v1/users/${user.id}/identities/auth0`, "hk_platform")).status).toBe(409);
+    expect(
+      (await call("DELETE", `/v1/users/${user.id}/identities/github`, "hk_platform")).status,
+    ).toBe(200);
+    expect(
+      (await call("DELETE", `/v1/users/${user.id}/identities/auth0`, "hk_platform")).status,
+    ).toBe(409);
 
     const active = chat.createSession({ userId: user.id });
     const old = chat.createSession({ userId: user.id });
     chat.updateSession(old.id, { archived: true });
-    const deleted = (await (await call("DELETE", `/v1/users/${user.id}?cascade=true`, "hk_platform")).json()) as {
+    const deleted = (await (
+      await call("DELETE", `/v1/users/${user.id}?cascade=true`, "hk_platform")
+    ).json()) as {
       sessions: number;
     };
     expect(deleted.sessions).toBe(2);

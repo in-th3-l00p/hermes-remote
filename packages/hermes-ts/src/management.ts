@@ -19,10 +19,7 @@ export class ProfilesResource {
   constructor(private readonly http: HttpClient) {}
 
   async list(): Promise<ProfileInfo[]> {
-    const res = await this.http.request<{ profiles: ProfileInfo[] }>(
-      "GET",
-      "/v1/profiles",
-    );
+    const res = await this.http.request<{ profiles: ProfileInfo[] }>("GET", "/v1/profiles");
     return res.profiles;
   }
 
@@ -150,9 +147,7 @@ export class AgentOpsResource {
     return this.http.request("GET", `/v1/insights${query(options)}`);
   }
 
-  logs(
-    options: { tail?: number; source?: string; filter?: string } = {},
-  ): Promise<CliResult> {
+  logs(options: { tail?: number; source?: string; filter?: string } = {}): Promise<CliResult> {
     return this.http.request("GET", `/v1/logs${query(options)}`);
   }
 
@@ -336,10 +331,7 @@ export class BundlesResource {
   constructor(private readonly http: HttpClient) {}
 
   async list(): Promise<Bundle[]> {
-    const res = await this.http.request<{ bundles: Bundle[] }>(
-      "GET",
-      "/v1/bundles",
-    );
+    const res = await this.http.request<{ bundles: Bundle[] }>("GET", "/v1/bundles");
     return res.bundles;
   }
 

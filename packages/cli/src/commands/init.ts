@@ -3,10 +3,7 @@ import { flag, flagAll, parseArgs } from "../args.ts";
 import { configPath, loadConfig, type ConfigFile } from "../config.ts";
 import { fail, ok, type CliContext, type CliResult } from "../context.ts";
 
-export async function initCommand(
-  args: string[],
-  ctx: CliContext,
-): Promise<CliResult> {
+export async function initCommand(args: string[], ctx: CliContext): Promise<CliResult> {
   const parsed = parseArgs(args);
   const loaded = await loadConfig(ctx.homeDir);
   if (!loaded.ok) {

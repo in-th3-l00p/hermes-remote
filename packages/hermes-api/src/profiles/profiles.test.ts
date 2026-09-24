@@ -20,10 +20,7 @@ function registryWith(fake: FakeCliBridge, cacheMs = 15_000): ProfileRegistry {
   });
 }
 
-function keyStore(
-  scopes: string[],
-  profile?: string,
-): KeyVerifier {
+function keyStore(scopes: string[], profile?: string): KeyVerifier {
   const record: ApiKeyRecord = {
     id: "abc123",
     name: "ops",
@@ -38,11 +35,7 @@ function keyStore(
   return { verifyToken: async (t) => (t === "hk_good" ? record : null) };
 }
 
-function managedApp(options: {
-  fake: FakeCliBridge;
-  store?: KeyVerifier;
-  anonymous?: boolean;
-}) {
+function managedApp(options: { fake: FakeCliBridge; store?: KeyVerifier; anonymous?: boolean }) {
   const registry = registryWith(options.fake);
   return createApp({
     anonymous: options.anonymous ?? options.store === undefined,
@@ -69,9 +62,30 @@ describe("ProfileRegistry", () => {
     const registry = registryWith(fake);
     const profiles = await registry.list();
     expect(profiles).toEqual([
-      { name: "default", isDefault: false, model: "anthropic/claude-fable-5", gateway: "stopped", alias: null, distribution: null },
-      { name: "creative", isDefault: false, model: "deepseek/deepseek-v4-flash", gateway: "running", alias: "creative", distribution: null },
-      { name: "indra", isDefault: true, model: "deepseek/deepseek-v4-flash", gateway: "running", alias: "indra", distribution: null },
+      {
+        name: "default",
+        isDefault: false,
+        model: "anthropic/claude-fable-5",
+        gateway: "stopped",
+        alias: null,
+        distribution: null,
+      },
+      {
+        name: "creative",
+        isDefault: false,
+        model: "deepseek/deepseek-v4-flash",
+        gateway: "running",
+        alias: "creative",
+        distribution: null,
+      },
+      {
+        name: "indra",
+        isDefault: true,
+        model: "deepseek/deepseek-v4-flash",
+        gateway: "running",
+        alias: "indra",
+        distribution: null,
+      },
     ]);
     expect(await registry.exists("indra")).toBe(true);
     expect(await registry.exists("nope")).toBe(false);
@@ -116,9 +130,7 @@ describe("profile middleware", () => {
       "-p indra profile show indra": { stdout: "shown" },
     });
     const app = managedApp({ fake, store: keyStore(["status:read"]) });
-    expect(
-      (await app.fetch(get("/v1/profiles/indra", "hk_good", "ghost"))).status,
-    ).toBe(404);
+    expect((await app.fetch(get("/v1/profiles/indra", "hk_good", "ghost"))).status).toBe(404);
     const res = await app.fetch(get("/v1/profiles/indra", "hk_good", "indra"));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true, raw: "shown" });
@@ -133,18 +145,10 @@ describe("profile middleware", () => {
       fake,
       store: keyStore(["status:read"], "creative"),
     });
-    expect(
-      (await app.fetch(get("/v1/profiles/creative", "hk_good", "indra"))).status,
-    ).toBe(403);
+    expect((await app.fetch(get("/v1/profiles/creative", "hk_good", "indra"))).status).toBe(403);
     const implicit = await app.fetch(get("/v1/profiles/creative", "hk_good"));
     expect(implicit.status).toBe(200);
-    expect(fake.calls.at(-1)).toEqual([
-      "-p",
-      "creative",
-      "profile",
-      "show",
-      "creative",
-    ]);
+    expect(fake.calls.at(-1)).toEqual(["-p", "creative", "profile", "show", "creative"]);
   });
 });
 
@@ -158,14 +162,11 @@ describe("profile routes", () => {
     const list = await app.fetch(get("/v1/profiles", "hk_good"));
     expect(list.status).toBe(200);
     const body = (await list.json()) as { profiles: { name: string }[] };
-    expect(body.profiles.map((p) => p.name)).toEqual([
-      "default",
-      "creative",
-      "indra",
-    ]);
-    expect(
-      await (await app.fetch(get("/v1/profiles/default", "hk_good"))).json(),
-    ).toEqual({ ok: true, raw: "details" });
+    expect(body.profiles.map((p) => p.name)).toEqual(["default", "creative", "indra"]);
+    expect(await (await app.fetch(get("/v1/profiles/default", "hk_good"))).json()).toEqual({
+      ok: true,
+      raw: "details",
+    });
   });
 
   test("user and anonymous principals cannot list profiles or select one", async () => {
@@ -174,9 +175,9 @@ describe("profile routes", () => {
     expect((await app.fetch(get("/v1/profiles"))).status).toBe(403);
     const pinned = await app.fetch(get("/v1/sessions", undefined, "indra"));
     expect(pinned.status).toBe(403);
-    expect(
-      ((await pinned.json()) as { error: { code: string } }).error.code,
-    ).toBe("profile_forbidden");
+    expect(((await pinned.json()) as { error: { code: string } }).error.code).toBe(
+      "profile_forbidden",
+    );
   });
 
   test("mutations require an api key with profiles:manage", async () => {
@@ -217,26 +218,16 @@ describe("profile routes", () => {
       );
     expect((await post("/v1/profiles", { name: "fresh" })).status).toBe(200);
     expect((await post("/v1/profiles/creative", undefined, "DELETE")).status).toBe(200);
+    expect((await post("/v1/profiles/creative", { rename: "art" }, "PATCH")).status).toBe(200);
     expect(
-      (await post("/v1/profiles/creative", { rename: "art" }, "PATCH")).status,
-    ).toBe(200);
-    expect(
-      (
-        await post(
-          "/v1/profiles/creative",
-          { description: "studio bot" },
-          "PATCH",
-        )
-      ).status,
+      (await post("/v1/profiles/creative", { description: "studio bot" }, "PATCH")).status,
     ).toBe(200);
     const exported = await post("/v1/profiles/creative/export");
-    expect(exported.headers.get("content-type")).toBe(
-      "application/octet-stream",
-    );
+    expect(exported.headers.get("content-type")).toBe("application/octet-stream");
     expect(await exported.text()).toBe("ARCHIVEBYTES");
-    expect(
-      (await post("/v1/profiles/fresh/install", { source: "https://x.git" })).status,
-    ).toBe(200);
+    expect((await post("/v1/profiles/fresh/install", { source: "https://x.git" })).status).toBe(
+      200,
+    );
     expect((await post("/v1/profiles/creative/update")).status).toBe(200);
     expect((await post("/v1/profiles", { name: "-bad" })).status).toBe(400);
     expect((await post("/v1/profiles", {})).status).toBe(400);
@@ -324,19 +315,11 @@ describe("profile routes", () => {
         }),
       );
     expect((await raw("/v1/profiles", "not json")).status).toBe(400);
-    expect(
-      (await raw("/v1/profiles/creative/install", "not json")).status,
-    ).toBe(400);
-    expect(
-      (await raw("/v1/profiles/creative/import", "not json")).status,
-    ).toBe(400);
+    expect((await raw("/v1/profiles/creative/install", "not json")).status).toBe(400);
+    expect((await raw("/v1/profiles/creative/import", "not json")).status).toBe(400);
     expect((await post("/v1/profiles/creative/install", {})).status).toBe(400);
-    expect(
-      (await post("/v1/profiles/creative/install", { source: "-bad" })).status,
-    ).toBe(400);
-    expect(
-      (await post("/v1/profiles/creative/import", { path: "/etc/passwd" })).status,
-    ).toBe(400);
+    expect((await post("/v1/profiles/creative/install", { source: "-bad" })).status).toBe(400);
+    expect((await post("/v1/profiles/creative/import", { path: "/etc/passwd" })).status).toBe(400);
     const upload = (path: string, bytes: Uint8Array) =>
       app.fetch(
         new Request(`http://x${path}`, {
@@ -348,9 +331,7 @@ describe("profile routes", () => {
           body: bytes,
         }),
       );
-    expect(
-      (await upload("/v1/profiles/creative/import", new Uint8Array())).status,
-    ).toBe(400);
+    expect((await upload("/v1/profiles/creative/import", new Uint8Array())).status).toBe(400);
     const seen: { bytes: Uint8Array | null } = { bytes: null };
     fake.on("profile import", () => {
       seen.bytes = new Uint8Array(readFileSync(fake.calls.at(-1)?.[2] ?? ""));

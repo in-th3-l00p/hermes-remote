@@ -2,10 +2,7 @@ import type { Hono } from "hono";
 import { canAccess, error, json, requireScope, type ChatEnv, type ChatOptions } from "./shared.ts";
 import { pageParams } from "./validate.ts";
 
-export function registerSessionRoutes(
-  app: Hono<ChatEnv>,
-  options: ChatOptions,
-): void {
+export function registerSessionRoutes(app: Hono<ChatEnv>, options: ChatOptions): void {
   const { store } = options;
 
   app.post("/v1/sessions", (c) => {

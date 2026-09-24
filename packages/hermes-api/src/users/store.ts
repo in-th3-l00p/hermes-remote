@@ -228,10 +228,10 @@ export class UserStore {
     if (user === null || user.identities.length <= 1) {
       return false;
     }
-    const result = this.db.run(
-      "DELETE FROM user_identities WHERE user_id = ? AND provider = ?",
-      [id, provider],
-    );
+    const result = this.db.run("DELETE FROM user_identities WHERE user_id = ? AND provider = ?", [
+      id,
+      provider,
+    ]);
     return result.changes > 0;
   }
 }

@@ -1,12 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  HOMES,
-  PROFILES,
-  renderConfig,
-  seedEvents,
-  seedRuns,
-  seedSessions,
-} from "./seed.ts";
+import { HOMES, PROFILES, renderConfig, seedEvents, seedRuns, seedSessions } from "./seed.ts";
 import { MEMORY_LIMIT, USER_LIMIT } from "./state.ts";
 
 const now = new Date("2026-08-31T12:00:00Z");
@@ -21,9 +14,7 @@ describe("seedSessions", () => {
       expect(session.messages[0]?.role).toBe("user");
       expect(session.messages.at(-1)?.role).toBe("assistant");
       expect(/^[0-9a-f]+$/.test(session.id)).toBe(true);
-      expect(Date.parse(session.createdAt)).toBeLessThanOrEqual(
-        Date.parse(session.updatedAt),
-      );
+      expect(Date.parse(session.createdAt)).toBeLessThanOrEqual(Date.parse(session.updatedAt));
     }
   });
 

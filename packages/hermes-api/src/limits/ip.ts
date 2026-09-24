@@ -23,7 +23,11 @@ function v6ToBigInt(ip: string): bigint {
   const headGroups = head === "" ? [] : head.split(":");
   const tailGroups = tail === undefined || tail === "" ? [] : tail.split(":");
   const missing = 8 - headGroups.length - tailGroups.length;
-  const groups = [...headGroups, ...Array<string>(tail === undefined ? 0 : missing).fill("0"), ...tailGroups];
+  const groups = [
+    ...headGroups,
+    ...Array<string>(tail === undefined ? 0 : missing).fill("0"),
+    ...tailGroups,
+  ];
   return groups.reduce((n, g) => (n << 16n) | BigInt(parseInt(g, 16)), 0n);
 }
 
@@ -88,7 +92,10 @@ export function clientIp(
   if (!trusted(peer) || forwardedFor === null) {
     return peer;
   }
-  const hops = forwardedFor.split(",").map(normalizeIp).filter((h) => isIP(h) !== 0);
+  const hops = forwardedFor
+    .split(",")
+    .map(normalizeIp)
+    .filter((h) => isIP(h) !== 0);
   for (let i = hops.length - 1; i >= 0; i -= 1) {
     const hop = hops[i] as string;
     if (!trusted(hop)) {

@@ -1,5 +1,7 @@
 # Hermes Remote: release plan
 
+> **Historical.** This is the plan written for the 1.0 rename and launch. It is kept for context and is not maintained. The current release process is in HANDOFF.md ("Release process"), the version history in CHANGELOG.md, and the production-readiness roadmap in the pinned GitHub issue.
+
 The project is renamed **Hermes Remote**. This document is the single checklist that takes the current state (working chat, secured API, Supabase auth, shadcn UI, 116 tests at 100% coverage) to a public release. Work is organized in five milestones; each has concrete tasks and a definition of done. Nothing ships until the milestone before it is green.
 
 ## Current state (baseline)

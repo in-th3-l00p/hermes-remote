@@ -32,9 +32,7 @@ describe("useSessions", () => {
         deleted.push(id);
       },
     };
-    const { result } = renderHook(() =>
-      useSessions({ client, ids: ["a", "b"] }),
-    );
+    const { result } = renderHook(() => useSessions({ client, ids: ["a", "b"] }));
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.sessions.map((s) => s.id)).toEqual(["a", "b"]);
     await act(async () => {
@@ -65,9 +63,7 @@ describe("useSessions", () => {
       },
       deleteSession: async () => undefined,
     };
-    const { result: second } = renderHook(() =>
-      useSessions({ client: throwing }),
-    );
+    const { result: second } = renderHook(() => useSessions({ client: throwing }));
     await waitFor(() => expect(second.current.error).toBe("raw string"));
   });
 });

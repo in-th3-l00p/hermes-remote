@@ -1,6 +1,6 @@
 {
   "name": "@intheloop-studio/hermes-remote-cli",
-  "version": "4.1.0",
+  "version": "4.1.1",
   "description": "Management CLI for Hermes Remote (serve, keys, config, service)",
   "license": "MIT",
   "author": "Tisca Catalin",
@@ -23,7 +23,7 @@
     "!src/**/*.test.ts"
   ],
   "engines": {
-    "bun": ">=1.1.0"
+    "bun": ">=1.3.0"
   },
   "keywords": [
     "hermes",
@@ -36,7 +36,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@intheloop-studio/hermes-remote": "^4.1.0"
+    "@intheloop-studio/hermes-remote": "^4.1.1"
   },
   "publishConfig": {
     "access": "public",

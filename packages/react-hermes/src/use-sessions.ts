@@ -34,8 +34,7 @@ export function useSessions(options: UseSessionsOptions): UseSessions {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const lookup =
-        idsKey === null ? undefined : idsKey.split(",").filter(Boolean);
+      const lookup = idsKey === null ? undefined : idsKey.split(",").filter(Boolean);
       setSessions(await clientRef.current.listSessions(lookup));
       setError(null);
     } catch (cause) {

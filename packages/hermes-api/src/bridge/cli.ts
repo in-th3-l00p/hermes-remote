@@ -74,19 +74,13 @@ export class HermesCliBridge implements CliBridge {
     this.maxConcurrent = options.maxConcurrent ?? 4;
   }
 
-  async run(
-    argv: string[],
-    options: { timeoutMs?: number } = {},
-  ): Promise<CliResultData> {
+  async run(argv: string[], options: { timeoutMs?: number } = {}): Promise<CliResultData> {
     if (this.active >= this.maxConcurrent) {
       await new Promise<void>((resolve) => this.waiting.push(resolve));
     }
     this.active += 1;
     try {
-      const result = await this.spawn(
-        [this.binary, ...argv],
-        options.timeoutMs ?? this.timeoutMs,
-      );
+      const result = await this.spawn([this.binary, ...argv], options.timeoutMs ?? this.timeoutMs);
       return { ok: result.exitCode === 0, ...result };
     } catch (cause) {
       return {

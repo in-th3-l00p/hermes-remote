@@ -15,7 +15,14 @@ describe("redact", () => {
       "password: null",
     ].join("\n");
     const out = redact(input);
-    for (const secret of ["abc123def456", "hunter2hunter2", "quoted-secret", "double-quoted", "s3cr3t", "xoxb-1234567890"]) {
+    for (const secret of [
+      "abc123def456",
+      "hunter2hunter2",
+      "quoted-secret",
+      "double-quoted",
+      "s3cr3t",
+      "xoxb-1234567890",
+    ]) {
       expect(out).not.toContain(secret);
     }
     expect(out).toContain("OPENAI_API_KEY=[redacted]");

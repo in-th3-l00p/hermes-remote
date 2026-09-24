@@ -45,15 +45,9 @@ export class ClerkAuthProvider implements AuthProvider {
     const sdk = await (this.sdk ??= this.loadSdk());
     const claims = await sdk
       .verifyToken(token, {
-        ...(this.options.secretKey === undefined
-          ? {}
-          : { secretKey: this.options.secretKey }),
-        ...(this.options.jwtKey === undefined
-          ? {}
-          : { jwtKey: this.options.jwtKey }),
-        ...(this.options.audience === undefined
-          ? {}
-          : { audience: this.options.audience }),
+        ...(this.options.secretKey === undefined ? {} : { secretKey: this.options.secretKey }),
+        ...(this.options.jwtKey === undefined ? {} : { jwtKey: this.options.jwtKey }),
+        ...(this.options.audience === undefined ? {} : { audience: this.options.audience }),
         ...(this.options.authorizedParties === undefined
           ? {}
           : { authorizedParties: this.options.authorizedParties }),

@@ -92,9 +92,7 @@ describe("useChat", () => {
         };
       },
     });
-    const { result } = renderHook(() =>
-      useChat({ client, sessionId: "given" }),
-    );
+    const { result } = renderHook(() => useChat({ client, sessionId: "given" }));
     await act(async () => {
       await result.current.send("x");
     });
@@ -111,10 +109,7 @@ describe("useChat", () => {
     await act(async () => {
       await result.current.edit("u1", "edited");
     });
-    expect(result.current.messages.map((m) => m.content)).toEqual([
-      "edited",
-      "re-reply",
-    ]);
+    expect(result.current.messages.map((m) => m.content)).toEqual(["edited", "re-reply"]);
   });
 
   test("react replaces the message", async () => {
@@ -215,10 +210,7 @@ describe("useChat", () => {
       await result.current.send("x");
     });
     expect(result.current.error).toBe("network gone");
-    expect(result.current.messages.map((m) => m.status)).toEqual([
-      "done",
-      "error",
-    ]);
+    expect(result.current.messages.map((m) => m.status)).toEqual(["done", "error"]);
   });
 
   test("unmount aborts the in-flight stream", async () => {

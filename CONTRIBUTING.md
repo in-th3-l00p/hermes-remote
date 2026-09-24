@@ -2,7 +2,7 @@
 
 ## Setup
 
-Requires [Bun](https://bun.sh) 1.1+.
+Requires [Bun](https://bun.sh) 1.3+.
 
 ```bash
 git clone https://github.com/in-th3-l00p/hermes-remote
@@ -10,15 +10,17 @@ cd hermes-remote
 bun install
 bun run --cwd packages/hermes-ts build
 bun run --cwd packages/react-hermes build
+bun run dev   # the chat app in demo mode; dev:site and dev:docs run the website and docs
 ```
 
 ## The rules
 
 1. **100% coverage is the gate.** `bun run test` fails below 100% line and function coverage. New code lands with its tests; side effects go behind injectable seams (see the [engineering notes](https://hermes-remote.tiscacatalin.com/docs/internals/engineering.html)).
 2. **Typecheck must pass.** `bun run typecheck` runs strict TypeScript across every package.
-3. **Docs snippets are checked.** `bun scripts/check-snippets.ts` parses every ts/tsx fence in the docs; keep them valid.
-4. **Integration tests** (`bun run test:integration`) need a live Hermes agent and are not required for every PR, but changes to the streaming path or auth should be exercised against one.
-5. Commit messages are a few plain words. PRs against `main`; CI must be green.
+3. **Docs snippets are checked.** `bun scripts/check-snippets.ts` parses every ts/tsx fence in the docs; keep them valid. It checks syntax only: a snippet calling a method that doesn't exist still passes, so check API names against the code by hand.
+4. **Lint and format are checked.** `bun run lint` (ESLint with typescript-eslint and the React hooks rules) and `bun run format:check` (Prettier) run in CI; `bun run format` fixes formatting. An `eslint-disable` comment needs a line saying why.
+5. **Integration tests** come in two modes. `bun run test:integration:local` runs against an in-process fake and runs in CI. `bun run test:integration` needs a live Hermes agent and is not required for every PR, but changes to the streaming path or auth should be exercised against one.
+6. Commit messages are a few plain words. PRs against `main`; CI must be green.
 
 ## Code structure
 

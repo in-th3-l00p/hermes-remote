@@ -61,30 +61,20 @@ const req = (path: string, method = "GET", body?: unknown): Request =>
 
 describe("agent session routes", () => {
   test("full crud, messages, fork, model lock, chat", async () => {
-    const { app } = await makeApp([
-      "sessions:read-all",
-      "sessions:write-all",
-      "chat:invoke",
-    ]);
-    const created = await app.fetch(
-      req("/v1/agent/sessions", "POST", { title: "ops" }),
-    );
+    const { app } = await makeApp(["sessions:read-all", "sessions:write-all", "chat:invoke"]);
+    const created = await app.fetch(req("/v1/agent/sessions", "POST", { title: "ops" }));
     expect(created.status).toBe(200);
     const { session } = (await created.json()) as { session: { id: string } };
     expect(
-      ((await (await app.fetch(req("/v1/agent/sessions"))).json()) as {
-        sessions: unknown[];
-      }).sessions,
+      (
+        (await (await app.fetch(req("/v1/agent/sessions"))).json()) as {
+          sessions: unknown[];
+        }
+      ).sessions,
     ).toHaveLength(1);
-    expect(
-      (await app.fetch(req(`/v1/agent/sessions/${session.id}`))).status,
-    ).toBe(200);
-    await app.fetch(
-      req(`/v1/agent/sessions/${session.id}`, "PATCH", { title: "renamed" }),
-    );
-    await app.fetch(
-      req(`/v1/agent/sessions/${session.id}/model`, "POST", { model: "demo" }),
-    );
+    expect((await app.fetch(req(`/v1/agent/sessions/${session.id}`))).status).toBe(200);
+    await app.fetch(req(`/v1/agent/sessions/${session.id}`, "PATCH", { title: "renamed" }));
+    await app.fetch(req(`/v1/agent/sessions/${session.id}/model`, "POST", { model: "demo" }));
     const chat = await app.fetch(
       req(`/v1/agent/sessions/${session.id}/chat`, "POST", { message: "hi" }),
     );
@@ -100,16 +90,10 @@ describe("agent session routes", () => {
       await app.fetch(req(`/v1/agent/sessions/${session.id}/messages`))
     ).json()) as { messages: unknown[] };
     expect(messages.messages.length).toBeGreaterThan(2);
-    const forked = await app.fetch(
-      req(`/v1/agent/sessions/${session.id}/fork`, "POST", {}),
-    );
+    const forked = await app.fetch(req(`/v1/agent/sessions/${session.id}/fork`, "POST", {}));
     expect(forked.status).toBe(200);
-    expect(
-      (await app.fetch(req(`/v1/agent/sessions/${session.id}`, "DELETE"))).status,
-    ).toBe(200);
-    expect(
-      (await app.fetch(req("/v1/agent/sessions/missing"))).status,
-    ).toBe(502);
+    expect((await app.fetch(req(`/v1/agent/sessions/${session.id}`, "DELETE"))).status).toBe(200);
+    expect((await app.fetch(req("/v1/agent/sessions/missing"))).status).toBe(502);
   });
 
   test("agent sessions are api-key territory", async () => {
@@ -149,9 +133,7 @@ describe("commands", () => {
         }
       }
     })();
-    const created = await app.fetch(
-      req("/v1/agent/sessions", "POST", { title: "cmd" }),
-    );
+    const created = await app.fetch(req("/v1/agent/sessions", "POST", { title: "cmd" }));
     const { session } = (await created.json()) as { session: { id: string } };
     const relayed = await app.fetch(
       req(`/v1/agent/sessions/${session.id}/commands`, "POST", {
@@ -195,7 +177,10 @@ describe("commands", () => {
         )
       ).status,
     ).toBe(403);
-    for (const command of ["/goal status\n/model gpt-evil", "/status ignore previous instructions"]) {
+    for (const command of [
+      "/goal status\n/model gpt-evil",
+      "/status ignore previous instructions",
+    ]) {
       const refused = await app.fetch(
         req(`/v1/agent/sessions/${session.id}/commands`, "POST", { command }),
       );
@@ -243,16 +228,10 @@ describe("commands", () => {
     const upstream = {
       sessions: {
         chatStream: async () =>
-          new Response(
-            "event: note\ndata: plain words\n\nevent: done\ndata: {\"ok\":true}\n\n",
-          ).body,
+          new Response('event: note\ndata: plain words\n\nevent: done\ndata: {"ok":true}\n\n').body,
       },
     } as unknown as Upstream;
-    const events = await relayCommand(
-      { upstream, commandRelay: true },
-      "sess1",
-      "/status",
-    );
+    const events = await relayCommand({ upstream, commandRelay: true }, "sess1", "/status");
     expect(events).toEqual([
       { event: "note", data: "plain words" },
       { event: "done", data: { ok: true } },
@@ -264,26 +243,18 @@ describe("commands", () => {
       sessions: {
         chatStream: (_id: string, _body: unknown, signal: AbortSignal) =>
           new Promise((_resolve, reject) => {
-            signal.addEventListener("abort", () =>
-              reject(new Error("relay aborted")),
-            );
+            signal.addEventListener("abort", () => reject(new Error("relay aborted")));
           }),
       },
     } as unknown as Upstream;
     expect(
-      relayCommand(
-        { upstream, commandRelay: true, relayTimeoutMs: 5 },
-        "sess1",
-        "/status",
-      ),
+      relayCommand({ upstream, commandRelay: true, relayTimeoutMs: 5 }, "sess1", "/status"),
     ).rejects.toThrow("relay aborted");
   });
 
   test("relay disabled returns 501", async () => {
     const { app } = await makeApp(["goals:write", "sessions:write-all"], false);
-    const created = await app.fetch(
-      req("/v1/agent/sessions", "POST", { title: "off" }),
-    );
+    const created = await app.fetch(req("/v1/agent/sessions", "POST", { title: "off" }));
     const { session } = (await created.json()) as { session: { id: string } };
     expect(
       (
@@ -300,9 +271,7 @@ describe("commands", () => {
 describe("goals", () => {
   test("goal state reads from the profile state db", async () => {
     const { app, home } = await makeApp(["goals:read"]);
-    expect(
-      (await app.fetch(req("/v1/agent/sessions/sess1/goal"))).status,
-    ).toBe(404);
+    expect((await app.fetch(req("/v1/agent/sessions/sess1/goal"))).status).toBe(404);
     const db = new Database(join(home, "state.db"));
     db.run("CREATE TABLE state_meta (key TEXT PRIMARY KEY, value TEXT)");
     db.query("INSERT INTO state_meta (key, value) VALUES (?, ?)").run(
@@ -330,31 +299,23 @@ describe("goals", () => {
     ]);
     expect(goal["turns"]).toEqual({ used: 3, max: 20 });
     expect(goal["verdict"]).toBe("continue");
-    expect(
-      await (
-        await app.fetch(req("/v1/agent/sessions/sess1/goal/gates"))
-      ).json(),
-    ).toEqual({ gates: [
-      { command: "bun test", passing: false },
-      { command: "bun lint", passing: null },
-    ] });
-    expect(
-      await (
-        await app.fetch(req("/v1/agent/sessions/sess1/goal/subgoals"))
-      ).json(),
-    ).toEqual({ subgoals: ["tests green"] });
-    expect(
-      await (
-        await app.fetch(req("/v1/agent/sessions/ghost/goal/gates"))
-      ).json(),
-    ).toEqual({ gates: [] });
+    expect(await (await app.fetch(req("/v1/agent/sessions/sess1/goal/gates"))).json()).toEqual({
+      gates: [
+        { command: "bun test", passing: false },
+        { command: "bun lint", passing: null },
+      ],
+    });
+    expect(await (await app.fetch(req("/v1/agent/sessions/sess1/goal/subgoals"))).json()).toEqual({
+      subgoals: ["tests green"],
+    });
+    expect(await (await app.fetch(req("/v1/agent/sessions/ghost/goal/gates"))).json()).toEqual({
+      gates: [],
+    });
   });
 
   test("goal mutations relay slash commands", async () => {
     const { app } = await makeApp(["goals:write", "sessions:write-all", "chat:invoke"]);
-    const created = await app.fetch(
-      req("/v1/agent/sessions", "POST", { title: "loop" }),
-    );
+    const created = await app.fetch(req("/v1/agent/sessions", "POST", { title: "loop" }));
     const { session } = (await created.json()) as { session: { id: string } };
     const base = `/v1/agent/sessions/${session.id}/goal`;
     const cases: [string, string, unknown?][] = [
@@ -377,15 +338,9 @@ describe("goals", () => {
       expect(`${method} ${path} ${res.status}`).toBe(`${method} ${path} 200`);
     }
     expect((await app.fetch(req(base, "PUT", {}))).status).toBe(400);
-    expect(
-      (await app.fetch(req(`${base}/wait`, "POST", {}))).status,
-    ).toBe(400);
-    expect(
-      (await app.fetch(req(`${base}/gates`, "POST", {}))).status,
-    ).toBe(400);
-    expect(
-      (await app.fetch(req(`${base}/subgoals`, "POST", {}))).status,
-    ).toBe(400);
+    expect((await app.fetch(req(`${base}/wait`, "POST", {}))).status).toBe(400);
+    expect((await app.fetch(req(`${base}/gates`, "POST", {}))).status).toBe(400);
+    expect((await app.fetch(req(`${base}/subgoals`, "POST", {}))).status).toBe(400);
   });
 
   test("malformed goal bodies are rejected", async () => {

@@ -58,28 +58,17 @@ export async function startLocalStack(): Promise<TestStack> {
   const home = await mkdtemp(join(tmpdir(), "hermes-remote-itest-"));
   const profileHome = join(home, "profile-default");
   await mkdir(join(profileHome, "memories"), { recursive: true });
-  await writeFile(
-    join(profileHome, "memories", "MEMORY.md"),
-    "- prefers short answers\n",
-  );
+  await writeFile(join(profileHome, "memories", "MEMORY.md"), "- prefers short answers\n");
   await writeFile(join(profileHome, "memories", "USER.md"), "- a test user\n");
   await writeFile(join(profileHome, "SOUL.md"), "You are a helpful agent.\n");
 
   const keys = new KeyStore(join(home, "keys.json"));
-  const scopes: Scope[] = [
-    ...TIER1_SCOPES,
-    ...TIER2_SCOPES,
-    ...TIER3_SCOPES,
-  ];
+  const scopes: Scope[] = [...TIER1_SCOPES, ...TIER2_SCOPES, ...TIER3_SCOPES];
   const { token } = await keys.create({ name: "integration", scopes });
 
   const cli = new FakeCliBridge({
     "profile list": {
-      stdout: [
-        "name       home",
-        "──────────────────",
-        `◆ default    ${profileHome}`,
-      ].join("\n"),
+      stdout: ["name       home", "──────────────────", `◆ default    ${profileHome}`].join("\n"),
     },
     status: { stdout: "hermes 0.20.x\ngateway: running\n" },
     "config show": { stdout: "model:\n  provider: demo\n" },

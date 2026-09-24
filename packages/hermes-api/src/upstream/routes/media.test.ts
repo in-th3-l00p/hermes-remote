@@ -45,9 +45,7 @@ describe("media tts", () => {
     const app = demoApp();
     const res = await app.fetch(post("/v1/media/tts", { input: "hi" }));
     expect(res.status).toBe(501);
-    expect(((await res.json()) as { error: { code: string } }).error.code).toBe(
-      "not_supported",
-    );
+    expect(((await res.json()) as { error: { code: string } }).error.code).toBe("not_supported");
   });
 
   test("proxies audio when the capability is on", async () => {
@@ -121,9 +119,7 @@ describe("tool runs", () => {
         "url_not_allowed",
       );
     }
-    const images = await app.fetch(
-      post("/v1/media/images", { prompt: "a hermes", model: "flux" }),
-    );
+    const images = await app.fetch(post("/v1/media/images", { prompt: "a hermes", model: "flux" }));
     const imageBody = (await images.json()) as { output: { echo: string } };
     expect(imageBody.output.echo).toContain("image_gen");
     expect(imageBody.output.echo).toContain("flux");
@@ -140,9 +136,7 @@ describe("tool runs", () => {
         get: async () => ({ status: "completed", output: "plain words" }),
       },
     } as Upstream;
-    const res = await demoApp(rawOutput).fetch(
-      post("/v1/web/search", { query: "x" }),
-    );
+    const res = await demoApp(rawOutput).fetch(post("/v1/web/search", { query: "x" }));
     expect(await res.json()).toEqual({
       runId: "r1",
       output: null,
@@ -158,9 +152,7 @@ describe("tool runs", () => {
         get: async () => ({ status: "failed" }),
       },
     } as Upstream;
-    expect(
-      (await demoApp(failing).fetch(post("/v1/web/search", { query: "x" }))).status,
-    ).toBe(502);
+    expect((await demoApp(failing).fetch(post("/v1/web/search", { query: "x" }))).status).toBe(502);
 
     const hung = {
       ...demo,
@@ -171,18 +163,14 @@ describe("tool runs", () => {
         get: async () => ({ status: "running" }),
       },
     } as Upstream;
-    expect(
-      (await demoApp(hung).fetch(post("/v1/web/search", { query: "x" }))).status,
-    ).toBe(504);
+    expect((await demoApp(hung).fetch(post("/v1/web/search", { query: "x" }))).status).toBe(504);
 
     const idless = {
       ...demo,
       raw: demo.raw.bind(demo),
       runs: { ...demo.runs, create: async () => ({}) },
     } as Upstream;
-    expect(
-      (await demoApp(idless).fetch(post("/v1/web/search", { query: "x" }))).status,
-    ).toBe(502);
+    expect((await demoApp(idless).fetch(post("/v1/web/search", { query: "x" }))).status).toBe(502);
   });
 });
 
@@ -190,9 +178,7 @@ describe("browser tasks", () => {
   test("creates an owned run", async () => {
     const runStore = new RunStore();
     const app = demoApp(new DemoUpstream(), runStore);
-    const res = await app.fetch(
-      post("/v1/browser/tasks", { task: "screenshot bun.sh" }),
-    );
+    const res = await app.fetch(post("/v1/browser/tasks", { task: "screenshot bun.sh" }));
     expect(res.status).toBe(201);
     const { runId } = (await res.json()) as { runId: string };
     expect(runStore.get(runId)?.principal).toContain("anonymous");
@@ -222,12 +208,8 @@ describe("media scope enforcement", () => {
   test("every media surface requires chat:invoke on api keys", async () => {
     const app = scopedApp(["sessions:read"]);
     expect((await app.fetch(post("/v1/media/tts", { input: "hi" }, "hk_good"))).status).toBe(403);
-    expect(
-      (await app.fetch(post("/v1/web/search", { query: "x" }, "hk_good"))).status,
-    ).toBe(403);
-    expect(
-      (await app.fetch(post("/v1/browser/tasks", { task: "x" }, "hk_good"))).status,
-    ).toBe(403);
+    expect((await app.fetch(post("/v1/web/search", { query: "x" }, "hk_good"))).status).toBe(403);
+    expect((await app.fetch(post("/v1/browser/tasks", { task: "x" }, "hk_good"))).status).toBe(403);
     expect(
       (await app.fetch(post("/v1/chat/completions", { messages: [] }, "hk_good"))).status,
     ).toBe(403);
@@ -284,9 +266,9 @@ describe("media error branches", () => {
       raw: demo.raw.bind(demo),
       runs: { ...demo.runs, create: async () => ({}) },
     } as Upstream;
-    expect(
-      (await demoApp(idless).fetch(post("/v1/browser/tasks", { task: "t" }))).status,
-    ).toBe(502);
+    expect((await demoApp(idless).fetch(post("/v1/browser/tasks", { task: "t" }))).status).toBe(
+      502,
+    );
     const throwing = {
       ...demo,
       raw: demo.raw.bind(demo),
@@ -306,7 +288,12 @@ describe("media error branches", () => {
 
   test("malformed json bodies are rejected or defaulted per surface", async () => {
     const app = demoApp();
-    for (const path of ["/v1/media/images", "/v1/web/search", "/v1/web/extract", "/v1/browser/tasks"]) {
+    for (const path of [
+      "/v1/media/images",
+      "/v1/web/search",
+      "/v1/web/extract",
+      "/v1/browser/tasks",
+    ]) {
       expect((await app.fetch(rawPost(path, "{{{"))).status).toBe(400);
     }
     const demo = new DemoUpstream();
@@ -322,9 +309,7 @@ describe("media error branches", () => {
     expect(tts.status).toBe(200);
     expect(await tts.text()).toBe("DEMOAUDIO");
     const keyed = scopedApp(["chat:invoke"]);
-    const passthrough = await keyed.fetch(
-      rawPost("/v1/chat/completions", "{{{", "hk_good"),
-    );
+    const passthrough = await keyed.fetch(rawPost("/v1/chat/completions", "{{{", "hk_good"));
     expect(passthrough.status).toBe(200);
     expect(((await passthrough.json()) as { echo: unknown }).echo).toEqual({});
   });
@@ -337,9 +322,7 @@ describe("openai passthrough", () => {
       store: keyStore(["chat:invoke"]),
       upstream: { upstream: new DemoUpstream() },
     });
-    const anonymous = await app.fetch(
-      post("/v1/chat/completions", { messages: [] }),
-    );
+    const anonymous = await app.fetch(post("/v1/chat/completions", { messages: [] }));
     expect(anonymous.status).toBe(403);
     const keyed = await app.fetch(
       post("/v1/chat/completions", { messages: [{ role: "user", content: "hi" }] }, "hk_good"),
@@ -347,9 +330,7 @@ describe("openai passthrough", () => {
     expect(keyed.status).toBe(200);
     const body = (await keyed.json()) as { object: string; echo: unknown };
     expect(body.object).toBe("demo.completion");
-    const responses = await app.fetch(
-      post("/v1/responses", { input: "x" }, "hk_good"),
-    );
+    const responses = await app.fetch(post("/v1/responses", { input: "x" }, "hk_good"));
     expect(((await responses.json()) as { method: string }).method).toBe("POST");
   });
 });

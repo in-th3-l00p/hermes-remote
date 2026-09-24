@@ -14,10 +14,7 @@ import {
 // Names never start with "-", so a path segment can't become a CLI flag.
 const NAME = ":name{[A-Za-z0-9_][A-Za-z0-9_-]*}";
 
-export function registerProfileRoutes(
-  app: Hono<ChatEnv>,
-  options: ManagementOptions,
-): void {
+export function registerProfileRoutes(app: Hono<ChatEnv>, options: ManagementOptions): void {
   const { cli, profiles } = options;
 
   app.get("/v1/profiles", async (c) => {
@@ -96,12 +93,7 @@ export function registerProfileRoutes(
       return error(400, "invalid_request", "source (string) is required");
     }
     const body = parsed.data;
-    return runCli(c, cli, [
-      "profile",
-      "install",
-      c.req.param("name"),
-      body.source,
-    ]);
+    return runCli(c, cli, ["profile", "install", c.req.param("name"), body.source]);
   });
 
   app.post(`/v1/profiles/${NAME}/import`, async (c) => {
@@ -109,9 +101,7 @@ export function registerProfileRoutes(
     if (denied !== null) {
       return denied;
     }
-    return withUploadedArchive(c, (path) =>
-      runCli(c, cli, ["profile", "import", path], 300_000),
-    );
+    return withUploadedArchive(c, (path) => runCli(c, cli, ["profile", "import", path], 300_000));
   });
 
   app.post(`/v1/profiles/${NAME}/update`, (c) => {

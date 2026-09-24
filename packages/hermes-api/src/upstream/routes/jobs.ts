@@ -10,10 +10,7 @@ function denyNonKey(c: Context<ChatEnv>, scope: string): Response | null {
   return requireScope(principal, scope);
 }
 
-export function registerJobRoutes(
-  app: Hono<ChatEnv>,
-  options: UpstreamRouteOptions,
-): void {
+export function registerJobRoutes(app: Hono<ChatEnv>, options: UpstreamRouteOptions): void {
   const { jobs } = options.upstream;
 
   app.get("/v1/jobs", (c) => {
@@ -43,9 +40,7 @@ export function registerJobRoutes(
   });
 
   app.delete("/v1/jobs/:id", (c) => {
-    return (
-      denyNonKey(c, "crons:write") ?? proxy(() => jobs.remove(c.req.param("id")))
-    );
+    return denyNonKey(c, "crons:write") ?? proxy(() => jobs.remove(c.req.param("id")));
   });
 
   const lifecycle: [string, (id: string) => Promise<unknown>][] = [

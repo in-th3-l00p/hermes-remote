@@ -5,11 +5,7 @@ import { useResource } from "./use-resource.ts";
 export interface GoalClientLike {
   goals: {
     get(sessionId: string): Promise<GoalState>;
-    set(
-      sessionId: string,
-      text: string,
-      options?: { draft?: boolean },
-    ): Promise<unknown>;
+    set(sessionId: string, text: string, options?: { draft?: boolean }): Promise<unknown>;
     clear(sessionId: string): Promise<unknown>;
     pause(sessionId: string): Promise<unknown>;
     resume(sessionId: string): Promise<unknown>;
@@ -31,15 +27,13 @@ export interface UseGoal {
   addSubgoal(text: string): Promise<void>;
 }
 
-export function useGoal(options: {
-  client: GoalClientLike;
-  sessionId: string | null;
-}): UseGoal {
+export function useGoal(options: { client: GoalClientLike; sessionId: string | null }): UseGoal {
   const { client, sessionId } = options;
   const resource = useResource<GoalState | null>(
     () => (sessionId === null ? Promise.resolve(null) : client.goals.get(sessionId)),
     [client, sessionId],
   );
+  const { refresh } = resource;
 
   const mutate = useCallback(
     async (action: (id: string) => Promise<unknown>) => {
@@ -47,9 +41,9 @@ export function useGoal(options: {
         return;
       }
       await action(sessionId);
-      await resource.refresh();
+      await refresh();
     },
-    [sessionId, resource.refresh],
+    [sessionId, refresh],
   );
 
   return {

@@ -1,6 +1,6 @@
 {
   "name": "@intheloop-studio/hermes-remote-client",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "author": "Tisca Catalin",
   "repository": {
     "type": "git",
@@ -16,7 +16,10 @@
   },
   "description": "Typed TypeScript client for Hermes Remote",
   "files": [
-    "dist"
+    "dist",
+    "src",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx"
   ],
   "homepage": "https://hermes-remote.tiscacatalin.com",
   "keywords": [

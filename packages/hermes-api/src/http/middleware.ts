@@ -37,18 +37,11 @@ export function corsMiddleware(origins: string[]): MiddlewareHandler<ChatEnv> {
   });
 }
 
-export function authMiddleware(
-  options: AuthenticateOptions,
-): MiddlewareHandler<ChatEnv> {
+export function authMiddleware(options: AuthenticateOptions): MiddlewareHandler<ChatEnv> {
   return async (c, next) => {
     const principal = await authenticate(c.req.raw, c.env.clientIp, options);
     if ("code" in principal) {
-      return errorResponse(
-        c,
-        principal.status as ErrorStatus,
-        principal.code,
-        principal.message,
-      );
+      return errorResponse(c, principal.status as ErrorStatus, principal.code, principal.message);
     }
     c.set("principal", principal);
     await next();
@@ -56,30 +49,18 @@ export function authMiddleware(
 }
 
 /** Resolves the target profile from the header and the key's restriction. */
-export function profileMiddleware(
-  options: ManagementOptions,
-): MiddlewareHandler<ChatEnv> {
+export function profileMiddleware(options: ManagementOptions): MiddlewareHandler<ChatEnv> {
   return async (c, next) => {
     const principal = c.get("principal");
     const requested = c.req.header("x-hermes-profile") ?? null;
-    const keyProfile =
-      principal.type === "api_key" ? (principal.record.profile ?? null) : null;
+    const keyProfile = principal.type === "api_key" ? (principal.record.profile ?? null) : null;
     if (requested !== null && principal.type !== "api_key") {
-      return errorResponse(
-        c,
-        403,
-        "profile_forbidden",
-        "Only API keys may select a profile",
-      );
+      return errorResponse(c, 403, "profile_forbidden", "Only API keys may select a profile");
     }
     if (requested !== null && !(await options.profiles.exists(requested))) {
       return errorResponse(c, 404, "profile_not_found", "Unknown profile");
     }
-    if (
-      keyProfile !== null &&
-      requested !== null &&
-      requested !== keyProfile
-    ) {
+    if (keyProfile !== null && requested !== null && requested !== keyProfile) {
       return errorResponse(
         c,
         403,
@@ -97,9 +78,7 @@ function rateLimited(c: Context<ChatEnv>): Response {
 }
 
 /** Counts only 401 responses; blocks credential guessing before argon2 runs. */
-export function authFailureLimiter(
-  options: RateLimitOptions,
-): MiddlewareHandler<ChatEnv> {
+export function authFailureLimiter(options: RateLimitOptions): MiddlewareHandler<ChatEnv> {
   return rateLimiter<ChatEnv>({
     windowMs: options.windowSeconds * 1000,
     limit: options.limit,
@@ -110,9 +89,7 @@ export function authFailureLimiter(
   });
 }
 
-export function principalRateLimiter(
-  options: RateLimitOptions,
-): MiddlewareHandler<ChatEnv> {
+export function principalRateLimiter(options: RateLimitOptions): MiddlewareHandler<ChatEnv> {
   return rateLimiter<ChatEnv>({
     windowMs: options.windowSeconds * 1000,
     limit: options.limit,

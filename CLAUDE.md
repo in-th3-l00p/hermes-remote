@@ -1,8 +1,8 @@
-# CLAUDE.md — hermes-web
+# CLAUDE.md — Hermes Remote
 
 ## What this project is
 
-**hermes-web** makes it easy to put a [Hermes agent](https://hermes-agent.nousresearch.com) on the web. It has three deliverables, all TypeScript:
+**Hermes Remote** (repo `hermes-remote`, formerly hermes-web) makes it easy to put a [Hermes agent](https://hermes-agent.nousresearch.com) on the web. It has three deliverables, all TypeScript:
 
 1. **`hermes-api`** — a Bun HTTP server that connects to a local Hermes agent instance and exposes it to the web with authentication and authorization. It is a secure facade over *everything* Hermes can do (see the feature catalog below), not just chat.
 2. **`hermes.ts`** — a TypeScript client library for consuming the hermes-api.
@@ -10,14 +10,14 @@
 
 See `ARCHITECTURE.md` for the package layout, the full API endpoint map, and how the server bridges to the local Hermes instance.
 
-**Start with `HANDOFF.md`** — it records the actual state of the project as shipped (v1.0.0, released as "Hermes Remote"), where it diverges from ARCHITECTURE.md, all external infrastructure (GitHub, Vercel, Supabase, GitHub Packages), the release process, known pitfalls, and the roadmap.
+**Start with `HANDOFF.md`** — it records the actual state of the project as shipped, where it diverges from ARCHITECTURE.md, all external infrastructure (GitHub, Vercel, Supabase, npm), the release process, known pitfalls, and the roadmap.
 
 ## Project conventions
 
 - **Runtime/tooling:** Bun everywhere (`bun install`, `bun test`, `bun run`). TypeScript across all packages, strict mode.
 - **Testing:** 100% test coverage is mandatory at all times. Two tiers:
   - **Unit tests** — no external dependencies; the Hermes backend is mocked/faked.
-  - **Integration tests** — require a running Hermes agent instance (its gateway/API server); kept in separate files (`*.integration.test.ts`) so they can be skipped when no instance is available.
+  - **Integration tests** — live in `integration/`. `bun run test:integration:local` runs them against an in-process fake agent (this runs in CI); `bun run test:integration` sets `HERMES_INTEGRATION=1` and runs them against a running Hermes agent (its gateway/API server).
 - Every feature of the Hermes agent must have a corresponding API surface in `hermes-api`, a typed client method in `hermes.ts`, and (where it makes sense for UI) a hook in `react-hermes`.
 
 ---

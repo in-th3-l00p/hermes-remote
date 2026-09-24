@@ -37,10 +37,7 @@ export function parseAttachments(raw: unknown, limits: Limits): Attachment[] | n
   return attachments;
 }
 
-export function pageParams(
-  url: URL,
-  defaultLimit: number,
-): { limit: number; offset: number } {
+export function pageParams(url: URL, defaultLimit: number): { limit: number; offset: number } {
   const limit = Number(url.searchParams.get("limit") ?? String(defaultLimit));
   const offset = Number(url.searchParams.get("offset") ?? "0");
   return {

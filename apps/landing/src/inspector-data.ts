@@ -72,7 +72,7 @@ const OUTCOMES: Record<CallerId, Record<RequestId, Outcome>> = {
       detail: "The reply streams back token by token over server-sent events.",
       identity:
         "You are chatting through hermes-remote with an authenticated user (user id: 8c1e…, email: ada@example.com).",
-      body: "event: delta\ndata: {\"id\":\"a1\",\"text\":\"Hi Ada\"}",
+      body: 'event: delta\ndata: {"id":"a1","text":"Hi Ada"}',
     },
     foreign: {
       passed: ["token", "scope"],
@@ -87,7 +87,8 @@ const OUTCOMES: Record<CallerId, Record<RequestId, Outcome>> = {
       stoppedAt: "scope",
       status: 403,
       verdict: "Returned",
-      detail: "Agent settings are an operator surface. User tokens never reach it, whatever they hold.",
+      detail:
+        "Agent settings are an operator surface. User tokens never reach it, whatever they hold.",
       body: '{ "error": { "code": "api_key_required", "message": "This surface requires an API key" } }',
     },
   },
@@ -98,8 +99,9 @@ const OUTCOMES: Record<CallerId, Record<RequestId, Outcome>> = {
       status: 200,
       verdict: "Delivered",
       detail: "Keys own the sessions they create, and the agent knows which service is calling.",
-      identity: 'You are chatting through hermes-remote with a backend service using the API key "web".',
-      body: "event: delta\ndata: {\"id\":\"a1\",\"text\":\"On it\"}",
+      identity:
+        'You are chatting through hermes-remote with a backend service using the API key "web".',
+      body: 'event: delta\ndata: {"id":"a1","text":"On it"}',
     },
     foreign: {
       passed: ["token", "scope"],
@@ -140,7 +142,8 @@ const OUTCOMES: Record<CallerId, Record<RequestId, Outcome>> = {
       stoppedAt: null,
       status: 200,
       verdict: "Delivered",
-      detail: "Host-wide and keys-only, so there's no owner to check. Secrets in the output are masked.",
+      detail:
+        "Host-wide and keys-only, so there's no owner to check. Secrets in the output are masked.",
       body: '{ "ok": true, "raw": "model: claude-opus\\nOPENAI_API_KEY=[redacted]" }',
     },
   },

@@ -16,10 +16,7 @@ export interface ManagementOptions {
 }
 
 /** Management surfaces are operator territory: api keys only, exact scope. */
-export function requireKeyScope(
-  principal: Principal,
-  scope: string,
-): Response | null {
+export function requireKeyScope(principal: Principal, scope: string): Response | null {
   if (principal.type !== "api_key") {
     return error(403, "api_key_required", "This surface requires an API key");
   }

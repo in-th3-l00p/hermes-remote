@@ -25,15 +25,11 @@ const TOKEN_PATTERNS: RegExp[] = [
 export function redact(text: string): string {
   let out = text;
   for (const pattern of TOKEN_PATTERNS) {
-    out = out.replace(pattern, (match) =>
-      match.startsWith("Bearer") ? `Bearer ${MASK}` : MASK,
-    );
+    out = out.replace(pattern, (match) => (match.startsWith("Bearer") ? `Bearer ${MASK}` : MASK));
   }
-  return out.replace(
-    SECRET_ASSIGNMENT,
-    (_m, prefix: string, value: string) =>
-      /^(?:["']?(?:null|none|true|false|bearer|\*+|\[redacted\])["']?|["']{2})$/i.test(value)
-        ? `${prefix}${value}`
-        : `${prefix}${MASK}`,
+  return out.replace(SECRET_ASSIGNMENT, (_m, prefix: string, value: string) =>
+    /^(?:["']?(?:null|none|true|false|bearer|\*+|\[redacted\])["']?|["']{2})$/i.test(value)
+      ? `${prefix}${value}`
+      : `${prefix}${MASK}`,
   );
 }

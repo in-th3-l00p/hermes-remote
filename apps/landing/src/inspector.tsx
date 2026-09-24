@@ -12,7 +12,12 @@ import {
 
 type StepState = "passed" | "stopped" | "skipped" | "pending";
 
-function stateOf(step: StepId, passed: StepId[], stoppedAt: StepId | null, skipped: StepId[]): StepState {
+function stateOf(
+  step: StepId,
+  passed: StepId[],
+  stoppedAt: StepId | null,
+  skipped: StepId[],
+): StepState {
   if (skipped.includes(step)) {
     return "skipped";
   }
@@ -51,7 +56,11 @@ export function Inspector() {
         <div className="inspector-controls">
           <div className="field">
             <label htmlFor={callerId}>Who is asking</label>
-            <select id={callerId} value={caller} onChange={(e) => setCaller(e.target.value as CallerId)}>
+            <select
+              id={callerId}
+              value={caller}
+              onChange={(e) => setCaller(e.target.value as CallerId)}
+            >
               {CALLERS.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.label}
@@ -61,7 +70,11 @@ export function Inspector() {
           </div>
           <div className="field">
             <label htmlFor={requestId}>What they ask for</label>
-            <select id={requestId} value={request} onChange={(e) => setRequest(e.target.value as RequestId)}>
+            <select
+              id={requestId}
+              value={request}
+              onChange={(e) => setRequest(e.target.value as RequestId)}
+            >
               {REQUESTS.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.label}
@@ -89,11 +102,15 @@ export function Inspector() {
                   <span className="name">{step.name}</span>
                   <span className="visually-hidden">: {state}. </span>
                   <span className="question">
-                    {state === "skipped" ? "Not a chat turn and keys-only, so this doesn't apply." : step.question}
+                    {state === "skipped"
+                      ? "Not a chat turn and keys-only, so this doesn't apply."
+                      : step.question}
                   </span>
-                  {step.id === "identity" && state === "passed" && outcome.identity !== undefined && (
-                    <span className="said">{outcome.identity}</span>
-                  )}
+                  {step.id === "identity" &&
+                    state === "passed" &&
+                    outcome.identity !== undefined && (
+                      <span className="said">{outcome.identity}</span>
+                    )}
                 </span>
               </li>
             );
@@ -103,14 +120,22 @@ export function Inspector() {
               ✦
             </span>
             <span>
-              <span className="name">{request === "config" ? "The hermes CLI on your machine" : "Your Hermes agent"}</span>
-              <span className="question">{delivered ? "Reached." : "Never sees this request."}</span>
+              <span className="name">
+                {request === "config" ? "The hermes CLI on your machine" : "Your Hermes agent"}
+              </span>
+              <span className="question">
+                {delivered ? "Reached." : "Never sees this request."}
+              </span>
             </span>
           </li>
         </ol>
 
         <div className="result" role="status" aria-live="polite">
-          <div className="stamp" data-kind={delivered ? "delivered" : "returned"} data-fresh={fresh}>
+          <div
+            className="stamp"
+            data-kind={delivered ? "delivered" : "returned"}
+            data-fresh={fresh}
+          >
             {outcome.status}
             <small>{outcome.verdict}</small>
           </div>

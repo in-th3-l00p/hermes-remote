@@ -3,29 +3,16 @@ import { randomId, toMessage, type MessageRow, type SessionRow } from "./db.ts";
 import type { Attachment, ChatMessage } from "./types.ts";
 
 function touch(db: Database, now: () => Date, sessionId: string): void {
-  db.run("UPDATE sessions SET updated_at = ? WHERE id = ?", [
-    now().toISOString(),
-    sessionId,
-  ]);
+  db.run("UPDATE sessions SET updated_at = ? WHERE id = ?", [now().toISOString(), sessionId]);
 }
 
-function messageRow(
-  db: Database,
-  sessionId: string,
-  messageId: string,
-): MessageRow | null {
+function messageRow(db: Database, sessionId: string, messageId: string): MessageRow | null {
   return db
-    .query<MessageRow, [string, string]>(
-      "SELECT * FROM messages WHERE session_id = ? AND id = ?",
-    )
+    .query<MessageRow, [string, string]>("SELECT * FROM messages WHERE session_id = ? AND id = ?")
     .get(sessionId, messageId);
 }
 
-export function getMessage(
-  db: Database,
-  sessionId: string,
-  messageId: string,
-): ChatMessage | null {
+export function getMessage(db: Database, sessionId: string, messageId: string): ChatMessage | null {
   const row = messageRow(db, sessionId, messageId);
   return row === null ? null : toMessage(row);
 }
@@ -47,12 +34,13 @@ export function addMessage(
   if (session === null) {
     return null;
   }
-  const position =
-    (db
+  const position = (
+    db
       .query<{ n: number }, [string]>(
         "SELECT COALESCE(MAX(position), -1) + 1 AS n FROM messages WHERE session_id = ?",
       )
-      .get(sessionId) as { n: number }).n;
+      .get(sessionId) as { n: number }
+  ).n;
   const message: ChatMessage = {
     id: randomId(),
     role: input.role,
@@ -80,10 +68,7 @@ export function addMessage(
     ],
   );
   if (session.title === null && input.role === "user" && input.content !== "") {
-    db.run("UPDATE sessions SET title = ? WHERE id = ?", [
-      input.content.slice(0, 48),
-      sessionId,
-    ]);
+    db.run("UPDATE sessions SET title = ? WHERE id = ?", [input.content.slice(0, 48), sessionId]);
   }
   touch(db, now, sessionId);
   return message;
@@ -95,10 +80,11 @@ export function appendContent(
   messageId: string,
   text: string,
 ): void {
-  db.run(
-    "UPDATE messages SET content = content || ? WHERE session_id = ? AND id = ?",
-    [text, sessionId, messageId],
-  );
+  db.run("UPDATE messages SET content = content || ? WHERE session_id = ? AND id = ?", [
+    text,
+    sessionId,
+    messageId,
+  ]);
 }
 
 export function finishMessage(
@@ -133,19 +119,20 @@ export function editMessage(
   if (row === null || row.role !== "user") {
     return null;
   }
-  const position = (db
-    .query<{ position: number }, [string, string]>(
-      "SELECT position FROM messages WHERE session_id = ? AND id = ?",
-    )
-    .get(sessionId, messageId) as { position: number }).position;
-  db.run(
-    "DELETE FROM messages WHERE session_id = ? AND position > ?",
-    [sessionId, position],
-  );
-  db.run(
-    "UPDATE messages SET content = ?, edited_at = ? WHERE session_id = ? AND id = ?",
-    [content, now().toISOString(), sessionId, messageId],
-  );
+  const position = (
+    db
+      .query<{ position: number }, [string, string]>(
+        "SELECT position FROM messages WHERE session_id = ? AND id = ?",
+      )
+      .get(sessionId, messageId) as { position: number }
+  ).position;
+  db.run("DELETE FROM messages WHERE session_id = ? AND position > ?", [sessionId, position]);
+  db.run("UPDATE messages SET content = ?, edited_at = ? WHERE session_id = ? AND id = ?", [
+    content,
+    now().toISOString(),
+    sessionId,
+    messageId,
+  ]);
   touch(db, now, sessionId);
   return getMessage(db, sessionId, messageId);
 }
@@ -165,9 +152,10 @@ export function toggleReaction(
   } else {
     delete message.reactions[emoji];
   }
-  db.run(
-    "UPDATE messages SET reactions = ? WHERE session_id = ? AND id = ?",
-    [JSON.stringify(message.reactions), sessionId, messageId],
-  );
+  db.run("UPDATE messages SET reactions = ? WHERE session_id = ? AND id = ?", [
+    JSON.stringify(message.reactions),
+    sessionId,
+    messageId,
+  ]);
   return message;
 }

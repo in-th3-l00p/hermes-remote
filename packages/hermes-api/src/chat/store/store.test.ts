@@ -24,9 +24,7 @@ describe("ChatStore", () => {
     expect(message?.status).toBe("done");
     expect(message?.attachments).toEqual([]);
     expect(store.addMessage("nope", { role: "user", content: "x" })).toBeNull();
-    expect(store.getMessage(session.id, message?.id as string)?.content).toBe(
-      "hi",
-    );
+    expect(store.getMessage(session.id, message?.id as string)?.content).toBe("hi");
     expect(store.getMessage("nope", "x")).toBeNull();
   });
 
@@ -55,9 +53,7 @@ describe("ChatStore", () => {
     legacy.run(
       "CREATE TABLE sessions (id TEXT PRIMARY KEY, user_id TEXT, title TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)",
     );
-    legacy.run(
-      "INSERT INTO sessions VALUES ('aa', NULL, NULL, '2026-01-01', '2026-01-01')",
-    );
+    legacy.run("INSERT INTO sessions VALUES ('aa', NULL, NULL, '2026-01-01', '2026-01-01')");
     legacy.close();
     const store = new ChatStore(path, now);
     expect(store.getSession("aa")?.keyId).toBeNull();
@@ -101,9 +97,7 @@ describe("ChatStore", () => {
     const mine = store.createSession({ userId: "u1" });
     const other = store.createSession({ userId: "u2" });
     const anonymous = store.createSession();
-    expect(store.listSessions({ userId: "u1" }).map((s) => s.id)).toEqual([
-      mine.id,
-    ]);
+    expect(store.listSessions({ userId: "u1" }).map((s) => s.id)).toEqual([mine.id]);
     expect(
       store
         .listSessions({ ids: [anonymous.id, other.id, "ffff"] })
@@ -133,9 +127,10 @@ describe("ChatStore", () => {
     store.appendContent(session.id, msg?.id as string, "hel");
     store.appendContent(session.id, msg?.id as string, "lo");
     store.appendContent(session.id, "nope", "x");
-    expect(
-      store.finishMessage(session.id, msg?.id as string, "done"),
-    ).toMatchObject({ content: "hello", status: "done" });
+    expect(store.finishMessage(session.id, msg?.id as string, "done")).toMatchObject({
+      content: "hello",
+      status: "done",
+    });
     expect(store.finishMessage(session.id, "nope", "done")).toBeNull();
   });
 
@@ -159,21 +154,17 @@ describe("ChatStore", () => {
     });
     expect(store.editMessage("nope", "x", "y")).toBeNull();
     expect(store.editMessage(session.id, "nope", "y")).toBeNull();
-    expect(
-      store.editMessage(session.id, assistant?.id as string, "y"),
-    ).toBeNull();
+    expect(store.editMessage(session.id, assistant?.id as string, "y")).toBeNull();
   });
 
   test("toggles reactions", () => {
     const store = new ChatStore(":memory:", now);
     const session = store.createSession();
     const msg = store.addMessage(session.id, { role: "user", content: "a" });
-    expect(
-      store.toggleReaction(session.id, msg?.id as string, "👍")?.reactions,
-    ).toEqual({ "👍": 1 });
-    expect(
-      store.toggleReaction(session.id, msg?.id as string, "👍")?.reactions,
-    ).toEqual({});
+    expect(store.toggleReaction(session.id, msg?.id as string, "👍")?.reactions).toEqual({
+      "👍": 1,
+    });
+    expect(store.toggleReaction(session.id, msg?.id as string, "👍")?.reactions).toEqual({});
     expect(store.toggleReaction(session.id, "nope", "👍")).toBeNull();
   });
 });

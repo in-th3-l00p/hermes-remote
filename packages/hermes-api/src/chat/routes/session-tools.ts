@@ -17,7 +17,12 @@ function ownerOf(principal: Principal): { userId: string } | { keyId: string } |
 function toMarkdown(session: ChatSession): string {
   const lines = [`# ${session.title ?? "Untitled"}`, ""];
   for (const m of session.messages) {
-    lines.push(`**${m.role === "user" ? "User" : "Assistant"}** · ${m.createdAt}`, "", m.content, "");
+    lines.push(
+      `**${m.role === "user" ? "User" : "Assistant"}** · ${m.createdAt}`,
+      "",
+      m.content,
+      "",
+    );
   }
   return `${lines.join("\n").trimEnd()}\n`;
 }

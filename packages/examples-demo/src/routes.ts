@@ -128,10 +128,7 @@ interface StreamFlags {
 }
 
 function sse(
-  producer: (
-    emit: (event: string, data: unknown) => void,
-    flags: StreamFlags,
-  ) => Promise<void>,
+  producer: (emit: (event: string, data: unknown) => void, flags: StreamFlags) => Promise<void>,
   onCancel: () => void,
   signal: AbortSignal | null = null,
 ): Response {
@@ -157,9 +154,7 @@ function sse(
       signal?.addEventListener("abort", stop);
       const emit = (event: string, data: unknown): void => {
         if (!flags.closed) {
-          controller.enqueue(
-            encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
-          );
+          controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
         }
       };
       await producer(emit, flags);
@@ -289,13 +284,14 @@ async function handleSessions(ctx: Ctx, method: string, rest: string): Promise<R
   if (rest === "" && method === "POST") {
     const denied = guard(principal, "sessions:write");
     return (
-      denied ??
-      json(201, state.createSession(principal.type === "user" ? principal.id : null))
+      denied ?? json(201, state.createSession(principal.type === "user" ? principal.id : null))
     );
   }
   if (rest === "" && method === "GET") {
     const archived = new URL(ctx.request.url).searchParams.get("archived") === "true";
-    return guard(principal, "sessions:read") ?? json(200, { sessions: state.listSessions(archived) });
+    return (
+      guard(principal, "sessions:read") ?? json(200, { sessions: state.listSessions(archived) })
+    );
   }
   if (rest === "/search" && method === "GET") {
     const denied = guard(principal, "sessions:search");
@@ -598,11 +594,7 @@ async function handleSoul(ctx: Ctx, method: string, rest: string): Promise<Respo
   return null;
 }
 
-export async function handle(
-  state: DemoState,
-  delay: Delay,
-  request: Request,
-): Promise<Response> {
+export async function handle(state: DemoState, delay: Delay, request: Request): Promise<Response> {
   const url = new URL(request.url);
   const path = url.pathname;
   const method = request.method.toUpperCase();
@@ -625,9 +617,7 @@ export async function handle(
   }
   if (path === "/v1/health" && method === "GET") {
     const denied = guard(auth, "status:read");
-    return (
-      denied ?? json(200, { status: "ok", version: DEMO_VERSION, upstream: UPSTREAM_HEALTH })
-    );
+    return denied ?? json(200, { status: "ok", version: DEMO_VERSION, upstream: UPSTREAM_HEALTH });
   }
   if (path === "/v1/capabilities" && method === "GET") {
     const denied = guard(auth, "status:read");

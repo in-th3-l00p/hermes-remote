@@ -6,8 +6,7 @@ export const KEEPALIVE_MS = 15_000;
 /** True when the stream so far ends with a blank line (LF or CRLF). */
 function endsFrame(tail: number[]): boolean {
   const lf = tail.at(-1) === 10 && tail.at(-2) === 10;
-  const crlf =
-    tail.at(-1) === 10 && tail.at(-2) === 13 && tail.at(-3) === 10 && tail.at(-4) === 13;
+  const crlf = tail.at(-1) === 10 && tail.at(-2) === 13 && tail.at(-3) === 10 && tail.at(-4) === 13;
   return lf || crlf;
 }
 
@@ -28,12 +27,15 @@ export function keepAlive(
   let lastWrite = Date.now();
   return new ReadableStream<Uint8Array>({
     start(controller) {
-      timer = setInterval(() => {
-        if (atBoundary && Date.now() - lastWrite >= intervalMs) {
-          controller.enqueue(COMMENT);
-          lastWrite = Date.now();
-        }
-      }, Math.max(1, Math.floor(intervalMs / 2)));
+      timer = setInterval(
+        () => {
+          if (atBoundary && Date.now() - lastWrite >= intervalMs) {
+            controller.enqueue(COMMENT);
+            lastWrite = Date.now();
+          }
+        },
+        Math.max(1, Math.floor(intervalMs / 2)),
+      );
     },
     async pull(controller) {
       let chunk: Awaited<ReturnType<typeof reader.read>>;

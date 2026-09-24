@@ -70,12 +70,8 @@ describe("KeyStore", () => {
       scopes: ["chat:invoke"],
       expiresAt: new Date("2026-01-01T00:00:00Z"),
     });
-    expect(
-      await store.verifyToken(token, new Date("2025-12-31T00:00:00Z")),
-    ).not.toBeNull();
-    expect(
-      await store.verifyToken(token, new Date("2026-01-01T00:00:00Z")),
-    ).toBeNull();
+    expect(await store.verifyToken(token, new Date("2025-12-31T00:00:00Z"))).not.toBeNull();
+    expect(await store.verifyToken(token, new Date("2026-01-01T00:00:00Z"))).toBeNull();
   });
 
   test("rotates the secret", async () => {
@@ -98,8 +94,8 @@ describe("KeyStore", () => {
     const filePath = join(dir, "secrets", "keys.json");
     const store = new KeyStore(filePath);
     await store.create({ name: "x", scopes: ["chat:invoke"] });
-    expect(((await stat(filePath)).mode & 0o777)).toBe(0o600);
-    expect(((await stat(join(dir, "secrets"))).mode & 0o777)).toBe(0o700);
+    expect((await stat(filePath)).mode & 0o777).toBe(0o600);
+    expect((await stat(join(dir, "secrets"))).mode & 0o777).toBe(0o700);
   });
 
   test("tightens permissions on a pre-existing keys file", async () => {
@@ -108,7 +104,7 @@ describe("KeyStore", () => {
     await writeFile(filePath, '{"keys":[]}\n', { mode: 0o644 });
     const store = new KeyStore(filePath);
     await store.create({ name: "x", scopes: ["chat:invoke"] });
-    expect(((await stat(filePath)).mode & 0o777)).toBe(0o600);
+    expect((await stat(filePath)).mode & 0o777).toBe(0o600);
   });
 
   test("grants and ungrants scopes", async () => {
@@ -117,10 +113,7 @@ describe("KeyStore", () => {
       name: "x",
       scopes: ["chat:invoke"],
     });
-    const granted = await store.grantScopes(record.id, [
-      "sessions:read",
-      "chat:invoke",
-    ]);
+    const granted = await store.grantScopes(record.id, ["sessions:read", "chat:invoke"]);
     expect(granted?.scopes).toEqual(["chat:invoke", "sessions:read"]);
     const ungranted = await store.ungrantScopes(record.id, ["chat:invoke"]);
     expect(ungranted?.scopes).toEqual(["sessions:read"]);

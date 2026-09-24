@@ -1,10 +1,7 @@
 import { flag, parseArgs } from "../args.ts";
 import { fail, ok, type CliResult } from "../context.ts";
 
-export async function logsCommand(
-  args: string[],
-  logPath: string,
-): Promise<CliResult> {
+export async function logsCommand(args: string[], logPath: string): Promise<CliResult> {
   const parsed = parseArgs(args);
   const tail = Number(flag(parsed, "tail") ?? "50");
   if (!Number.isInteger(tail) || tail <= 0) {

@@ -33,9 +33,7 @@ for (const file of SCAN_DIRS.flatMap((dir) => [...markdownFiles(dir)])) {
   for (const [, lang, code] of fences) {
     checked += 1;
     try {
-      new Bun.Transpiler({ loader: lang as "ts" | "tsx" }).transformSync(
-        code as string,
-      );
+      new Bun.Transpiler({ loader: lang as "ts" | "tsx" }).transformSync(code as string);
     } catch (error) {
       failed += 1;
       console.error(`✗ ${file}:`);

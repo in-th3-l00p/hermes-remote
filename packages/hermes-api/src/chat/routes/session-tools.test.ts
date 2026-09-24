@@ -46,7 +46,9 @@ describe("session tools", () => {
     const renamed = await call("PATCH", `/v1/sessions/${s.id}`, "u1", { title: "  Plans  " });
     expect(((await renamed.json()) as { title: string }).title).toBe("Plans");
     await call("PATCH", `/v1/sessions/${s.id}`, "u1", { archived: true });
-    const active = (await (await call("GET", "/v1/sessions", "u1")).json()) as { sessions: unknown[] };
+    const active = (await (await call("GET", "/v1/sessions", "u1")).json()) as {
+      sessions: unknown[];
+    };
     expect(active.sessions).toEqual([]);
     const archived = (await (await call("GET", "/v1/sessions?archived=true", "u1")).json()) as {
       sessions: { id: string; archived: boolean }[];
@@ -69,7 +71,12 @@ describe("session tools", () => {
     store.addMessage(s.id, { role: "user", content: "three", status: "done" });
     const res = await call("POST", `/v1/sessions/${s.id}/fork`, "u1", { messageId: first?.id });
     expect(res.status).toBe(201);
-    const fork = (await res.json()) as { id: string; userId: string; title: string; messages: { content: string }[] };
+    const fork = (await res.json()) as {
+      id: string;
+      userId: string;
+      title: string;
+      messages: { content: string }[];
+    };
     expect(fork.userId).toBe("u1");
     expect(fork.title).toBe("Trip (fork)");
     expect(fork.messages.map((m) => m.content)).toEqual(["one"]);
@@ -77,8 +84,12 @@ describe("session tools", () => {
       messages: unknown[];
     };
     expect(whole.messages).toHaveLength(3);
-    expect((await call("POST", `/v1/sessions/${s.id}/fork`, "u1", { messageId: "ffff" })).status).toBe(404);
-    expect((await call("POST", `/v1/sessions/${s.id}/fork`, "u1", { messageId: 7 })).status).toBe(400);
+    expect(
+      (await call("POST", `/v1/sessions/${s.id}/fork`, "u1", { messageId: "ffff" })).status,
+    ).toBe(404);
+    expect((await call("POST", `/v1/sessions/${s.id}/fork`, "u1", { messageId: 7 })).status).toBe(
+      400,
+    );
     expect((await call("POST", `/v1/sessions/${s.id}/fork`, "u2")).status).toBe(404);
   });
 
@@ -96,7 +107,9 @@ describe("session tools", () => {
     expect(found.sessions.map((x) => x.id).sort()).toEqual([mine.id, titled.id].sort());
     expect((await call("GET", "/v1/sessions/search", "u1")).status).toBe(400);
     store.addMessage(mine.id, { role: "user", content: "100% done_now" });
-    const literal = (await (await call("GET", `/v1/sessions/search?q=${encodeURIComponent("100% done_")}`, "u1")).json()) as {
+    const literal = (await (
+      await call("GET", `/v1/sessions/search?q=${encodeURIComponent("100% done_")}`, "u1")
+    ).json()) as {
       sessions: { id: string }[];
     };
     expect(literal.sessions.map((x) => x.id)).toEqual([mine.id]);

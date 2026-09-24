@@ -190,10 +190,7 @@ export class HermesClient {
       params.set("archived", "true");
     }
     const query = params.size === 0 ? "" : `?${params.toString()}`;
-    const res = await this.request<{ sessions: ChatSessionMeta[] }>(
-      "GET",
-      `/v1/sessions${query}`,
-    );
+    const res = await this.request<{ sessions: ChatSessionMeta[] }>("GET", `/v1/sessions${query}`);
     return res.sessions;
   }
 
@@ -279,15 +276,9 @@ export class HermesClient {
     );
   }
 
-  react(
-    sessionId: string,
-    messageId: string,
-    emoji: string,
-  ): Promise<ChatMessage> {
-    return this.request(
-      "POST",
-      `/v1/sessions/${sessionId}/messages/${messageId}/reactions`,
-      { emoji },
-    );
+  react(sessionId: string, messageId: string, emoji: string): Promise<ChatMessage> {
+    return this.request("POST", `/v1/sessions/${sessionId}/messages/${messageId}/reactions`, {
+      emoji,
+    });
   }
 }

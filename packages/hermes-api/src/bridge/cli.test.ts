@@ -12,9 +12,7 @@ describe("HermesCliBridge", () => {
     const bridge = new HermesCliBridge({ binary: "/bin/hermes", spawn });
     const result = await bridge.run(["status"]);
     expect(result).toEqual({ ok: true, exitCode: 0, stdout: "out", stderr: "" });
-    expect(seen).toEqual([
-      { argv: ["/bin/hermes", "status"], timeoutMs: 30_000 },
-    ]);
+    expect(seen).toEqual([{ argv: ["/bin/hermes", "status"], timeoutMs: 30_000 }]);
   });
 
   test("propagates failures and custom timeouts", async () => {

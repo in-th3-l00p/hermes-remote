@@ -61,20 +61,14 @@ export class HermesUpstream implements Upstream {
     return res;
   }
 
-  private async request(
-    method: string,
-    path: string,
-    body?: unknown,
-  ): Promise<unknown> {
+  private async request(method: string, path: string, body?: unknown): Promise<unknown> {
     const res = await this.doFetch(method, path, body);
     return res.json();
   }
 
   readonly discovery: UpstreamDiscovery = {
     health: () =>
-      this.request("GET", "/health/detailed").catch(() =>
-        this.request("GET", "/health"),
-      ),
+      this.request("GET", "/health/detailed").catch(() => this.request("GET", "/health")),
     capabilities: () => this.request("GET", "/v1/capabilities"),
     models: () => this.request("GET", "/v1/models"),
     modelOptions: () => this.request("GET", "/api/model/options"),
@@ -97,12 +91,7 @@ export class HermesUpstream implements Upstream {
     approve: async (id, body) => this.request("POST", `/v1/runs/${seg(id)}/approval`, body),
   };
 
-  raw(
-    method: string,
-    path: string,
-    body?: unknown,
-    signal?: AbortSignal,
-  ): Promise<Response> {
+  raw(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<Response> {
     return this.send(method, path, body, signal);
   }
 
@@ -141,12 +130,7 @@ export class HermesUpstream implements Upstream {
     fork: async (id, body) => this.request("POST", `/api/sessions/${seg(id)}/fork`, body),
     chat: async (id, body) => this.request("POST", `/api/sessions/${seg(id)}/chat`, body),
     chatStream: async (id, body, signal) => {
-      const res = await this.doFetch(
-        "POST",
-        `/api/sessions/${seg(id)}/chat/stream`,
-        body,
-        signal,
-      );
+      const res = await this.doFetch("POST", `/api/sessions/${seg(id)}/chat/stream`, body, signal);
       if (res.body === null) {
         throw new HermesUpstreamError(res.status, "Chat stream had no body");
       }

@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { HermesApiError, HttpClient } from "./http.ts";
 
-function mockFetch(
-  handler: (url: string, init: RequestInit) => Response,
-): { calls: { url: string; init: RequestInit }[]; fetch: typeof fetch } {
+function mockFetch(handler: (url: string, init: RequestInit) => Response): {
+  calls: { url: string; init: RequestInit }[];
+  fetch: typeof fetch;
+} {
   const calls: { url: string; init: RequestInit }[] = [];
   const impl = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
@@ -32,22 +33,16 @@ describe("HttpClient", () => {
     const { calls, fetch } = mockFetch(() => Response.json({ ok: true }));
     const http = new HttpClient({ baseUrl: "http://x", fetch });
     await http.request("GET", "/v1/status");
-    expect(
-      (calls[0]?.init.headers as Record<string, string>).authorization,
-    ).toBeUndefined();
+    expect((calls[0]?.init.headers as Record<string, string>).authorization).toBeUndefined();
   });
 
   test("sends bearer token from static token", async () => {
-    const { calls, fetch } = mockFetch(() =>
-      Response.json({ ok: true, version: "0.0.1" }),
-    );
+    const { calls, fetch } = mockFetch(() => Response.json({ ok: true, version: "0.0.1" }));
     const http = new HttpClient({ baseUrl: "http://x", token: "t1", fetch });
     const status = await http.request("GET", "/v1/status");
     expect(status).toEqual({ ok: true, version: "0.0.1" });
     expect(calls[0]?.url).toBe("http://x/v1/status");
-    expect(
-      (calls[0]?.init.headers as Record<string, string>).authorization,
-    ).toBe("Bearer t1");
+    expect((calls[0]?.init.headers as Record<string, string>).authorization).toBe("Bearer t1");
   });
 
   test("uses async tokenProvider", async () => {
@@ -58,9 +53,7 @@ describe("HttpClient", () => {
       fetch,
     });
     await http.request("GET", "/v1/status");
-    expect(
-      (calls[0]?.init.headers as Record<string, string>).authorization,
-    ).toBe("Bearer t2");
+    expect((calls[0]?.init.headers as Record<string, string>).authorization).toBe("Bearer t2");
   });
 
   test("serializes JSON bodies with content-type", async () => {
@@ -69,22 +62,17 @@ describe("HttpClient", () => {
     await http.request("POST", "/v1/sessions", { title: "hi" });
     expect(calls[0]?.init.method).toBe("POST");
     expect(calls[0]?.init.body).toBe('{"title":"hi"}');
-    expect(
-      (calls[0]?.init.headers as Record<string, string>)["content-type"],
-    ).toBe("application/json");
+    expect((calls[0]?.init.headers as Record<string, string>)["content-type"]).toBe(
+      "application/json",
+    );
   });
 
   test("throws HermesApiError with server error payload", async () => {
     const { fetch } = mockFetch(() =>
-      Response.json(
-        { error: { code: "not_found", message: "Unknown route" } },
-        { status: 404 },
-      ),
+      Response.json({ error: { code: "not_found", message: "Unknown route" } }, { status: 404 }),
     );
     const http = new HttpClient({ baseUrl: "http://x", token: "t", fetch });
-    const err = (await http
-      .request("GET", "/nope")
-      .catch((e: unknown) => e)) as HermesApiError;
+    const err = (await http.request("GET", "/nope").catch((e: unknown) => e)) as HermesApiError;
     expect(err).toBeInstanceOf(HermesApiError);
     expect(err.status).toBe(404);
     expect(err.code).toBe("not_found");
@@ -94,9 +82,7 @@ describe("HttpClient", () => {
   test("throws HermesApiError on non-JSON error body", async () => {
     const { fetch } = mockFetch(() => new Response("boom", { status: 500 }));
     const http = new HttpClient({ baseUrl: "http://x", token: "t", fetch });
-    const err = (await http
-      .request("GET", "/x")
-      .catch((e: unknown) => e)) as HermesApiError;
+    const err = (await http.request("GET", "/x").catch((e: unknown) => e)) as HermesApiError;
     expect(err.status).toBe(500);
     expect(err.code).toBe("unknown_error");
     expect(err.message).toBe("Request failed with status 500");
@@ -115,9 +101,7 @@ describe("HttpClient", () => {
       tokenProvider: async () => `t${calls}`,
       fetch: fetchImpl,
     });
-    expect(
-      ((await http.request("GET", "/v1/status")) as { ok: boolean }).ok,
-    ).toBe(true);
+    expect(((await http.request("GET", "/v1/status")) as { ok: boolean }).ok).toBe(true);
     expect(calls).toBe(2);
     let anonCalls = 0;
     const anonymous = new HttpClient({
@@ -127,9 +111,7 @@ describe("HttpClient", () => {
         return new Response("no", { status: 401 });
       }) as unknown as typeof fetch,
     });
-    await expect(anonymous.request("GET", "/v1/status")).rejects.toBeInstanceOf(
-      HermesApiError,
-    );
+    await expect(anonymous.request("GET", "/v1/status")).rejects.toBeInstanceOf(HermesApiError);
     expect(anonCalls).toBe(1);
   });
 
@@ -143,9 +125,7 @@ describe("HttpClient", () => {
         return new Response("no", { status: 401 });
       }) as unknown as typeof fetch,
     });
-    await expect(http.request("GET", "/v1/status")).rejects.toBeInstanceOf(
-      HermesApiError,
-    );
+    await expect(http.request("GET", "/v1/status")).rejects.toBeInstanceOf(HermesApiError);
     expect(calls).toBe(1);
   });
 
@@ -154,9 +134,7 @@ describe("HttpClient", () => {
       baseUrl: "http://x",
       fetch: mockFetch(() => new Response("no", { status: 401 })).fetch,
     });
-    await expect(
-      drain(failing.stream("POST", "/x", {})),
-    ).rejects.toBeInstanceOf(HermesApiError);
+    await expect(drain(failing.stream("POST", "/x", {}))).rejects.toBeInstanceOf(HermesApiError);
     const empty = new HttpClient({
       baseUrl: "http://x",
       fetch: mockFetch(() => new Response(null, { status: 200 })).fetch,
@@ -190,7 +168,11 @@ describe("retries", () => {
       },
       () => Response.json({ ok: true }),
     ]);
-    const http = new HttpClient({ baseUrl: "http://x", fetch: fetchImpl, retry: { baseDelayMs: 1 } });
+    const http = new HttpClient({
+      baseUrl: "http://x",
+      fetch: fetchImpl,
+      retry: { baseDelayMs: 1 },
+    });
     expect(await http.request<{ ok: boolean }>("GET", "/v1/status")).toEqual({ ok: true });
     expect(calls).toEqual(["GET", "GET", "GET"]);
   });
@@ -216,19 +198,31 @@ describe("retries", () => {
         throw new TypeError("still down");
       },
     ]);
-    const net = new HttpClient({ baseUrl: "http://x", fetch: failing.fetchImpl, retry: { attempts: 1, baseDelayMs: 1 } });
+    const net = new HttpClient({
+      baseUrl: "http://x",
+      fetch: failing.fetchImpl,
+      retry: { attempts: 1, baseDelayMs: 1 },
+    });
     expect(net.request("GET", "/v1/x")).rejects.toThrow("still down");
   });
 
   test("mutations, client errors, aborts and retry: false are never retried", async () => {
     const post = counting([() => new Response("", { status: 503 })]);
-    const http = new HttpClient({ baseUrl: "http://x", fetch: post.fetchImpl, retry: { baseDelayMs: 1 } });
+    const http = new HttpClient({
+      baseUrl: "http://x",
+      fetch: post.fetchImpl,
+      retry: { baseDelayMs: 1 },
+    });
     expect(http.request("POST", "/v1/sessions", {})).rejects.toBeInstanceOf(HermesApiError);
     await Promise.resolve();
     expect(post.calls).toEqual(["POST"]);
 
     const notFound = counting([() => new Response("", { status: 404 })]);
-    const four = new HttpClient({ baseUrl: "http://x", fetch: notFound.fetchImpl, retry: { baseDelayMs: 1 } });
+    const four = new HttpClient({
+      baseUrl: "http://x",
+      fetch: notFound.fetchImpl,
+      retry: { baseDelayMs: 1 },
+    });
     expect(four.request("GET", "/v1/x")).rejects.toBeInstanceOf(HermesApiError);
 
     const disabled = counting([() => new Response("", { status: 503 })]);
@@ -242,7 +236,11 @@ describe("retries", () => {
         throw new DOMException("aborted", "AbortError");
       },
     ]);
-    const cancelling = new HttpClient({ baseUrl: "http://x", fetch: aborted.fetchImpl, retry: { baseDelayMs: 1 } });
+    const cancelling = new HttpClient({
+      baseUrl: "http://x",
+      fetch: aborted.fetchImpl,
+      retry: { baseDelayMs: 1 },
+    });
     expect(cancelling.raw("GET", "/v1/x", undefined, controller.signal)).rejects.toThrow("aborted");
     await new Promise((r) => setTimeout(r, 20));
     expect([disabled.calls.length, aborted.calls.length, notFound.calls.length]).toEqual([1, 1, 1]);

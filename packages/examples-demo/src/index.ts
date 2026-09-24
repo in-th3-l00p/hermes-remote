@@ -40,8 +40,7 @@ export interface DemoFetchOptions {
   now?: () => Date;
 }
 
-export const defaultDelay: Delay = (ms) =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+export const defaultDelay: Delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * A drop-in `fetch` implementation backing the example apps with seeded,

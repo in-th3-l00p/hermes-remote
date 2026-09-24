@@ -64,7 +64,11 @@ export function registerUserRoutes(app: Hono<ChatEnv>, options: UserRouteOptions
       ttlSeconds: body.ttl,
       now: now(),
     });
-    return json(201, { token: minted.token, expires_at: minted.expiresAt, user: publicUser(record) });
+    return json(201, {
+      token: minted.token,
+      expires_at: minted.expiresAt,
+      user: publicUser(record),
+    });
   });
 
   app.get("/v1/users", (c) => {
@@ -78,18 +82,21 @@ export function registerUserRoutes(app: Hono<ChatEnv>, options: UserRouteOptions
     return json(200, { users: users.map(publicUser), total });
   });
 
-  const withUser = (
-    handler: (c: Context<ChatEnv>, user: User) => Response | Promise<Response>,
-  ) => async (c: Context<ChatEnv>): Promise<Response> => {
-    const denied = guard(c);
-    if (denied !== null) {
-      return denied;
-    }
-    const user = store.get(c.req.param("id") ?? "");
-    return user === null ? error(404, "user_not_found", "Unknown user") : handler(c, user);
-  };
+  const withUser =
+    (handler: (c: Context<ChatEnv>, user: User) => Response | Promise<Response>) =>
+    async (c: Context<ChatEnv>): Promise<Response> => {
+      const denied = guard(c);
+      if (denied !== null) {
+        return denied;
+      }
+      const user = store.get(c.req.param("id") ?? "");
+      return user === null ? error(404, "user_not_found", "Unknown user") : handler(c, user);
+    };
 
-  app.get(`/v1/users/${USER_ID}`, withUser((_c, user) => json(200, publicUser(user))));
+  app.get(
+    `/v1/users/${USER_ID}`,
+    withUser((_c, user) => json(200, publicUser(user))),
+  );
 
   app.patch(
     `/v1/users/${USER_ID}`,
@@ -108,7 +115,10 @@ export function registerUserRoutes(app: Hono<ChatEnv>, options: UserRouteOptions
     }),
   );
 
-  for (const [action, disabled] of [["disable", true], ["enable", false]] as const) {
+  for (const [action, disabled] of [
+    ["disable", true],
+    ["enable", false],
+  ] as const) {
     app.post(
       `/v1/users/${USER_ID}/${action}`,
       withUser((_c, user) => json(200, publicUser(store.setDisabled(user.id, disabled) as User))),

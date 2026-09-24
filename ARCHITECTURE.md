@@ -1,21 +1,31 @@
-# ARCHITECTURE.md — hermes-web
+# ARCHITECTURE.md — Hermes Remote
+
+> This is the design document the project was built from. The principal model, scopes and bridges below are implemented as written. The endpoint map, client resources and hook list are the original design: where they differ from the code, the code wins. The authoritative route list is the OpenAPI document (`GET /v1/openapi.json`, snapshot in `packages/hermes-api/openapi.json`) and the API reference in `apps/landing/docs/api/`. HANDOFF.md records where the shipped product diverges.
 
 ## Overview
 
-hermes-web exposes a local Hermes agent instance to the web, securely. It is a Bun + TypeScript monorepo with three packages:
+Hermes Remote exposes a local Hermes agent instance to the web, securely. It is a Bun + TypeScript monorepo:
 
 ```
-hermes-web/
+hermes-remote/
 ├── packages/
-│   ├── hermes-api/       # Bun HTTP server — authenticated facade over a local Hermes instance
-│   ├── cli/              # Management CLI (bins hermes-remote/hermes-api) built on hermes-api
-│   ├── hermes-ts/        # "hermes.ts" — typed TypeScript client (@intheloop-studio/hermes-remote-client)
-│   └── react-hermes/     # React hooks built on hermes-ts
+│   ├── hermes-api/       # Server library (@intheloop-studio/hermes-remote): Hono app, auth, bridges
+│   ├── cli/              # Management CLI (@intheloop-studio/hermes-remote-cli, bin hermes-remote)
+│   ├── hermes-ts/        # Typed TypeScript client (@intheloop-studio/hermes-remote-client)
+│   ├── react-hermes/     # React hooks built on the client (@intheloop-studio/hermes-remote-react)
+│   └── examples-demo/    # In-browser fake of the HTTP routes, used by the demo chat app (private)
+├── apps/
+│   ├── landing/          # Website (Vite) and docs (VitePress, apps/landing/docs)
+│   └── chat/             # Reference chat app; runs in demo mode without a server
+├── integration/          # Integration tests: in-process fake by default, live agent with HERMES_INTEGRATION=1
+├── scripts/              # openapi, snippet, version and pack smoke checks
+├── Dockerfile            # Single-file server bundle on oven/bun
 ├── CLAUDE.md             # Hermes feature reference + project conventions
+├── HANDOFF.md            # Shipped state, infrastructure, release process
 └── ARCHITECTURE.md       # This file
 ```
 
-All packages share one `tsconfig` base (strict), are built and tested with Bun (`bun test`), and publish types from source.
+All packages share one `tsconfig` base (strict) and are tested with Bun (`bun test`). The client and hooks publish built `dist` plus source; the server and CLI run from source under Bun.
 
 ## System diagram
 
@@ -43,18 +53,19 @@ hermes-api  (Bun server, public-facing)
 Hermes's built-in API server covers chat, sessions, runs, jobs, and capability enumeration — but not memory, hooks, goals, cron management, or configuration. hermes-api therefore composes three backends behind one coherent REST API:
 
 1. **HTTP proxy** (preferred) — forwards to `127.0.0.1:8642` with the server-held `API_SERVER_KEY`. The upstream bearer key never leaves the server; clients authenticate to hermes-api with their own credentials.
-2. **CLI bridge** — spawns `hermes <cmd> --json` via `Bun.spawn` for management operations that have no HTTP equivalent. All CLI invocations go through a single `HermesCli` module (command allowlist, argument escaping, timeout, JSON parsing) so nothing else in the codebase shells out.
-3. **FS bridge** — reads well-known `~/.hermes/` files (e.g. cron output, memory files, logs) where that is faster and safer than shelling out. Writes go through the CLI whenever a CLI command exists, so Hermes's own validation/consent logic stays in the loop.
+2. **CLI bridge** — spawns `hermes <cmd>` via `Bun.spawn` for management operations that have no HTTP equivalent. All CLI invocations go through one `HermesCliBridge` (allowlisted argv templates from `mgmt/catalog.ts`, no shell, timeouts, a concurrency cap, audit logging) so nothing else in the codebase shells out. Output is returned as `{ ok, raw }` with secrets redacted; the server does not parse it.
+3. **FS bridge** (`FsBridge`) — reads well-known `~/.hermes/` files (e.g. cron output, memory files, logs) where that is faster and safer than shelling out. Writes go through the CLI whenever a CLI command exists, so Hermes's own validation/consent logic stays in the loop.
 
-Each bridge is defined by an interface (`HermesHttpBackend`, `HermesCliBackend`, `HermesFsBackend`) with a real implementation and an in-memory fake — this is what makes 100% unit coverage possible without a live agent.
+Each bridge has a real implementation and a fake (`Upstream` with `HermesUpstream`/`DemoUpstream`, `CliBridge` with `HermesCliBridge`/`FakeCliBridge`, and `FsBridge` over a temp directory in tests) — this is what makes 100% unit coverage possible without a live agent.
 
 ## hermes-api
 
 ### Server
 
-- Bun's native `Bun.serve` with a small typed router (no framework dependency needed; if one is used, Hono — it's Bun-native and edge-portable).
-- OpenAPI 3.1 spec generated from route schemas (Zod), served at `GET /openapi.json`; hermes-ts types are generated from the same schemas, so client and server can never drift.
-- SSE streaming passthrough for chat/runs/events.
+- Hono on `Bun.serve`, with `hono/cors`, `hono/body-limit` and `hono-rate-limiter`.
+- Request bodies are validated with Zod schemas (`src/openapi/schemas.ts`); the same schemas and a per-route docs table build the OpenAPI 3.1 document served at `GET /v1/openapi.json`. The build fails on an undocumented route. `bun scripts/openapi.ts` regenerates the committed snapshot and the client's types from it; CI checks both are current.
+- SSE streaming for chat, runs and events, with keep-alive comments.
+- Prometheus metrics at `GET /v1/metrics`.
 
 ### Identity, authentication & authorization
 
@@ -151,22 +162,22 @@ Two deployment patterns follow from this:
 - Rate limiting per principal (separate budgets for keys and user tokens); audit log of every mutating call and every token mint.
 - CORS allowlist configurable; user tokens are the only principal intended for browsers — API keys in frontend code are treated as a deployment error (the docs and CLI say so loudly).
 
-### hermes-api CLI
+### hermes-remote CLI
 
-The server package ships a `hermes-api` binary (Bun) for host-side administration — the only way to manage API keys:
+The CLI package (`@intheloop-studio/hermes-remote-cli`) ships the `hermes-remote` binary (Bun) for host-side administration — the only way to manage API keys. The block below is the original sketch; `hermes-remote help` prints the current commands:
 
 ```
-hermes-api serve                                  # run the server
-hermes-api init                                   # create server config + signing keys
-hermes-api keys create --name ci-bot \
+hermes-remote serve                                  # run the server
+hermes-remote init                                   # create server config + signing keys
+hermes-remote keys create --name ci-bot \
     --scope chat:invoke --scope sessions:read \
     --profile support-agent \
     --user-grantable chat:invoke,sessions:read,sessions:write \
     --expires 90d                                 # prints the secret once, stores only the hash
-hermes-api keys list | show <id> | revoke <id> | rotate <id>
-hermes-api users list | show <id> | disable <id> | enable <id> | delete <id>
-hermes-api audit tail                             # follow the audit log
-hermes-api doctor                                 # check upstream Hermes reachability, key hygiene
+hermes-remote keys list | show <id> | revoke <id> | rotate <id>
+hermes-remote users list | show <id> | disable <id> | enable <id> | delete <id>
+hermes-remote audit tail                             # follow the audit log
+hermes-remote doctor                                 # check upstream Hermes reachability, key hygiene
 ```
 
 `keys create` refuses ambient over-granting: Tier 3 scopes require an explicit `--dangerous` acknowledgment flag, and `--user-grantable` accepts Tier 1 scopes only.
@@ -290,7 +301,7 @@ All routes are prefixed `/v1`. Standard REST semantics; list endpoints support p
 | `GET /v1/status` | hermes-api health + upstream Hermes agent/gateway/auth status |
 | `GET /v1/insights` | Token/cost/activity analytics |
 | `GET /v1/logs?source=&filter=` | Agent/gateway/error logs |
-| `GET /openapi.json` | Generated OpenAPI spec |
+| `GET /v1/openapi.json` | Generated OpenAPI spec |
 
 ## hermes.ts (client)
 
@@ -321,11 +332,11 @@ Every mutation hook invalidates the relevant queries; streaming hooks clean up S
 
 ## Testing strategy (100% coverage, enforced)
 
-- `bun test --coverage` with 100% line/branch/function thresholds enforced in CI for every package; a PR that drops coverage fails.
+- `bun test packages` with 100% line and function thresholds (Bun reports no branch coverage) enforced in CI; a PR that drops coverage fails.
 - **Unit tests** (`*.test.ts`) — run everywhere, no Hermes required:
-  - hermes-api routes tested against the in-memory fake backends (`FakeHermesHttp`, `FakeHermesCli`, `FakeHermesFs`), covering success, auth/scope failures, upstream errors, and streaming.
+  - hermes-api routes tested against the fakes (`DemoUpstream`, `FakeCliBridge`, `FsBridge` over a temp directory), covering success, auth/scope failures, upstream errors, and streaming.
   - hermes-ts tested against a mock `fetch`; react-hermes tested with Testing Library against a mocked client.
-- **Integration tests** (`*.integration.test.ts`) — require a live Hermes instance (`hermes gateway` with `API_SERVER_ENABLED=true`); gated by `HERMES_INTEGRATION=1` + `HERMES_API_URL`/`HERMES_API_KEY` env vars and excluded from the default test run. They exercise the real bridges end-to-end: real chat turn, session CRUD, cron create→run→output, skill list/view, memory round-trip, goal set/clear, hook list, config get/set on a throwaway profile.
+- **Integration tests** (`integration/`) — `bun run test:integration:local` runs them against an in-process fake agent (and runs in CI); `bun run test:integration` sets `HERMES_INTEGRATION=1` and runs them against a live Hermes instance (`hermes gateway` with `API_SERVER_ENABLED=true`, `HERMES_API_URL`/`HERMES_API_KEY`). They exercise the real bridges end-to-end: real chat turn, session CRUD, cron create→run→output, skill list/view, memory round-trip, goal set/clear, hook list, config get/set on a throwaway profile.
 - Contract guard: the OpenAPI spec is snapshot-tested so any route/schema change is an explicit, reviewed diff.
 - **Authorization matrix tests:** a generated test iterates every route × every scope tier × both principal types and asserts allow/deny matches the permission catalog — a new route without a declared scope fails the suite. Token-exchange tests cover scope-subset enforcement, tier-1-only user tokens, auto-provisioning on/off, disable-invalidates-tokens, and that `metadata`/withheld profile fields never reach the injected `<user-context>` block at any visibility level.
 

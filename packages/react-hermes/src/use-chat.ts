@@ -23,11 +23,7 @@ export interface ChatClientLike {
     content: string,
     options?: { signal?: AbortSignal },
   ): AsyncIterable<ChatEvent>;
-  react(
-    sessionId: string,
-    messageId: string,
-    emoji: string,
-  ): Promise<ChatMessage>;
+  react(sessionId: string, messageId: string, emoji: string): Promise<ChatMessage>;
   stopTurn(sessionId: string): Promise<{ stopped: boolean }>;
 }
 
@@ -53,15 +49,11 @@ export interface UseChat {
 }
 
 const failStreaming = (prev: ChatMessage[]): ChatMessage[] =>
-  prev.map((m) =>
-    m.status === "streaming" ? { ...m, status: "error" as const } : m,
-  );
+  prev.map((m) => (m.status === "streaming" ? { ...m, status: "error" as const } : m));
 
 export function useChat(options: UseChatOptions): UseChat {
   const { client } = options;
-  const [sessionId, setSessionId] = useState<string | null>(
-    options.sessionId ?? null,
-  );
+  const [sessionId, setSessionId] = useState<string | null>(options.sessionId ?? null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,10 +79,7 @@ export function useChat(options: UseChatOptions): UseChat {
   }, [client]);
 
   const consume = useCallback(
-    async (
-      start: (signal: AbortSignal) => AsyncIterable<ChatEvent>,
-      editedId: string | null,
-    ) => {
+    async (start: (signal: AbortSignal) => AsyncIterable<ChatEvent>, editedId: string | null) => {
       const controller = new AbortController();
       abortRef.current = controller;
       setStreaming(true);
@@ -124,10 +113,7 @@ export function useChat(options: UseChatOptions): UseChat {
   const send = useCallback(
     async (content: string, attachments: Attachment[] = []) => {
       const id = await ensureSession();
-      await consume(
-        (signal) => client.sendMessage(id, { content, attachments }, { signal }),
-        null,
-      );
+      await consume((signal) => client.sendMessage(id, { content, attachments }, { signal }), null);
     },
     [client, consume, ensureSession],
   );
@@ -135,10 +121,7 @@ export function useChat(options: UseChatOptions): UseChat {
   const edit = useCallback(
     async (messageId: string, content: string) => {
       const id = await ensureSession();
-      await consume(
-        (signal) => client.editMessage(id, messageId, content, { signal }),
-        messageId,
-      );
+      await consume((signal) => client.editMessage(id, messageId, content, { signal }), messageId);
     },
     [client, consume, ensureSession],
   );
@@ -147,9 +130,7 @@ export function useChat(options: UseChatOptions): UseChat {
     async (messageId: string, emoji: string) => {
       const id = await ensureSession();
       const updated = await client.react(id, messageId, emoji);
-      setMessages((prev) =>
-        prev.map((m) => (m.id === updated.id ? updated : m)),
-      );
+      setMessages((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
     },
     [client, ensureSession],
   );

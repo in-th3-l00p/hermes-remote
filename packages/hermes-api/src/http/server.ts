@@ -33,9 +33,7 @@ function appendSafely(path: string, line: string): void {
   }
 }
 
-export async function startServer(
-  options: StartServerOptions,
-): Promise<RunningServer> {
+export async function startServer(options: StartServerOptions): Promise<RunningServer> {
   const now = options.now ?? (() => new Date());
   await mkdir(dirname(options.logPath), { recursive: true });
   const appOptions: AppOptions = { ...options };

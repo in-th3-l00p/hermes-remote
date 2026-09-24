@@ -1,11 +1,6 @@
 export { createApp } from "./http/index.ts";
 export { VERSION } from "./version.ts";
-export type {
-  App,
-  AppOptions,
-  AuditEntry,
-  RouteInfo,
-} from "./http/index.ts";
+export type { App, AppOptions, AuditEntry, RouteInfo } from "./http/index.ts";
 export type { KeyVerifier, Principal } from "./auth/index.ts";
 export { DEFAULT_LIMITS, clientIp, ipInCidr, isValidCidr, normalizeIp } from "./limits/index.ts";
 export type { Limits, RateLimitOptions } from "./limits/index.ts";
@@ -24,11 +19,7 @@ export type {
   SupabaseProviderOptions,
   VerifiedUser,
 } from "./auth/index.ts";
-export {
-  DemoUpstream,
-  HermesUpstream,
-  RunStore,
-} from "./upstream/index.ts";
+export { DemoUpstream, HermesUpstream, RunStore } from "./upstream/index.ts";
 export type {
   HermesUpstreamOptions,
   RunRecord,
@@ -38,12 +29,7 @@ export type {
   UpstreamRuns,
   UpstreamSessions,
 } from "./upstream/index.ts";
-export {
-  BridgeDenied,
-  FakeCliBridge,
-  FsBridge,
-  HermesCliBridge,
-} from "./bridge/index.ts";
+export { BridgeDenied, FakeCliBridge, FsBridge, HermesCliBridge } from "./bridge/index.ts";
 export type { CliBridge, CliResultData, SpawnLike } from "./bridge/index.ts";
 export { ProfileRegistry, profileArgs } from "./profiles/index.ts";
 export type { ProfileInfo } from "./profiles/index.ts";
@@ -56,18 +42,9 @@ export type { GoalGate, GoalState } from "./mgmt/goals.ts";
 export { startServer } from "./http/index.ts";
 export type { RunningServer, StartServerOptions } from "./http/index.ts";
 export { ChatStore } from "./chat/index.ts";
-export type {
-  Attachment,
-  ChatMessage,
-  ChatSession,
-  ChatSessionMeta,
-} from "./chat/index.ts";
+export type { Attachment, ChatMessage, ChatSession, ChatSessionMeta } from "./chat/index.ts";
 export { DemoAgent, HermesAgent, HermesUpstreamError } from "./chat/index.ts";
-export type {
-  AgentBackend,
-  AgentTurnMessage,
-  HermesAgentOptions,
-} from "./chat/index.ts";
+export type { AgentBackend, AgentTurnMessage, HermesAgentOptions } from "./chat/index.ts";
 export { KeyStore } from "./auth/index.ts";
 export type { ApiKeyRecord, CreateKeyInput } from "./auth/index.ts";
 export {

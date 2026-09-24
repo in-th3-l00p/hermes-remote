@@ -57,13 +57,9 @@ describe("chat routes", () => {
     const { app, store } = makeApp();
     const session = store.createSession();
     store.addMessage(session.id, { role: "user", content: "hi" });
-    const res = await app.fetch(
-      new Request(`http://x/v1/sessions/${session.id}/messages`),
-    );
+    const res = await app.fetch(new Request(`http://x/v1/sessions/${session.id}/messages`));
     expect(((await res.json()) as { messages: unknown[] }).messages).toHaveLength(1);
-    const missing = await app.fetch(
-      new Request("http://x/v1/sessions/ffff/messages"),
-    );
+    const missing = await app.fetch(new Request("http://x/v1/sessions/ffff/messages"));
     expect(missing.status).toBe(404);
   });
 
@@ -73,18 +69,14 @@ describe("chat routes", () => {
     const res = await app.fetch(
       post(`/v1/sessions/${session.id}/messages`, {
         content: "hello",
-        attachments: [{ name: "a.png", type: "image/png", dataUrl: "data:image/png;base64,iVBORw0KGgo=" }],
+        attachments: [
+          { name: "a.png", type: "image/png", dataUrl: "data:image/png;base64,iVBORw0KGgo=" },
+        ],
       }),
     );
     expect(res.headers.get("content-type")).toBe("text/event-stream");
     const events = parseSse(await res.text());
-    expect(events.map((e) => e.event)).toEqual([
-      "user",
-      "assistant",
-      "delta",
-      "delta",
-      "done",
-    ]);
+    expect(events.map((e) => e.event)).toEqual(["user", "assistant", "delta", "delta", "done"]);
     const done = events.at(-1)?.data as { content: string; status: string };
     expect(done.content).toBe("echo: hello");
     expect(done.status).toBe("done");
@@ -100,9 +92,7 @@ describe("chat routes", () => {
       { content: "x", attachments: [{ name: "a" }] },
       { content: "x", attachments: "nope" },
     ]) {
-      const res = await app.fetch(
-        post(`/v1/sessions/${session.id}/messages`, body),
-      );
+      const res = await app.fetch(post(`/v1/sessions/${session.id}/messages`, body));
       expect(res.status).toBe(400);
     }
     const badJson = await app.fetch(
@@ -115,7 +105,9 @@ describe("chat routes", () => {
     const emptyWithAttachment = await app.fetch(
       post(`/v1/sessions/${session.id}/messages`, {
         content: "",
-        attachments: [{ name: "a.png", type: "image/png", dataUrl: "data:image/png;base64,iVBORw0KGgo=" }],
+        attachments: [
+          { name: "a.png", type: "image/png", dataUrl: "data:image/png;base64,iVBORw0KGgo=" },
+        ],
       }),
     );
     expect(emptyWithAttachment.status).toBe(200);
@@ -136,23 +128,17 @@ describe("chat routes", () => {
   test("streams an error event when the agent fails", async () => {
     const { app, store } = makeApp(failingAgent);
     const session = store.createSession();
-    const res = await app.fetch(
-      post(`/v1/sessions/${session.id}/messages`, { content: "boom" }),
-    );
+    const res = await app.fetch(post(`/v1/sessions/${session.id}/messages`, { content: "boom" }));
     const events = parseSse(await res.text());
     expect(events.at(-1)?.event).toBe("error");
-    expect((events.at(-1)?.data as { message: string }).message).toBe(
-      "agent exploded",
-    );
+    expect((events.at(-1)?.data as { message: string }).message).toBe("agent exploded");
     expect(store.getSession(session.id)?.messages.at(-1)?.status).toBe("error");
   });
 
   test("edits a message, truncates, and regenerates", async () => {
     const { app, store } = makeApp();
     const session = store.createSession();
-    const first = await app.fetch(
-      post(`/v1/sessions/${session.id}/messages`, { content: "one" }),
-    );
+    const first = await app.fetch(post(`/v1/sessions/${session.id}/messages`, { content: "one" }));
     await first.text();
     const userId = store.getSession(session.id)?.messages[0]?.id as string;
     const res = await app.fetch(
@@ -160,9 +146,7 @@ describe("chat routes", () => {
     );
     const events = parseSse(await res.text());
     expect((events[0]?.data as { content: string }).content).toBe("two");
-    expect((events.at(-1)?.data as { content: string }).content).toBe(
-      "echo: two",
-    );
+    expect((events.at(-1)?.data as { content: string }).content).toBe("echo: two");
     expect(store.getSession(session.id)?.messages).toHaveLength(2);
   });
 
@@ -205,17 +189,11 @@ describe("chat routes", () => {
     const session = store.createSession();
     const raw = (path: string, method: string) =>
       new Request(`http://x${path}`, { method, body: "{" });
+    expect((await app.fetch(raw(`/v1/sessions/${session.id}/messages/ffff`, "PATCH"))).status).toBe(
+      400,
+    );
     expect(
-      (
-        await app.fetch(raw(`/v1/sessions/${session.id}/messages/ffff`, "PATCH"))
-      ).status,
-    ).toBe(400);
-    expect(
-      (
-        await app.fetch(
-          raw(`/v1/sessions/${session.id}/messages/ffff/reactions`, "POST"),
-        )
-      ).status,
+      (await app.fetch(raw(`/v1/sessions/${session.id}/messages/ffff/reactions`, "POST"))).status,
     ).toBe(400);
   });
 
@@ -224,16 +202,12 @@ describe("chat routes", () => {
     const anonymous = store.createSession();
     const owned = store.createSession({ userId: "user-1" });
     const res = await app.fetch(
-      new Request(
-        `http://x/v1/sessions?ids=${anonymous.id},${owned.id},zzz,ffff`,
-      ),
+      new Request(`http://x/v1/sessions?ids=${anonymous.id},${owned.id},zzz,ffff`),
     );
     const body = (await res.json()) as { sessions: { id: string }[] };
     expect(body.sessions.map((s) => s.id)).toEqual([anonymous.id]);
     const empty = await app.fetch(new Request("http://x/v1/sessions"));
-    expect(((await empty.json()) as { sessions: unknown[] }).sessions).toEqual(
-      [],
-    );
+    expect(((await empty.json()) as { sessions: unknown[] }).sessions).toEqual([]);
   });
 
   test("deletes sessions", async () => {
@@ -319,13 +293,9 @@ describe("chat routes", () => {
       app.fetch(post(`/v1/sessions/${session.id}/messages`, { content: "go" })),
     ).then((res) => res.text());
     await new Promise((r) => setTimeout(r, 20));
-    const busy = await app.fetch(
-      post(`/v1/sessions/${session.id}/messages`, { content: "again" }),
-    );
+    const busy = await app.fetch(post(`/v1/sessions/${session.id}/messages`, { content: "again" }));
     expect(busy.status).toBe(409);
-    expect(
-      ((await busy.json()) as { error: { code: string } }).error.code,
-    ).toBe("turn_in_flight");
+    expect(((await busy.json()) as { error: { code: string } }).error.code).toBe("turn_in_flight");
     const firstId = store.getSession(session.id)?.messages[0]?.id ?? "";
     const busyEdit = await app.fetch(
       post(`/v1/sessions/${session.id}/messages/${firstId}`, { content: "edited" }, "PATCH"),
@@ -339,9 +309,7 @@ describe("chat routes", () => {
     ]);
     (release as unknown as () => void)();
     await pending;
-    const after = await app.fetch(
-      post(`/v1/sessions/${session.id}/messages`, { content: "free" }),
-    );
+    const after = await app.fetch(post(`/v1/sessions/${session.id}/messages`, { content: "free" }));
     expect(after.status).toBe(200);
     await after.text();
   });
@@ -387,9 +355,7 @@ describe("chat routes", () => {
     };
     const { app, store, turns } = makeApp(ignoringAgent);
     const session = store.createSession();
-    const res = await app.fetch(
-      post(`/v1/sessions/${session.id}/messages`, { content: "go" }),
-    );
+    const res = await app.fetch(post(`/v1/sessions/${session.id}/messages`, { content: "go" }));
     const reader = (res.body as ReadableStream<Uint8Array>).getReader();
     await reader.read();
     await reader.cancel();
@@ -407,8 +373,14 @@ describe("chat routes", () => {
     const store = new ChatStore(":memory:", () => new Date("2026-08-24T00:00:00Z"));
     const session = store.createSession();
     const record = {
-      id: "k1", name: "scopeless", hash: "h", scopes: [] as string[],
-      userGrantable: [], createdAt: "t", expiresAt: null, revoked: false,
+      id: "k1",
+      name: "scopeless",
+      hash: "h",
+      scopes: [] as string[],
+      userGrantable: [],
+      createdAt: "t",
+      expiresAt: null,
+      revoked: false,
     };
     const app = createApp({
       chat: { store, agent: echoAgent },
@@ -448,23 +420,17 @@ describe("chat routes", () => {
       store.addMessage(session.id, { role: "user", content: `m${i}` });
     }
     const page = await app.fetch(
-      new Request(
-        `http://x/v1/sessions/${session.id}/messages?limit=2&offset=1`,
-      ),
+      new Request(`http://x/v1/sessions/${session.id}/messages?limit=2&offset=1`),
     );
     const body = (await page.json()) as { messages: { content: string }[]; total: number };
     expect(body.total).toBe(5);
     expect(body.messages.map((m) => m.content)).toEqual(["m1", "m2"]);
     const bad = await app.fetch(
-      new Request(
-        `http://x/v1/sessions/${session.id}/messages?limit=-1&offset=x`,
-      ),
+      new Request(`http://x/v1/sessions/${session.id}/messages?limit=-1&offset=x`),
     );
     expect(((await bad.json()) as { messages: unknown[] }).messages).toHaveLength(5);
     const ids = [store.createSession().id, store.createSession().id, session.id];
-    const paged = await app.fetch(
-      new Request(`http://x/v1/sessions?ids=${ids.join(",")}&limit=2`),
-    );
+    const paged = await app.fetch(new Request(`http://x/v1/sessions?ids=${ids.join(",")}&limit=2`));
     expect(((await paged.json()) as { sessions: unknown[] }).sessions).toHaveLength(2);
   });
 
@@ -480,11 +446,8 @@ describe("chat routes", () => {
     expect((await app.fetch(post(path, { content: "toolong" }))).status).toBe(400);
     const attachment = { name: "a", type: "t", dataUrl: "x" };
     expect(
-      (
-        await app.fetch(
-          post(path, { content: "ok", attachments: [attachment, attachment] }),
-        )
-      ).status,
+      (await app.fetch(post(path, { content: "ok", attachments: [attachment, attachment] })))
+        .status,
     ).toBe(400);
     expect(
       (
@@ -498,11 +461,7 @@ describe("chat routes", () => {
     ).toBe(400);
     const user = store.addMessage(session.id, { role: "user", content: "a" });
     expect(
-      (
-        await app.fetch(
-          post(`${path}/${user?.id}`, { content: "toolong" }, "PATCH"),
-        )
-      ).status,
+      (await app.fetch(post(`${path}/${user?.id}`, { content: "toolong" }, "PATCH"))).status,
     ).toBe(400);
   });
 

@@ -36,9 +36,7 @@ function parseBlock(block: string): SseEvent | null {
   }
 }
 
-export async function* parseSse(
-  body: ReadableStream<Uint8Array>,
-): AsyncIterable<SseEvent> {
+export async function* parseSse(body: ReadableStream<Uint8Array>): AsyncIterable<SseEvent> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";

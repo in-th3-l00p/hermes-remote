@@ -64,9 +64,7 @@ describe("DemoUpstream runs", () => {
     const runId = created.id;
     expect(created.status).toBe("completed");
     expect(created.input).toBe("do a thing");
-    expect(((await upstream.runs.create({ input: "x" })) as { id: string }).id).not.toBe(
-      runId,
-    );
+    expect(((await upstream.runs.create({ input: "x" })) as { id: string }).id).not.toBe(runId);
     expect(await upstream.runs.get(runId)).toMatchObject({ id: runId });
     expect(await upstream.runs.steer(runId, { text: "left" })).toMatchObject({
       id: runId,
@@ -121,9 +119,9 @@ describe("DemoUpstream jobs", () => {
       jobs: [expect.objectContaining({ id: "job_1", name: "sweep", paused: false })],
     });
     expect(await upstream.jobs.get("job_1")).toMatchObject({ name: "sweep" });
-    expect(
-      await upstream.jobs.update("job_1", { name: "sweep2" }),
-    ).toMatchObject({ name: "sweep2" });
+    expect(await upstream.jobs.update("job_1", { name: "sweep2" })).toMatchObject({
+      name: "sweep2",
+    });
     expect(await upstream.jobs.pause("job_1")).toMatchObject({ paused: true });
     expect(await upstream.jobs.resume("job_1")).toMatchObject({ paused: false });
     expect(await upstream.jobs.trigger("job_1")).toMatchObject({ runs: 1 });

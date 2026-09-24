@@ -7,12 +7,7 @@ afterAll(async () => {
   await GlobalRegistrator.unregister();
 });
 import { act, renderHook, waitFor } from "@testing-library/react";
-import {
-  useRunEvents,
-  useRuns,
-  type RunEventsClientLike,
-  type RunsClientLike,
-} from "./index.ts";
+import { useRunEvents, useRuns, type RunEventsClientLike, type RunsClientLike } from "./index.ts";
 
 describe("useRuns", () => {
   test("lists, creates, and refreshes runs", async () => {
@@ -67,9 +62,7 @@ describe("useRunEvents", () => {
           })(),
       },
     };
-    const { result } = renderHook(() =>
-      useRunEvents({ client, runId: "r1" }),
-    );
+    const { result } = renderHook(() => useRunEvents({ client, runId: "r1" }));
     await waitFor(() => expect(result.current.done).toBe(true));
     expect(result.current.events).toEqual([
       { event: "run.started", data: { id: "r1" } },
@@ -99,9 +92,7 @@ describe("useRunEvents", () => {
     await waitFor(() => expect(result.current.events).toHaveLength(1));
     rerender({ runId: "r2" });
     await waitFor(() =>
-      expect(result.current.events).toEqual([
-        { event: "run.started", data: { id: "r2" } },
-      ]),
+      expect(result.current.events).toEqual([{ event: "run.started", data: { id: "r2" } }]),
     );
     expect(seen).toEqual(["r1", "r2"]);
   });
@@ -116,9 +107,7 @@ describe("useRunEvents", () => {
           })(),
       },
     };
-    const { result } = renderHook(() =>
-      useRunEvents({ client, runId: "r1" }),
-    );
+    const { result } = renderHook(() => useRunEvents({ client, runId: "r1" }));
     await waitFor(() => expect(result.current.error).toBe("stream broke"));
     expect(result.current.done).toBe(false);
   });
@@ -139,9 +128,7 @@ describe("useRunEvents", () => {
           })(),
       },
     };
-    const { result, unmount } = renderHook(() =>
-      useRunEvents({ client, runId: "r1" }),
-    );
+    const { result, unmount } = renderHook(() => useRunEvents({ client, runId: "r1" }));
     await waitFor(() => expect(result.current.events).toHaveLength(1));
     unmount();
     await waitFor(() => expect(aborted).toBe(true));

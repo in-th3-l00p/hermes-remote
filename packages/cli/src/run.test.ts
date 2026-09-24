@@ -10,6 +10,30 @@ describe("usage", () => {
     expect((await runCli(["--help"], ctx)).output).toContain("Commands:");
   });
 
+  test("help documents every config.json setting and keys create --profile", async () => {
+    const { ctx } = await makeCtx();
+    const { output } = await runCli(["help"], ctx);
+    // Settings with a serve flag appear as the flag; the rest by their config.json name.
+    for (const option of [
+      "--port",
+      "--host",
+      "--cors",
+      "--trust-proxy",
+      "--anonymous",
+      "--upstream",
+      "--upstream-key",
+      "--model",
+      "--rate-limit",
+      '"auth"',
+      '"hermesBinary"',
+      '"profileHomes"',
+      '"commandRelay"',
+    ]) {
+      expect(output).toContain(option);
+    }
+    expect(output).toContain("[--profile <name>]");
+  });
+
   test("unknown command fails", async () => {
     const { ctx } = await makeCtx();
     const result = await runCli(["bogus"], ctx);

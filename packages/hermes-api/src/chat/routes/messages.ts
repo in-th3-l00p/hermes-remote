@@ -98,44 +98,41 @@ export function registerMessageRoutes(
     return streamTurn(options, sessionId, edited, principal);
   });
 
-  app.post(
-    "/v1/sessions/:id{[0-9a-f]+}/messages/:mid{[0-9a-f]+}/reactions",
-    async (c) => {
-      const principal = c.get("principal");
-      const denied = requireScope(principal, "sessions:write");
-      if (denied !== null) {
-        return denied;
-      }
-      const sessionId = c.req.param("id");
-      const session = store.getSession(sessionId);
-      if (session === null || !canAccess(session, principal, "write")) {
-        return error(404, "session_not_found", "Unknown session");
-      }
-      const body = (await c.req.json().catch(() => null)) as {
-        emoji?: unknown;
-      } | null;
-      if (
-        body === null ||
-        typeof body.emoji !== "string" ||
-        body.emoji === "" ||
-        body.emoji.length > MAX_REACTION_CHARS ||
-        /[\s\u0000-\u001f]/.test(body.emoji)
-      ) {
-        return error(400, "invalid_reaction", "emoji must be a short string without spaces");
-      }
-      const target = session.messages.find((m) => m.id === c.req.param("mid"));
-      if (
-        target !== undefined &&
-        target.reactions[body.emoji] === undefined &&
-        Object.keys(target.reactions).length >= MAX_REACTIONS_PER_MESSAGE
-      ) {
-        return error(400, "invalid_reaction", "Too many distinct reactions on this message");
-      }
-      const message = store.toggleReaction(sessionId, c.req.param("mid"), body.emoji);
-      if (message === null) {
-        return error(404, "message_not_found", "Unknown message");
-      }
-      return json(200, message);
-    },
-  );
+  app.post("/v1/sessions/:id{[0-9a-f]+}/messages/:mid{[0-9a-f]+}/reactions", async (c) => {
+    const principal = c.get("principal");
+    const denied = requireScope(principal, "sessions:write");
+    if (denied !== null) {
+      return denied;
+    }
+    const sessionId = c.req.param("id");
+    const session = store.getSession(sessionId);
+    if (session === null || !canAccess(session, principal, "write")) {
+      return error(404, "session_not_found", "Unknown session");
+    }
+    const body = (await c.req.json().catch(() => null)) as {
+      emoji?: unknown;
+    } | null;
+    if (
+      body === null ||
+      typeof body.emoji !== "string" ||
+      body.emoji === "" ||
+      body.emoji.length > MAX_REACTION_CHARS ||
+      /[\s\u0000-\u001f]/.test(body.emoji)
+    ) {
+      return error(400, "invalid_reaction", "emoji must be a short string without spaces");
+    }
+    const target = session.messages.find((m) => m.id === c.req.param("mid"));
+    if (
+      target !== undefined &&
+      target.reactions[body.emoji] === undefined &&
+      Object.keys(target.reactions).length >= MAX_REACTIONS_PER_MESSAGE
+    ) {
+      return error(400, "invalid_reaction", "Too many distinct reactions on this message");
+    }
+    const message = store.toggleReaction(sessionId, c.req.param("mid"), body.emoji);
+    if (message === null) {
+      return error(404, "message_not_found", "Unknown message");
+    }
+    return json(200, message);
+  });
 }

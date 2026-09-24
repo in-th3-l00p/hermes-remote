@@ -10,18 +10,13 @@ import {
 import { USAGE, fail, ok, type CliResult } from "../context.ts";
 
 function describeKey(record: ApiKeyRecord, now: Date): string {
-  const expired =
-    record.expiresAt !== null && Date.parse(record.expiresAt) <= now.getTime();
+  const expired = record.expiresAt !== null && Date.parse(record.expiresAt) <= now.getTime();
   const state = record.revoked ? "revoked" : expired ? "expired" : "active";
   const scopes = record.scopes.join(",") || "(none)";
   return `${record.id}  ${record.name}  ${state}  scopes=${scopes}`;
 }
 
-export async function keysCommand(
-  args: string[],
-  store: KeyStore,
-  now: Date,
-): Promise<CliResult> {
+export async function keysCommand(args: string[], store: KeyStore, now: Date): Promise<CliResult> {
   const parsed = parseArgs(args);
   const action = parsed.positionals[0];
 
@@ -45,17 +40,11 @@ export async function keysCommand(
     }
     const dangerous = scopes.filter(isDangerousScope);
     if (dangerous.length > 0 && flag(parsed, "dangerous") !== "true") {
-      return fail(
-        `dangerous scopes (${dangerous.join(", ")}) require --dangerous`,
-      );
+      return fail(`dangerous scopes (${dangerous.join(", ")}) require --dangerous`);
     }
-    const invalidGrantable = userGrantable.filter(
-      (s) => !isUserGrantableScope(s),
-    );
+    const invalidGrantable = userGrantable.filter((s) => !isUserGrantableScope(s));
     if (invalidGrantable.length > 0) {
-      return fail(
-        `--user-grantable accepts tier-1 scopes only: ${invalidGrantable.join(", ")}`,
-      );
+      return fail(`--user-grantable accepts tier-1 scopes only: ${invalidGrantable.join(", ")}`);
     }
     const expires = flag(parsed, "expires");
     let expiresAt: Date | undefined;
@@ -113,9 +102,7 @@ export async function keysCommand(
     }
     if (action === "revoke") {
       const record = await store.revoke(id);
-      return record === null
-        ? fail(`no such key: ${id}`)
-        : ok(`revoked key ${id}`);
+      return record === null ? fail(`no such key: ${id}`) : ok(`revoked key ${id}`);
     }
     if (action === "rotate") {
       const rotated = await store.rotate(id);
@@ -136,19 +123,13 @@ export async function keysCommand(
     if (action === "grant") {
       const dangerous = scopes.filter(isDangerousScope);
       if (dangerous.length > 0 && flag(parsed, "dangerous") !== "true") {
-        return fail(
-          `dangerous scopes (${dangerous.join(", ")}) require --dangerous`,
-        );
+        return fail(`dangerous scopes (${dangerous.join(", ")}) require --dangerous`);
       }
       const record = await store.grantScopes(id, scopes);
-      return record === null
-        ? fail(`no such key: ${id}`)
-        : ok(describeKey(record, now));
+      return record === null ? fail(`no such key: ${id}`) : ok(describeKey(record, now));
     }
     const record = await store.ungrantScopes(id, scopes);
-    return record === null
-      ? fail(`no such key: ${id}`)
-      : ok(describeKey(record, now));
+    return record === null ? fail(`no such key: ${id}`) : ok(describeKey(record, now));
   }
 
   return fail(`unknown keys action: ${action ?? "(none)"}\n\n${USAGE}`);

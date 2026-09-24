@@ -11,7 +11,10 @@ type Schemas = components["schemas"];
 const message: Same<ChatMessage, Schemas["ChatMessage"]> = true;
 const whoami: Same<WhoAmI, Schemas["WhoAmI"]> = true;
 // Older servers may omit keyId/archived, so the client marks them optional.
-const session: Same<Required<Pick<ChatSession, "keyId" | "archived">> & Omit<ChatSession, "keyId" | "archived">, Schemas["ChatSession"]> = true;
+const session: Same<
+  Required<Pick<ChatSession, "keyId" | "archived">> & Omit<ChatSession, "keyId" | "archived">,
+  Schemas["ChatSession"]
+> = true;
 
 describe("generated OpenAPI types", () => {
   test("match the hand-written client types", () => {

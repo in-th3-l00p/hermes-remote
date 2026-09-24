@@ -27,9 +27,7 @@ export function narrowChatEvent(event: SseEvent): ChatEvent | null {
         ? { event: "assistant", data: { id: data.id } }
         : null;
     case "delta":
-      return isRecord(data) &&
-        typeof data.id === "string" &&
-        typeof data.text === "string"
+      return isRecord(data) && typeof data.id === "string" && typeof data.text === "string"
         ? { event: "delta", data: { id: data.id, text: data.text } }
         : null;
     case "error": {

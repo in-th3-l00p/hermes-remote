@@ -39,11 +39,7 @@ export interface UpstreamSessions {
   messages(id: string): Promise<unknown>;
   fork(id: string, body: unknown): Promise<unknown>;
   chat(id: string, body: unknown): Promise<unknown>;
-  chatStream(
-    id: string,
-    body: unknown,
-    signal?: AbortSignal,
-  ): Promise<ReadableStream<Uint8Array>>;
+  chatStream(id: string, body: unknown, signal?: AbortSignal): Promise<ReadableStream<Uint8Array>>;
   modelLock(id: string, body: unknown): Promise<unknown>;
 }
 
@@ -54,10 +50,5 @@ export interface Upstream {
   jobs: UpstreamJobs;
   sessions: UpstreamSessions;
   /** Verbatim request to the upstream; the Response comes back untouched. */
-  raw(
-    method: string,
-    path: string,
-    body?: unknown,
-    signal?: AbortSignal,
-  ): Promise<Response>;
+  raw(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<Response>;
 }

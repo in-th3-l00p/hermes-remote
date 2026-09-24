@@ -47,10 +47,7 @@ function sampleValues(spec: CliRouteSpec): Record<string, string> {
 }
 
 function samplePath(spec: CliRouteSpec, values: Record<string, string>): string {
-  let path = spec.path.replace(
-    /:(\w+)(\{[^}]*\})?/g,
-    (_m, name: string) => values[name] ?? "x",
-  );
+  let path = spec.path.replace(/:(\w+)(\{[^}]*\})?/g, (_m, name: string) => values[name] ?? "x");
   const query = (spec.params ?? [])
     .filter((p) => p.from === "query")
     .map((p) => `${p.name}=${values[p.name]}`)
@@ -93,16 +90,12 @@ describe("management catalog", () => {
       good.on(expected.join(" "), { stdout: `done:${spec.path}` });
       const app = makeApp(good, keyStore([spec.scope]));
       const res = await app.fetch(sampleRequest(spec, values, "hk_good"));
-      expect(`${spec.method} ${spec.path} ${res.status}`).toBe(
-        `${spec.method} ${spec.path} 200`,
-      );
+      expect(`${spec.method} ${spec.path} ${res.status}`).toBe(`${spec.method} ${spec.path} 200`);
       expect(await res.json()).toEqual({ ok: true, raw: `done:${spec.path}` });
       expect(good.calls.at(-1)).toEqual(expected);
 
       const denied = makeApp(good, keyStore(["sessions:search"]));
-      expect(
-        (await denied.fetch(sampleRequest(spec, values, "hk_good"))).status,
-      ).toBe(403);
+      expect((await denied.fetch(sampleRequest(spec, values, "hk_good"))).status).toBe(403);
 
       const failing = new FakeCliBridge({
         "profile list": { stdout: PROFILE_TABLE },
@@ -121,10 +114,7 @@ describe("management catalog", () => {
       "send --to telegram:ops hello": { stdout: "sent" },
       "insights --days 7": { stdout: "usage" },
     });
-    const app = makeApp(
-      fake,
-      keyStore(["config:write", "messaging:send", "insights:read"]),
-    );
+    const app = makeApp(fake, keyStore(["config:write", "messaging:send", "insights:read"]));
     const put = await app.fetch(
       new Request("http://x/v1/config/model.name", {
         method: "PUT",
@@ -247,9 +237,7 @@ describe("management catalog", () => {
       const res = await app.fetch(new Request(`http://x${path}`));
       expect(res.status).toBe(403);
     }
-    const prune = await app.fetch(
-      new Request("http://x/v1/checkpoints/prune", { method: "POST" }),
-    );
+    const prune = await app.fetch(new Request("http://x/v1/checkpoints/prune", { method: "POST" }));
     expect(prune.status).toBe(403);
     expect(fake.calls).toEqual([]);
   });
@@ -423,11 +411,7 @@ describe("management catalog", () => {
     ).toBe(502);
     const anonymous = makeApp(fake, undefined, true);
     expect(
-      (
-        await anonymous.fetch(
-          new Request("http://x/v1/backups", { method: "POST" }),
-        )
-      ).status,
+      (await anonymous.fetch(new Request("http://x/v1/backups", { method: "POST" }))).status,
     ).toBe(403);
   });
 });

@@ -6,7 +6,9 @@ type Labels = Record<string, string>;
 // Sorted so the same labels given in any order map to one series.
 const key = (labels: Labels): string =>
   Object.entries(labels)
-    .map(([k, v]) => `${k}="${v.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n")}"`)
+    .map(
+      ([k, v]) => `${k}="${v.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n")}"`,
+    )
     .sort()
     .join(",");
 
