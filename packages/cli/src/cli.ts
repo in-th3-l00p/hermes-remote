@@ -15,8 +15,7 @@ import {
   startServer,
 } from "@intheloop-studio/hermes-remote";
 
-const homeDir =
-  process.env["HERMES_REMOTE_HOME"] ?? join(homedir(), ".hermes-remote");
+const homeDir = process.env["HERMES_REMOTE_HOME"] ?? join(homedir(), ".hermes-remote");
 
 const ctx: CliContext = {
   homeDir,
@@ -27,16 +26,11 @@ const ctx: CliContext = {
   env: process.env,
   which: (name) => Bun.which(name),
   serve: (request) => {
-    const authProvider = createAuthProvider(
-      request.auth ?? { provider: "none" },
-    );
+    const authProvider = createAuthProvider(request.auth ?? { provider: "none" });
     const upstream =
-      request.upstream === null
-        ? new DemoUpstream()
-        : new HermesUpstream(request.upstream);
+      request.upstream === null ? new DemoUpstream() : new HermesUpstream(request.upstream);
     const cli = new HermesCliBridge({ binary: request.hermesBinary });
-    const hermesHome =
-      process.env["HERMES_HOME"] ?? join(homedir(), ".hermes");
+    const hermesHome = process.env["HERMES_HOME"] ?? join(homedir(), ".hermes");
     const profileHome = (name: string): string =>
       request.profileHomes[name] ?? join(hermesHome, "profiles", name);
     return startServer({
@@ -55,8 +49,7 @@ const ctx: CliContext = {
       management: {
         cli,
         profiles: new ProfileRegistry({ cli, homeFor: profileHome }),
-        homeFor: (profile) =>
-          profile === null ? hermesHome : profileHome(profile),
+        homeFor: (profile) => (profile === null ? hermesHome : profileHome(profile)),
       },
       users: {
         store: new UserStore(join(homeDir, "users.db")),

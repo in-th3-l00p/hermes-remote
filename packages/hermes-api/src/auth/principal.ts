@@ -75,10 +75,7 @@ export async function authenticate(
       return denial(401, "unauthorized", "Invalid or revoked API key");
     }
     const cidrs = record.cidrs ?? [];
-    if (
-      cidrs.length > 0 &&
-      (clientIp === undefined || !cidrs.some((c) => ipInCidr(clientIp, c)))
-    ) {
+    if (cidrs.length > 0 && (clientIp === undefined || !cidrs.some((c) => ipInCidr(clientIp, c)))) {
       return denial(401, "unauthorized", "API key not allowed from this address");
     }
     return { type: "api_key", record };

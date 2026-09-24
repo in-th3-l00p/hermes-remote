@@ -28,10 +28,7 @@ async function resolveParams(
     } else if (p.from === "query") {
       value = c.req.query(p.name);
     } else {
-      parsedBody ??= (await c.req.json().catch(() => null)) as Record<
-        string,
-        unknown
-      > | null;
+      parsedBody ??= (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
       value = parsedBody?.[p.name];
     }
     if (value === undefined || value === null || value === "") {
@@ -52,10 +49,7 @@ async function resolveParams(
   return values;
 }
 
-export function buildArgv(
-  spec: CliRouteSpec,
-  values: Record<string, string>,
-): string[] {
+export function buildArgv(spec: CliRouteSpec, values: Record<string, string>): string[] {
   const argv = spec.argv.map((token) =>
     token.replace(/\{(\w+)\}/g, (_, name: string) => values[name] ?? ""),
   );
@@ -90,10 +84,7 @@ function cliHandler(spec: CliRouteSpec, options: ManagementOptions) {
   };
 }
 
-export function registerMgmtRoutes(
-  app: Hono<ChatEnv>,
-  options: ManagementOptions,
-): void {
+export function registerMgmtRoutes(app: Hono<ChatEnv>, options: ManagementOptions): void {
   for (const spec of MGMT_ROUTES) {
     app[spec.method](spec.path, cliHandler(spec, options));
   }

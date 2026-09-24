@@ -27,21 +27,13 @@ export {
 } from "./use-management.ts";
 export type { CliResultLike } from "./use-management.ts";
 export { useInsights, useSession, useSkillHub } from "./use-queries.ts";
-export type {
-  InsightsClientLike,
-  SessionClientLike,
-  SkillHubClientLike,
-} from "./use-queries.ts";
+export type { InsightsClientLike, SessionClientLike, SkillHubClientLike } from "./use-queries.ts";
 export { useGoal } from "./use-goal.ts";
 export type { GoalClientLike, UseGoal } from "./use-goal.ts";
 export { useEvents } from "./use-events.ts";
 export type { EventsClientLike, UseEvents } from "./use-events.ts";
 export { useAgentInfo } from "./use-agent-info.ts";
-export type {
-  AgentInfoClientLike,
-  UseAgentInfo,
-  UseAgentInfoOptions,
-} from "./use-agent-info.ts";
+export type { AgentInfoClientLike, UseAgentInfo, UseAgentInfoOptions } from "./use-agent-info.ts";
 export { useRunEvents, useRuns } from "./use-runs.ts";
 export type {
   RunEventsClientLike,

@@ -60,12 +60,7 @@ export type Scope =
   | (typeof TIER3_SCOPES)[number]
   | (typeof AUTH_SCOPES)[number];
 
-const ALL = new Set<string>([
-  ...TIER1_SCOPES,
-  ...TIER2_SCOPES,
-  ...TIER3_SCOPES,
-  ...AUTH_SCOPES,
-]);
+const ALL = new Set<string>([...TIER1_SCOPES, ...TIER2_SCOPES, ...TIER3_SCOPES, ...AUTH_SCOPES]);
 
 /**
  * Scopes held implicitly by user and anonymous principals: chat, their own

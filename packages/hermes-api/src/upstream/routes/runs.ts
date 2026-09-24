@@ -3,12 +3,7 @@ import type { Hono } from "hono";
 import { principalKey } from "../../auth/index.ts";
 import { error, json, requireScope, type ChatEnv } from "../../chat/routes/shared.ts";
 import { injectRunIdentity } from "../identity.ts";
-import {
-  denyUnownedRun,
-  proxy,
-  upstreamFailure,
-  type UpstreamRouteOptions,
-} from "./shared.ts";
+import { denyUnownedRun, proxy, upstreamFailure, type UpstreamRouteOptions } from "./shared.ts";
 
 function createdRunId(created: unknown): string | null {
   const body = created as { id?: unknown; run_id?: unknown };
@@ -24,10 +19,7 @@ function createdRunId(created: unknown): string | null {
 /** Serialized size cap for a run's input; runs go to a paid upstream model. */
 const MAX_RUN_INPUT = 100_000;
 
-export function registerRunRoutes(
-  app: Hono<ChatEnv>,
-  options: UpstreamRouteOptions,
-): void {
+export function registerRunRoutes(app: Hono<ChatEnv>, options: UpstreamRouteOptions): void {
   const { runs } = options.upstream;
   const { runStore } = options;
 
@@ -76,16 +68,12 @@ export function registerRunRoutes(
   });
 
   app.get("/v1/runs/:id", (c) => {
-    const denied =
-      requireScope(c.get("principal"), "chat:invoke") ??
-      denyUnownedRun(c, runStore);
+    const denied = requireScope(c.get("principal"), "chat:invoke") ?? denyUnownedRun(c, runStore);
     return denied ?? proxy(() => runs.get(c.req.param("id")));
   });
 
   app.get("/v1/runs/:id/events", async (c) => {
-    const denied =
-      requireScope(c.get("principal"), "chat:invoke") ??
-      denyUnownedRun(c, runStore);
+    const denied = requireScope(c.get("principal"), "chat:invoke") ?? denyUnownedRun(c, runStore);
     if (denied !== null) {
       return denied;
     }
@@ -100,9 +88,7 @@ export function registerRunRoutes(
   });
 
   app.post("/v1/runs/:id/stop", (c) => {
-    const denied =
-      requireScope(c.get("principal"), "chat:invoke") ??
-      denyUnownedRun(c, runStore);
+    const denied = requireScope(c.get("principal"), "chat:invoke") ?? denyUnownedRun(c, runStore);
     if (denied !== null) {
       return denied;
     }
@@ -111,9 +97,7 @@ export function registerRunRoutes(
   });
 
   app.post("/v1/runs/:id/steer", async (c) => {
-    const denied =
-      requireScope(c.get("principal"), "chat:invoke") ??
-      denyUnownedRun(c, runStore);
+    const denied = requireScope(c.get("principal"), "chat:invoke") ?? denyUnownedRun(c, runStore);
     if (denied !== null) {
       return denied;
     }
@@ -122,9 +106,7 @@ export function registerRunRoutes(
   });
 
   app.post("/v1/runs/:id/approval", async (c) => {
-    const denied =
-      requireScope(c.get("principal"), "chat:invoke") ??
-      denyUnownedRun(c, runStore);
+    const denied = requireScope(c.get("principal"), "chat:invoke") ?? denyUnownedRun(c, runStore);
     if (denied !== null) {
       return denied;
     }

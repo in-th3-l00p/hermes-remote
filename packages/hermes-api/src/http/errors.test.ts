@@ -37,9 +37,7 @@ function throwingApp(cause: unknown) {
 
 describe("error envelope", () => {
   test("upstream errors that escape a route become 502 upstream_error", async () => {
-    const res = await throwingApp(new HermesUpstreamError(504, "slow")).fetch(
-      get("/v1/models"),
-    );
+    const res = await throwingApp(new HermesUpstreamError(504, "slow")).fetch(get("/v1/models"));
     // proxy() maps this itself; a raw escape goes through onError the same way.
     expect(res.status).toBe(502);
     expect(await res.json()).toEqual({
@@ -70,15 +68,13 @@ describe("error envelope", () => {
       }),
     );
     expect(res.status).toBe(502);
-    expect(((await res.json()) as { error: { code: string } }).error.code).toBe(
-      "upstream_error",
-    );
+    expect(((await res.json()) as { error: { code: string } }).error.code).toBe("upstream_error");
   });
 
   test("a body cut off by the server's size cap is 413", async () => {
-    const res = await throwingApp(
-      new Error("Request body exceeded maxRequestBodySize"),
-    ).fetch(get("/v1/models"));
+    const res = await throwingApp(new Error("Request body exceeded maxRequestBodySize")).fetch(
+      get("/v1/models"),
+    );
     expect(res.status).toBe(413);
   });
 
@@ -132,8 +128,6 @@ describe("error envelope", () => {
     });
     const res = await app.fetch(get("/v1/agent/status"));
     expect(res.status).toBe(503);
-    expect(((await res.json()) as { error: { code: string } }).error.code).toBe(
-      "cli_unavailable",
-    );
+    expect(((await res.json()) as { error: { code: string } }).error.code).toBe("cli_unavailable");
   });
 });

@@ -33,20 +33,20 @@ export class Conversation {
     input: string | SendMessageInput,
     options: ConversationSendOptions = {},
   ): AsyncIterable<ChatEvent> {
-    const conversation = this;
     const message: SendMessageInput = typeof input === "string" ? { content: input } : input;
     const attachments = options.attachments ?? message.attachments;
-    return (async function* () {
-      conversation.sessionId ??= (await conversation.client.createSession()).id;
-      yield* conversation.client.sendMessage(
-        conversation.sessionId,
-        {
-          content: message.content,
-          ...(attachments === undefined ? {} : { attachments }),
-        },
-        options.signal === undefined ? {} : { signal: options.signal },
-      );
-    })();
+    return this.#stream(
+      { content: message.content, ...(attachments === undefined ? {} : { attachments }) },
+      options.signal,
+    );
+  }
+
+  async *#stream(
+    message: SendMessageInput,
+    signal: AbortSignal | undefined,
+  ): AsyncIterable<ChatEvent> {
+    this.sessionId ??= (await this.client.createSession()).id;
+    yield* this.client.sendMessage(this.sessionId, message, signal === undefined ? {} : { signal });
   }
 
   edit(

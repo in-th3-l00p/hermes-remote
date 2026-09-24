@@ -1,14 +1,12 @@
-import { isValidCidr, type AuthProviderConfig, type KeyStore } from "@intheloop-studio/hermes-remote";
+import {
+  isValidCidr,
+  type AuthProviderConfig,
+  type KeyStore,
+} from "@intheloop-studio/hermes-remote";
 import { flag, flagAll, parseArgs, type ParsedArgs } from "../args.ts";
 import { loadConfig, type ConfigFile } from "../config.ts";
 import { loadSigningSecret } from "../signing.ts";
-import {
-  fail,
-  ok,
-  type CliContext,
-  type CliResult,
-  type ServeRequest,
-} from "../context.ts";
+import { fail, ok, type CliContext, type CliResult, type ServeRequest } from "../context.ts";
 
 function supabaseAuth(
   url: string | undefined,
@@ -31,10 +29,7 @@ function resolveAuth(
   env: Record<string, string | undefined>,
   config: ConfigFile,
 ): AuthProviderConfig | null {
-  const fromFlags = supabaseAuth(
-    flag(parsed, "supabase-url"),
-    flag(parsed, "supabase-jwt-secret"),
-  );
+  const fromFlags = supabaseAuth(flag(parsed, "supabase-url"), flag(parsed, "supabase-jwt-secret"));
   if (fromFlags !== null) {
     return fromFlags;
   }
@@ -49,9 +44,7 @@ function resolveAuth(
     return fromLegacy;
   }
   const clerkSecretKey = env["CLERK_SECRET_KEY"];
-  return clerkSecretKey === undefined
-    ? null
-    : { provider: "clerk", secretKey: clerkSecretKey };
+  return clerkSecretKey === undefined ? null : { provider: "clerk", secretKey: clerkSecretKey };
 }
 
 export interface ServePaths {
@@ -78,24 +71,15 @@ export async function serveCommand(
   }
   const host = flag(parsed, "host") ?? config.host ?? "127.0.0.1";
   const upstreamUrl =
-    flag(parsed, "upstream") ??
-    ctx.env["HERMES_UPSTREAM_URL"] ??
-    config.upstreamUrl;
+    flag(parsed, "upstream") ?? ctx.env["HERMES_UPSTREAM_URL"] ?? config.upstreamUrl;
   const upstreamKey =
-    flag(parsed, "upstream-key") ??
-    ctx.env["HERMES_UPSTREAM_KEY"] ??
-    config.upstreamKey;
+    flag(parsed, "upstream-key") ?? ctx.env["HERMES_UPSTREAM_KEY"] ?? config.upstreamKey;
   let upstream: ServeRequest["upstream"] = null;
   if (upstreamUrl !== undefined) {
     if (upstreamKey === undefined) {
-      return fail(
-        "an upstream requires a key: pass --upstream-key or set HERMES_UPSTREAM_KEY",
-      );
+      return fail("an upstream requires a key: pass --upstream-key or set HERMES_UPSTREAM_KEY");
     }
-    const model =
-      flag(parsed, "model") ??
-      ctx.env["HERMES_UPSTREAM_MODEL"] ??
-      config.upstreamModel;
+    const model = flag(parsed, "model") ?? ctx.env["HERMES_UPSTREAM_MODEL"] ?? config.upstreamModel;
     upstream = {
       baseUrl: upstreamUrl,
       apiKey: upstreamKey,
@@ -119,8 +103,7 @@ export async function serveCommand(
       store: paths.store,
       logPath: paths.logPath,
       auditPath: paths.auditPath,
-      anonymous:
-        flag(parsed, "anonymous") === "true" || config.anonymous === true,
+      anonymous: flag(parsed, "anonymous") === "true" || config.anonymous === true,
       corsOrigins: corsFlags.length > 0 ? corsFlags : (config.cors ?? []),
       trustProxy,
       auth: resolveAuth(parsed, ctx.env, config),

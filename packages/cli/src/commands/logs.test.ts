@@ -13,16 +13,9 @@ describe("logs", () => {
   test("tails the log file", async () => {
     const { ctx } = await makeCtx();
     await mkdir(join(ctx.homeDir, "logs"), { recursive: true });
-    await writeFile(
-      join(ctx.homeDir, "logs", "server.log"),
-      "one\ntwo\nthree\n",
-    );
+    await writeFile(join(ctx.homeDir, "logs", "server.log"), "one\ntwo\nthree\n");
     expect((await runCli(["logs"], ctx)).output).toBe("one\ntwo\nthree");
-    expect((await runCli(["logs", "--tail", "2"], ctx)).output).toBe(
-      "two\nthree",
-    );
-    expect((await runCli(["logs", "--tail", "-1"], ctx)).output).toContain(
-      "invalid --tail: -1",
-    );
+    expect((await runCli(["logs", "--tail", "2"], ctx)).output).toBe("two\nthree");
+    expect((await runCli(["logs", "--tail", "-1"], ctx)).output).toContain("invalid --tail: -1");
   });
 });

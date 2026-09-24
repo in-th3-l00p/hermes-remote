@@ -39,8 +39,7 @@ function toGates(value: unknown): GoalGate[] {
     const record = asObject(gate) ?? {};
     return {
       command: typeof record["command"] === "string" ? record["command"] : "",
-      passing:
-        typeof record["passing"] === "boolean" ? record["passing"] : null,
+      passing: typeof record["passing"] === "boolean" ? record["passing"] : null,
     };
   });
 }
@@ -61,10 +60,7 @@ export function toGoalState(value: unknown): GoalState {
       ? record["subgoals"].filter((s): s is string => typeof s === "string")
       : [],
     gates: toGates(record["gates"]),
-    turns:
-      typeof used === "number" && typeof max === "number"
-        ? { used, max }
-        : null,
+    turns: typeof used === "number" && typeof max === "number" ? { used, max } : null,
     wait: asObject(record["wait"]),
     verdict: typeof record["verdict"] === "string" ? record["verdict"] : null,
     raw: value,
@@ -84,9 +80,7 @@ export class GoalStore {
     }
     try {
       const row = db
-        .query<{ value: string }, [string]>(
-          "SELECT value FROM state_meta WHERE key = ?",
-        )
+        .query<{ value: string }, [string]>("SELECT value FROM state_meta WHERE key = ?")
         .get(`goal:${sessionId}`);
       if (row === null) {
         return null;
@@ -110,10 +104,7 @@ export interface GoalRouteOptions extends CommandRelayOptions {
 
 const SESSION = ":id{[A-Za-z0-9_-]+}";
 
-export function registerGoalRoutes(
-  app: Hono<ChatEnv>,
-  options: GoalRouteOptions,
-): void {
+export function registerGoalRoutes(app: Hono<ChatEnv>, options: GoalRouteOptions): void {
   const store = (c: Context<ChatEnv>): GoalStore =>
     new GoalStore(`${options.management.homeFor(currentProfile(c))}/state.db`);
 
@@ -144,10 +135,7 @@ export function registerGoalRoutes(
     if (body instanceof Response) {
       return body;
     }
-    return relay(
-      c,
-      body.draft === true ? `/goal draft ${body.text}` : `/goal ${body.text}`,
-    );
+    return relay(c, body.draft === true ? `/goal draft ${body.text}` : `/goal ${body.text}`);
   });
 
   app.delete(`/v1/agent/sessions/${SESSION}/goal`, (c) => {

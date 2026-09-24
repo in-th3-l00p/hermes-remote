@@ -118,7 +118,10 @@ export const UserChanges = z.object({
 
 export const TokenExchange = z
   .object({
-    user: UserChanges.extend({ provider: z.string().min(1).max(200), subject: z.string().min(1).max(200) }),
+    user: UserChanges.extend({
+      provider: z.string().min(1).max(200),
+      subject: z.string().min(1).max(200),
+    }),
     scopes: z.array(z.string()).min(1).describe("Must be in the key's user-grantable list"),
     ttl: z.number().int().min(60).max(86_400).default(900),
   })
@@ -128,11 +131,19 @@ export const TokenExchangeResult = z
   .object({ token: z.string(), expires_at: z.string(), user: User })
   .meta({ id: "TokenExchangeResult" });
 
-export const Identity = z.object({ provider: z.string().min(1).max(200), subject: z.string().min(1).max(200) });
+export const Identity = z.object({
+  provider: z.string().min(1).max(200),
+  subject: z.string().min(1).max(200),
+});
 
 export const WhoAmI = z
   .union([
-    z.object({ type: z.literal("api_key"), id: z.string(), name: z.string(), scopes: z.array(z.string()) }),
+    z.object({
+      type: z.literal("api_key"),
+      id: z.string(),
+      name: z.string(),
+      scopes: z.array(z.string()),
+    }),
     z.object({
       type: z.literal("user"),
       id: z.string(),
@@ -145,7 +156,10 @@ export const WhoAmI = z
   .meta({ id: "WhoAmI" });
 
 export const Content = z.object({ content: z.string() });
-export const NamedContent = z.object({ name: z.string().regex(/^[A-Za-z0-9_-]+$/), content: z.string() });
+export const NamedContent = z.object({
+  name: z.string().regex(/^[A-Za-z0-9_-]+$/),
+  content: z.string(),
+});
 export const MemoryEntry = z.object({
   action: z.enum(["add", "replace", "remove"]),
   text: z.string(),
@@ -153,7 +167,10 @@ export const MemoryEntry = z.object({
 });
 export const Text = z.object({ text: z.string().trim().min(1) });
 export const GoalSet = z.object({ text: z.string().trim().min(1), draft: z.boolean().optional() });
-export const GoalWait = z.object({ pid: z.number().int().positive(), reason: z.string().optional() });
+export const GoalWait = z.object({
+  pid: z.number().int().positive(),
+  reason: z.string().optional(),
+});
 export const GateAdd = z.object({ command: z.string().trim().min(1) });
 export const CommandRun = z.object({ command: z.string().startsWith("/").describe("One line") });
 /** A value passed to the hermes CLI: never empty, never flag-like. */
@@ -165,7 +182,10 @@ export const ProfileCreate = z.object({ name: CliArg });
 export const ProfilePatch = z.object({ rename: CliArg.optional(), description: CliArg.optional() });
 export const ProfileInstall = z.object({ source: CliArg });
 export const ToolsetToggle = z.object({ name: CliArg, enabled: z.boolean() });
-export const Prompt = z.object({ prompt: z.string().trim().min(1).max(8_000), model: z.string().optional() });
+export const Prompt = z.object({
+  prompt: z.string().trim().min(1).max(8_000),
+  model: z.string().optional(),
+});
 export const Query = z.object({ query: z.string().trim().min(1).max(8_000) });
 export const Url = z.object({ url: z.string().describe("A public http(s) URL") });
 export const Task = z.object({ task: z.string().trim().min(1).max(8_000) });

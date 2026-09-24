@@ -1,10 +1,5 @@
 export { authenticate, principalKey } from "./principal.ts";
-export type {
-  AuthDenial,
-  AuthenticateOptions,
-  KeyVerifier,
-  Principal,
-} from "./principal.ts";
+export type { AuthDenial, AuthenticateOptions, KeyVerifier, Principal } from "./principal.ts";
 export {
   ClerkAuthProvider,
   JwtAuthProvider,

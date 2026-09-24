@@ -27,12 +27,7 @@ import { RunStore } from "../upstream/run-store.ts";
 import { createApp, type App } from "./app.ts";
 import { UserStore, UserTokenIssuer } from "../users/index.ts";
 import { describe, expect, test } from "bun:test";
-import {
-  AUTH_SCOPES,
-  TIER1_SCOPES,
-  TIER2_SCOPES,
-  TIER3_SCOPES,
-} from "../scopes/index.ts";
+import { AUTH_SCOPES, TIER1_SCOPES, TIER2_SCOPES, TIER3_SCOPES } from "../scopes/index.ts";
 
 const SECRET = "matrix-secret";
 
@@ -90,16 +85,21 @@ const SAMPLES = ["abc123", "1", "demo", "x1", "usr_0123456789abcdef0123"];
 
 /** Replaces route parameters with sample values their patterns accept. */
 function concretePath(path: string): string {
-  return path
-    // Patterns may contain braces themselves (e.g. `{20}` quantifiers).
-    .replace(/:(\w+)(\{((?:[^{}]|\{[^}]*\})*)\})?/g, (_m, _name: string, _p, pattern?: string) => {
-      if (pattern === undefined) {
-        return "x1";
-      }
-      const re = new RegExp(`^(?:${pattern})$`);
-      return SAMPLES.find((s) => re.test(s)) ?? "x1";
-    })
-    .replace(/\*$/, "notes.md");
+  return (
+    path
+      // Patterns may contain braces themselves (e.g. `{20}` quantifiers).
+      .replace(
+        /:(\w+)(\{((?:[^{}]|\{[^}]*\})*)\})?/g,
+        (_m, _name: string, _p, pattern?: string) => {
+          if (pattern === undefined) {
+            return "x1";
+          }
+          const re = new RegExp(`^(?:${pattern})$`);
+          return SAMPLES.find((s) => re.test(s)) ?? "x1";
+        },
+      )
+      .replace(/\*$/, "notes.md")
+  );
 }
 
 /** Status of one request; streaming bodies are cancelled immediately. */
@@ -368,9 +368,10 @@ describe("authorization matrix", () => {
       check(key, "anonymous", await run(open, null), endUser);
       check(key, "user", await run(closed, userToken()), endUser);
       check(key, "key without scopes", await run(closed, keyToken([])), cls === "authenticated");
-      const needed = cls.startsWith("key:") || cls.startsWith("user:")
-        ? cls.slice(cls.indexOf(":") + 1).split("+")
-        : [];
+      const needed =
+        cls.startsWith("key:") || cls.startsWith("user:")
+          ? cls.slice(cls.indexOf(":") + 1).split("+")
+          : [];
       if (needed.length > 0) {
         check(key, `key with ${needed.join("+")}`, await run(closed, keyToken(needed)), true);
         const others = ALL_SCOPES.filter((s) => !needed.includes(s));

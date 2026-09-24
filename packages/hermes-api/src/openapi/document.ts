@@ -35,7 +35,9 @@ function schemaOf(schema: z.ZodType, io: "input" | "output"): Json {
     $schema: _drop,
     $defs,
     ...rest
-  } = z.toJSONSchema(schema, { io, unrepresentable: "any" }) as Json & { $defs?: Record<string, Json> };
+  } = z.toJSONSchema(schema, { io, unrepresentable: "any" }) as Json & {
+    $defs?: Record<string, Json>;
+  };
   for (const [name, def] of Object.entries($defs ?? {})) {
     components[name] = relink(def) as Json;
   }
@@ -44,13 +46,20 @@ function schemaOf(schema: z.ZodType, io: "input" | "output"): Json {
     return relink(rest) as Json;
   }
   // Input and output shapes can differ (defaults, optionals), so name both.
-  const name = io === "input" && JSON.stringify(schemaOfOutput(schema)) !== JSON.stringify(rest) ? `${id}Input` : id;
+  const name =
+    io === "input" && JSON.stringify(schemaOfOutput(schema)) !== JSON.stringify(rest)
+      ? `${id}Input`
+      : id;
   components[name] = relink(rest) as Json;
   return { $ref: `#/components/schemas/${name}` };
 }
 
 function schemaOfOutput(schema: z.ZodType): Json {
-  const { $schema: _drop, $defs: _defs, ...rest } = z.toJSONSchema(schema, {
+  const {
+    $schema: _drop,
+    $defs: _defs,
+    ...rest
+  } = z.toJSONSchema(schema, {
     io: "output",
     unrepresentable: "any",
   }) as Json;
@@ -67,7 +76,9 @@ function catalogDoc(spec: CliRouteSpec): RouteDoc {
           Object.fromEntries(
             bodyParams.map((p) => [
               p.name,
-              p.required === true ? z.union([z.string(), z.number(), z.boolean()]) : z.union([z.string(), z.number(), z.boolean()]).optional(),
+              p.required === true
+                ? z.union([z.string(), z.number(), z.boolean()])
+                : z.union([z.string(), z.number(), z.boolean()]).optional(),
             ]),
           ),
         );
@@ -82,7 +93,11 @@ function catalogDoc(spec: CliRouteSpec): RouteDoc {
     ...(body === undefined ? {} : { body }),
     ...(queryParams.length === 0
       ? {}
-      : { query: Object.fromEntries(queryParams.map((p) => [p.name, `Passed as ${p.flag ?? p.name}`])) }),
+      : {
+          query: Object.fromEntries(
+            queryParams.map((p) => [p.name, `Passed as ${p.flag ?? p.name}`]),
+          ),
+        }),
     response: "cli",
   };
 }
@@ -96,7 +111,10 @@ function convertPath(path: string): { path: string; params: Json[] } {
         name,
         in: "path",
         required: true,
-        schema: { type: "string", ...(pattern === undefined ? {} : { pattern: `^(?:${pattern})$` }) },
+        schema: {
+          type: "string",
+          ...(pattern === undefined ? {} : { pattern: `^(?:${pattern})$` }),
+        },
       });
       return `{${name}}`;
     })
@@ -118,7 +136,8 @@ function responseBody(doc: RouteDoc): Json {
   if (r === "download") {
     return { "application/octet-stream": { schema: { type: "string", format: "binary" } } };
   }
-  const schema = r === undefined ? { type: "object" } : schemaOf(r === "cli" ? CliResult : r, "output");
+  const schema =
+    r === undefined ? { type: "object" } : schemaOf(r === "cli" ? CliResult : r, "output");
   return { "application/json": { schema } };
 }
 
@@ -183,7 +202,9 @@ function operation(method: string, path: string, doc: RouteDoc): Json {
  */
 export function buildOpenApi(routes: { method: string; path: string }[], version: string): Json {
   components = {};
-  const catalog = new Map(MGMT_ROUTES.map((spec) => [`${spec.method.toUpperCase()} ${spec.path}`, spec]));
+  const catalog = new Map(
+    MGMT_ROUTES.map((spec) => [`${spec.method.toUpperCase()} ${spec.path}`, spec]),
+  );
   const paths: Record<string, Json> = {};
   const missing: string[] = [];
   for (const { method, path } of routes) {
@@ -205,12 +226,17 @@ export function buildOpenApi(routes: { method: string; path: string }[], version
     info: {
       title: "Hermes Remote API",
       version,
-      description: "The authenticated web API in front of a Hermes agent. Errors always use the Error schema.",
+      description:
+        "The authenticated web API in front of a Hermes agent. Errors always use the Error schema.",
     },
     components: {
       schemas: components,
       securitySchemes: {
-        bearer: { type: "http", scheme: "bearer", description: "An hk_ API key, a user JWT, or a token-exchange token" },
+        bearer: {
+          type: "http",
+          scheme: "bearer",
+          description: "An hk_ API key, a user JWT, or a token-exchange token",
+        },
       },
     },
     paths,

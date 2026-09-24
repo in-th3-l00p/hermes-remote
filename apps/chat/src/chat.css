@@ -576,6 +576,8 @@ textarea {
 
 @media (prefers-reduced-motion: no-preference) {
   .sidebar {
-    transition: transform 180ms ease, visibility 180ms;
+    transition:
+      transform 180ms ease,
+      visibility 180ms;
   }
 }

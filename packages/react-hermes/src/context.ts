@@ -1,10 +1,4 @@
-import {
-  createContext,
-  createElement,
-  useContext,
-  type ReactElement,
-  type ReactNode,
-} from "react";
+import { createContext, createElement, useContext, type ReactElement, type ReactNode } from "react";
 import type { HermesClient } from "@intheloop-studio/hermes-remote-client";
 
 const HermesContext = createContext<HermesClient | null>(null);
@@ -15,11 +9,7 @@ export interface HermesProviderProps {
 }
 
 export function HermesProvider(props: HermesProviderProps): ReactElement {
-  return createElement(
-    HermesContext.Provider,
-    { value: props.client },
-    props.children,
-  );
+  return createElement(HermesContext.Provider, { value: props.client }, props.children);
 }
 
 export function useHermesClient(): HermesClient {

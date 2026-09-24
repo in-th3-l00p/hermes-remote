@@ -1,0 +1,6 @@
+**/dist
+**/node_modules
+packages/hermes-api/openapi.json
+packages/hermes-ts/src/openapi.ts
+apps/landing/docs/.vitepress/cache
+bun.lock

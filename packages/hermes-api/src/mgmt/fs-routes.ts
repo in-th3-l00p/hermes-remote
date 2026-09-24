@@ -76,10 +76,7 @@ function registerMemoryFile(
   );
 }
 
-export function registerFsRoutes(
-  app: Hono<ChatEnv>,
-  options: ManagementOptions,
-): void {
+export function registerFsRoutes(app: Hono<ChatEnv>, options: ManagementOptions): void {
   registerMemoryFile(app, options, "/v1/memory", "memories/MEMORY.md", MEMORY_LIMIT);
   registerMemoryFile(app, options, "/v1/memory/user", "memories/USER.md", USER_LIMIT);
 
@@ -217,9 +214,7 @@ export function registerFsRoutes(
   );
 
   const skillFilePath = (c: Context<ChatEnv>): string =>
-    decodeURIComponent(
-      new URL(c.req.url).pathname.split("/files/")[1] ?? "",
-    );
+    decodeURIComponent(new URL(c.req.url).pathname.split("/files/")[1] ?? "");
 
   app.get(
     `/v1/skills/${SKILL_NAME}/files/*`,
@@ -229,9 +224,7 @@ export function registerFsRoutes(
         return denied;
       }
       const path = skillFilePath(c);
-      const content = await fs
-        .scoped(`skills/${c.req.param("name")}`)
-        .read(path);
+      const content = await fs.scoped(`skills/${c.req.param("name")}`).read(path);
       if (content === null) {
         return error(404, "file_not_found", "Unknown skill file");
       }
@@ -263,9 +256,7 @@ export function registerFsRoutes(
       if (denied !== null) {
         return denied;
       }
-      const names = (await fs.list("skill-bundles")).filter((n) =>
-        n.endsWith(".yaml"),
-      );
+      const names = (await fs.list("skill-bundles")).filter((n) => n.endsWith(".yaml"));
       const bundles = [];
       for (const file of names.sort()) {
         bundles.push({
@@ -317,9 +308,7 @@ export function registerFsRoutes(
       if (denied !== null) {
         return denied;
       }
-      const removed = await fs.remove(
-        `skill-bundles/${c.req.param("name")}.yaml`,
-      );
+      const removed = await fs.remove(`skill-bundles/${c.req.param("name")}.yaml`);
       if (!removed) {
         return error(404, "bundle_not_found", "Unknown bundle");
       }
@@ -348,9 +337,7 @@ export function registerFsRoutes(
         return denied;
       }
       const name = c.req.param("file");
-      const content = await fs.read(
-        `cron/output/${c.req.param("id")}/${name}`,
-      );
+      const content = await fs.read(`cron/output/${c.req.param("id")}/${name}`);
       if (content === null) {
         return error(404, "output_not_found", "Unknown cron output");
       }

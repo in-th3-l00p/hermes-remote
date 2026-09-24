@@ -26,9 +26,7 @@ export interface ConfigFile {
   rateLimit?: { limit: number; windowSeconds: number };
 }
 
-export type ConfigResult =
-  | { ok: true; config: ConfigFile }
-  | { ok: false; error: string };
+export type ConfigResult = { ok: true; config: ConfigFile } | { ok: false; error: string };
 
 export function configPath(homeDir: string): string {
   return join(homeDir, "config.json");

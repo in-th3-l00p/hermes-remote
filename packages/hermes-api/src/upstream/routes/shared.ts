@@ -43,10 +43,7 @@ export async function proxy(fn: () => Promise<unknown>): Promise<Response> {
 }
 
 /** Users and guests may only touch runs they created; api keys see all. */
-export function denyUnownedRun(
-  c: Context<ChatEnv>,
-  runStore: RunStore,
-): Response | null {
+export function denyUnownedRun(c: Context<ChatEnv>, runStore: RunStore): Response | null {
   const principal = c.get("principal");
   const record = runStore.get(c.req.param("id") ?? "");
   if (

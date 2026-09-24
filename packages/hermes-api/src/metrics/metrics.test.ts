@@ -66,7 +66,9 @@ describe("metrics", () => {
     const res = await call("GET", "/v1/metrics");
     expect(res.headers.get("content-type")).toContain("text/plain");
     const text = await res.text();
-    expect(text).toContain('hermes_http_requests_total{method="POST",route="/v1/sessions/:id{[0-9a-f]+}/messages",status="200"} 2');
+    expect(text).toContain(
+      'hermes_http_requests_total{method="POST",route="/v1/sessions/:id{[0-9a-f]+}/messages",status="200"} 2',
+    );
     expect(text).toContain('status="401"');
     expect(text).not.toContain(session.id);
     expect(text).toContain('hermes_chat_turns_total{outcome="completed"} 1');

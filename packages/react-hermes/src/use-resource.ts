@@ -18,7 +18,6 @@ export function useResource<T>(
   const fetcherRef = useLatest(fetcher);
 
   // Keyed by deps, not fetcher identity; the ref supplies the newest fetcher.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
@@ -29,6 +28,8 @@ export function useResource<T>(
     } finally {
       setLoading(false);
     }
+    // The caller's deps are the cache key; the rule cannot see through them.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
   useEffect(() => {
@@ -45,9 +46,7 @@ export interface UseAction<A extends unknown[], R> {
   result: R | null;
 }
 
-export function useAction<A extends unknown[], R>(
-  fn: (...args: A) => Promise<R>,
-): UseAction<A, R> {
+export function useAction<A extends unknown[], R>(fn: (...args: A) => Promise<R>): UseAction<A, R> {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<R | null>(null);

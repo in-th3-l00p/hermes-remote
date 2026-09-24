@@ -52,7 +52,5 @@ export function parseDuration(text: string): number | null {
   if (match === null) {
     return null;
   }
-  return (
-    Number(match[1]) * (DURATION_UNITS[match[2] as string] as number)
-  );
+  return Number(match[1]) * (DURATION_UNITS[match[2] as string] as number);
 }

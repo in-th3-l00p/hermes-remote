@@ -25,10 +25,7 @@ describe("DemoAgent", () => {
     const controller = new AbortController();
     controller.abort();
     const chunks: string[] = [];
-    for await (const chunk of new DemoAgent().stream(
-      userTurn("bye"),
-      controller.signal,
-    )) {
+    for await (const chunk of new DemoAgent().stream(userTurn("bye"), controller.signal)) {
       chunks.push(chunk);
     }
     expect(chunks).toEqual([]);
@@ -109,9 +106,7 @@ describe("HermesAgent", () => {
         {
           role: "user",
           content: "hi",
-          attachments: [
-            { name: "a.png", type: "image/png", dataUrl: "data:image/png;x" },
-          ],
+          attachments: [{ name: "a.png", type: "image/png", dataUrl: "data:image/png;x" }],
         },
       ]),
     );
@@ -221,8 +216,6 @@ describe("HermesAgent", () => {
       apiKey: "k",
       fetch: (async () => new Response(null, { status: 200 })) as unknown as typeof fetch,
     });
-    await expect(collect(agent.stream(userTurn("x")))).rejects.toBeInstanceOf(
-      HermesUpstreamError,
-    );
+    await expect(collect(agent.stream(userTurn("x")))).rejects.toBeInstanceOf(HermesUpstreamError);
   });
 });

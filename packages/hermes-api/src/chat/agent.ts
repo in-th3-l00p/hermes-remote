@@ -7,10 +7,7 @@ export interface AgentTurnMessage {
 }
 
 export interface AgentBackend {
-  stream(
-    messages: AgentTurnMessage[],
-    signal?: AbortSignal,
-  ): AsyncIterable<string>;
+  stream(messages: AgentTurnMessage[], signal?: AbortSignal): AsyncIterable<string>;
 }
 
 /** Offline fallback agent used when no Hermes upstream is configured. */
@@ -19,10 +16,7 @@ export class DemoAgent implements AgentBackend {
   // as uncoverable functions.
   constructor() {}
 
-  async *stream(
-    messages: AgentTurnMessage[],
-    signal?: AbortSignal,
-  ): AsyncIterable<string> {
+  async *stream(messages: AgentTurnMessage[], signal?: AbortSignal): AsyncIterable<string> {
     const system = messages.find((m) => m.role === "system");
     const last = messages.at(-1);
     const reply =
@@ -59,8 +53,7 @@ export interface HermesAgentOptions {
 }
 
 type UpstreamPart =
-  | { type: "text"; text: string }
-  | { type: "image_url"; image_url: { url: string } };
+  { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
 
 /** Streams turns through a Hermes agent's OpenAI-compatible API server. */
 export class HermesAgent implements AgentBackend {
@@ -76,10 +69,7 @@ export class HermesAgent implements AgentBackend {
     this.fetchImpl = options.fetch ?? fetch;
   }
 
-  async *stream(
-    messages: AgentTurnMessage[],
-    signal?: AbortSignal,
-  ): AsyncIterable<string> {
+  async *stream(messages: AgentTurnMessage[], signal?: AbortSignal): AsyncIterable<string> {
     const body = {
       model: this.model,
       stream: true,
@@ -90,12 +80,10 @@ export class HermesAgent implements AgentBackend {
             ? m.content
             : ([
                 { type: "text", text: m.content },
-                ...m.attachments.map(
-                  (a): UpstreamPart => ({
-                    type: "image_url",
-                    image_url: { url: a.dataUrl },
-                  }),
-                ),
+                ...m.attachments.map((a): UpstreamPart => ({
+                  type: "image_url",
+                  image_url: { url: a.dataUrl },
+                })),
               ] satisfies UpstreamPart[]),
       })),
     };
@@ -109,10 +97,7 @@ export class HermesAgent implements AgentBackend {
       ...(signal === undefined ? {} : { signal }),
     });
     if (!res.ok || res.body === null) {
-      throw new HermesUpstreamError(
-        res.status,
-        `Hermes upstream returned ${res.status}`,
-      );
+      throw new HermesUpstreamError(res.status, `Hermes upstream returned ${res.status}`);
     }
     const reader = res.body.getReader();
     const decoder = new TextDecoder();

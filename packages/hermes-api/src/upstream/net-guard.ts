@@ -31,7 +31,7 @@ export function isPublicAddress(ip: string): boolean {
     const n = v4ToInt(ip);
     return !BLOCKED_V4.some(([base, bits]) => {
       const mask = bits === 0 ? 0 : (0xffffffff << (32 - bits)) >>> 0;
-      return ((n & mask) >>> 0) === base;
+      return (n & mask) >>> 0 === base;
     });
   }
   if (family === 6) {

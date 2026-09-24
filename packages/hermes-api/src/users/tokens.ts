@@ -32,7 +32,13 @@ export class UserTokenIssuer {
     return createHmac("sha256", this.secret).update(data).digest("base64url");
   }
 
-  mint(input: { userId: string; scopes: string[]; generation: number; ttlSeconds: number; now: Date }): {
+  mint(input: {
+    userId: string;
+    scopes: string[];
+    generation: number;
+    ttlSeconds: number;
+    now: Date;
+  }): {
     token: string;
     expiresAt: string;
   } {
@@ -59,8 +65,10 @@ export class UserTokenIssuer {
       return false;
     }
     try {
-      return (JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { iss?: unknown })
-        .iss === TOKEN_ISSUER;
+      return (
+        (JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { iss?: unknown })
+          .iss === TOKEN_ISSUER
+      );
     } catch {
       return false;
     }
@@ -77,7 +85,9 @@ export class UserTokenIssuer {
     if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
       return null;
     }
-    const claims = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as UserTokenClaims;
+    const claims = JSON.parse(
+      Buffer.from(payload, "base64url").toString("utf8"),
+    ) as UserTokenClaims;
     if (
       claims.iss !== TOKEN_ISSUER ||
       typeof claims.sub !== "string" ||

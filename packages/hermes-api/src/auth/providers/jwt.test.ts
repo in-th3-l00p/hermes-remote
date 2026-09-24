@@ -6,18 +6,11 @@ const SECRET = "super-secret";
 const NOW = new Date("2026-08-24T00:00:00Z");
 const JWKS_URL = "https://auth.example.com/.well-known/jwks.json";
 
-function sign(
-  payload: Record<string, unknown>,
-  secret = SECRET,
-  alg = "HS256",
-): string {
-  const enc = (o: unknown) =>
-    Buffer.from(JSON.stringify(o)).toString("base64url");
+function sign(payload: Record<string, unknown>, secret = SECRET, alg = "HS256"): string {
+  const enc = (o: unknown) => Buffer.from(JSON.stringify(o)).toString("base64url");
   const head = enc({ alg, typ: "JWT" });
   const body = enc(payload);
-  const sig = createHmac("sha256", secret)
-    .update(`${head}.${body}`)
-    .digest("base64url");
+  const sig = createHmac("sha256", secret).update(`${head}.${body}`).digest("base64url");
   return `${head}.${body}.${sig}`;
 }
 
@@ -62,9 +55,9 @@ describe("JwtAuthProvider hs256", () => {
     expect(await provider.verify(sign({ sub: "u", exp: valid.exp }))).toEqual({
       sub: "u",
     });
-    expect(
-      await provider.verify(sign({ sub: "u", email: "", exp: valid.exp })),
-    ).toEqual({ sub: "u" });
+    expect(await provider.verify(sign({ sub: "u", email: "", exp: valid.exp }))).toEqual({
+      sub: "u",
+    });
   });
 
   test("rejects malformed tokens", async () => {
@@ -79,9 +72,7 @@ describe("JwtAuthProvider hs256", () => {
     const provider = hs256Provider();
     expect(await provider.verify(sign(valid, "other"))).toBeNull();
     expect(await provider.verify(sign(valid, SECRET, "none"))).toBeNull();
-    expect(
-      await provider.verify(sign({ ...valid, exp: NOW.getTime() / 1000 - 1 })),
-    ).toBeNull();
+    expect(await provider.verify(sign({ ...valid, exp: NOW.getTime() / 1000 - 1 }))).toBeNull();
     expect(await provider.verify(sign({ ...valid, exp: "soon" }))).toBeNull();
     expect(await provider.verify(sign({ ...valid, sub: "" }))).toBeNull();
     expect(await provider.verify(sign({ exp: valid.exp }))).toBeNull();
@@ -89,25 +80,15 @@ describe("JwtAuthProvider hs256", () => {
 
   test("enforces issuer when configured", async () => {
     const provider = hs256Provider({ issuer: "https://issuer.example" });
-    expect(
-      await provider.verify(
-        sign({ ...valid, iss: "https://issuer.example" }),
-      ),
-    ).not.toBeNull();
-    expect(
-      await provider.verify(sign({ ...valid, iss: "https://evil.example" })),
-    ).toBeNull();
+    expect(await provider.verify(sign({ ...valid, iss: "https://issuer.example" }))).not.toBeNull();
+    expect(await provider.verify(sign({ ...valid, iss: "https://evil.example" }))).toBeNull();
     expect(await provider.verify(sign(valid))).toBeNull();
   });
 
   test("enforces audience against string and array claims", async () => {
     const provider = hs256Provider({ audience: "my-api" });
-    expect(
-      await provider.verify(sign({ ...valid, aud: "my-api" })),
-    ).not.toBeNull();
-    expect(
-      await provider.verify(sign({ ...valid, aud: ["other", "my-api"] })),
-    ).not.toBeNull();
+    expect(await provider.verify(sign({ ...valid, aud: "my-api" }))).not.toBeNull();
+    expect(await provider.verify(sign({ ...valid, aud: ["other", "my-api"] }))).not.toBeNull();
     expect(await provider.verify(sign({ ...valid, aud: "other" }))).toBeNull();
     expect(await provider.verify(sign({ ...valid, aud: 7 }))).toBeNull();
     expect(await provider.verify(sign(valid))).toBeNull();
@@ -115,20 +96,16 @@ describe("JwtAuthProvider hs256", () => {
 
   test("uses the real clock by default", async () => {
     const provider = new JwtAuthProvider({ hs256Secret: SECRET });
-    expect(
-      (await provider.verify(sign({ sub: "u", exp: Date.now() / 1000 + 60 })))
-        ?.sub,
-    ).toBe("u");
+    expect((await provider.verify(sign({ sub: "u", exp: Date.now() / 1000 + 60 })))?.sub).toBe("u");
   });
 });
 
 describe("JwtAuthProvider jwks", () => {
   async function makeKeys() {
-    const pair = await crypto.subtle.generateKey(
-      { name: "ECDSA", namedCurve: "P-256" },
-      true,
-      ["sign", "verify"],
-    );
+    const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, [
+      "sign",
+      "verify",
+    ]);
     const jwk = (await crypto.subtle.exportKey("jwk", pair.publicKey)) as {
       kty: string;
       crv: string;
@@ -139,8 +116,7 @@ describe("JwtAuthProvider jwks", () => {
       payload: Record<string, unknown>,
       header: Record<string, unknown> = { alg: "ES256", kid: "k1", typ: "JWT" },
     ) => {
-      const enc = (o: unknown) =>
-        Buffer.from(JSON.stringify(o)).toString("base64url");
+      const enc = (o: unknown) => Buffer.from(JSON.stringify(o)).toString("base64url");
       const signed = `${enc(header)}.${enc(payload)}`;
       const sig = await crypto.subtle.sign(
         { name: "ECDSA", hash: "SHA-256" },
@@ -152,11 +128,7 @@ describe("JwtAuthProvider jwks", () => {
     return { jwk, signToken };
   }
 
-  function jwksFetch(
-    keys: unknown[],
-    counter: { fetches: number },
-    status = 200,
-  ): typeof fetch {
+  function jwksFetch(keys: unknown[], counter: { fetches: number }, status = 200): typeof fetch {
     return (async (url: string | URL | Request) => {
       counter.fetches += 1;
       expect(String(url)).toBe(JWKS_URL);
@@ -209,18 +181,10 @@ describe("JwtAuthProvider jwks", () => {
     const counter = { fetches: 0 };
     const provider = jwksProvider(jwksFetch([{ ...jwk, kid: "k1" }], counter));
     expect(
-      await provider.verify(
-        await signToken(payload, { alg: "ES256", kid: "other" }),
-      ),
+      await provider.verify(await signToken(payload, { alg: "ES256", kid: "other" })),
     ).toBeNull();
-    expect(
-      await provider.verify(
-        await signToken(payload, { alg: "HS256", kid: "k1" }),
-      ),
-    ).toBeNull();
-    expect(
-      await provider.verify(await signToken(payload, { alg: "ES256" })),
-    ).toBeNull();
+    expect(await provider.verify(await signToken(payload, { alg: "HS256", kid: "k1" }))).toBeNull();
+    expect(await provider.verify(await signToken(payload, { alg: "ES256" }))).toBeNull();
     expect(await provider.verify("garbage")).toBeNull();
   });
 
@@ -230,14 +194,12 @@ describe("JwtAuthProvider jwks", () => {
     const provider = jwksProvider(jwksFetch([{ ...jwk, kid: "k1" }], counter));
     const token = await signToken(payload);
     const [h] = token.split(".") as [string];
-    const forged = `${h}.${Buffer.from(
-      JSON.stringify({ ...payload, sub: "evil" }),
-    ).toString("base64url")}.${token.split(".")[2]}`;
+    const forged = `${h}.${Buffer.from(JSON.stringify({ ...payload, sub: "evil" })).toString(
+      "base64url",
+    )}.${token.split(".")[2]}`;
     expect(await provider.verify(forged)).toBeNull();
     expect(
-      await provider.verify(
-        await signToken({ ...payload, exp: NOW.getTime() / 1000 - 1 }),
-      ),
+      await provider.verify(await signToken({ ...payload, exp: NOW.getTime() / 1000 - 1 })),
     ).toBeNull();
   });
 
@@ -308,8 +270,6 @@ describe("JwtAuthProvider configuration", () => {
       now: () => NOW,
     });
     expect((await provider.verify(sign(valid)))?.sub).toBe("user-1");
-    expect(
-      await provider.verify(sign(valid, SECRET, "ES256")),
-    ).toBeNull();
+    expect(await provider.verify(sign(valid, SECRET, "ES256"))).toBeNull();
   });
 });

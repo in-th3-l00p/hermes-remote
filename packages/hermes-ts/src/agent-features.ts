@@ -41,17 +41,8 @@ export class AgentSessionsResource {
     return this.http.request("POST", `/v1/agent/sessions/${id}/chat`, { message });
   }
 
-  chatStream(
-    id: string,
-    message: string,
-    signal?: AbortSignal,
-  ): AsyncIterable<SseEvent> {
-    return this.http.stream(
-      "POST",
-      `/v1/agent/sessions/${id}/chat/stream`,
-      { message },
-      signal,
-    );
+  chatStream(id: string, message: string, signal?: AbortSignal): AsyncIterable<SseEvent> {
+    return this.http.stream("POST", `/v1/agent/sessions/${id}/chat/stream`, { message }, signal);
   }
 }
 
@@ -74,11 +65,7 @@ export class CommandsResource {
   }
 
   run(sessionId: string, command: string): Promise<CommandResult> {
-    return this.http.request(
-      "POST",
-      `/v1/agent/sessions/${sessionId}/commands`,
-      { command },
-    );
+    return this.http.request("POST", `/v1/agent/sessions/${sessionId}/commands`, { command });
   }
 }
 
@@ -110,11 +97,7 @@ export class GoalsResource {
     return this.http.request("GET", this.base(sessionId));
   }
 
-  set(
-    sessionId: string,
-    text: string,
-    options: { draft?: boolean } = {},
-  ): Promise<CommandResult> {
+  set(sessionId: string, text: string, options: { draft?: boolean } = {}): Promise<CommandResult> {
     return this.http.request("PUT", this.base(sessionId), {
       text,
       ...(options.draft === true ? { draft: true } : {}),

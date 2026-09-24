@@ -86,7 +86,12 @@ describe("HermesUpstream", () => {
       { method: "GET", path: "/v1/runs/r1", auth: "Bearer sekrit", body: undefined },
       { method: "POST", path: "/v1/runs/r1/stop", auth: "Bearer sekrit", body: {} },
       { method: "POST", path: "/v1/runs/r1/steer", auth: "Bearer sekrit", body: { text: "left" } },
-      { method: "POST", path: "/v1/runs/r1/approval", auth: "Bearer sekrit", body: { approved: false } },
+      {
+        method: "POST",
+        path: "/v1/runs/r1/approval",
+        auth: "Bearer sekrit",
+        body: { approved: false },
+      },
     ]);
   });
 
@@ -152,9 +157,7 @@ describe("HermesUpstream", () => {
       () => null,
       (e: unknown) => e,
     );
-    expect((error as HermesUpstreamError).message).toBe(
-      "Hermes upstream returned 500",
-    );
+    expect((error as HermesUpstreamError).message).toBe("Hermes upstream returned 500");
   });
 
   test("sessions map to the /api/sessions endpoints", async () => {
@@ -195,11 +198,7 @@ describe("HermesUpstream", () => {
       calls,
     );
     const controller = new AbortController();
-    const stream = await upstream.sessions.chatStream(
-      "s1",
-      { message: "hi" },
-      controller.signal,
-    );
+    const stream = await upstream.sessions.chatStream("s1", { message: "hi" }, controller.signal);
     const text = await new Response(stream).text();
     expect(text).toContain("message.delta");
     expect(calls).toEqual([
@@ -214,21 +213,18 @@ describe("HermesUpstream", () => {
 
   test("session chat stream rejects on failure or missing body", async () => {
     const failing = upstreamWith(() => Response.json({}, { status: 500 }));
-    expect(
-      failing.sessions.chatStream("s1", { message: "x" }),
-    ).rejects.toBeInstanceOf(HermesUpstreamError);
+    expect(failing.sessions.chatStream("s1", { message: "x" })).rejects.toBeInstanceOf(
+      HermesUpstreamError,
+    );
     const empty = upstreamWith(() => new Response(null, { status: 200 }));
-    expect(
-      empty.sessions.chatStream("s1", { message: "x" }),
-    ).rejects.toBeInstanceOf(HermesUpstreamError);
+    expect(empty.sessions.chatStream("s1", { message: "x" })).rejects.toBeInstanceOf(
+      HermesUpstreamError,
+    );
   });
 
   test("raw forwards method, path, body, auth, and signal", async () => {
     const calls: Recorded[] = [];
-    const upstream = upstreamWith(
-      () => Response.json({ ok: true }, { status: 418 }),
-      calls,
-    );
+    const upstream = upstreamWith(() => Response.json({ ok: true }, { status: 418 }), calls);
     const withBody = await upstream.raw("POST", "/v1/audio/speech", { input: "x" });
     expect(withBody.status).toBe(418);
     expect(await withBody.json()).toEqual({ ok: true });
@@ -248,7 +244,15 @@ describe("HermesUpstream", () => {
   test("ids that could change the request path never reach the agent", async () => {
     const calls: Recorded[] = [];
     const up = upstreamWith(() => Response.json({}), calls);
-    for (const id of ["../../sessions/victim", "a/b", "..", ".hidden", "a%2Fb", "", "x".repeat(201)]) {
+    for (const id of [
+      "../../sessions/victim",
+      "a/b",
+      "..",
+      ".hidden",
+      "a%2Fb",
+      "",
+      "x".repeat(201),
+    ]) {
       expect(() => seg(id)).toThrow(HermesUpstreamError);
       expect(up.jobs.get(id)).rejects.toBeInstanceOf(HermesUpstreamError);
       expect(up.sessions.remove(id)).rejects.toBeInstanceOf(HermesUpstreamError);

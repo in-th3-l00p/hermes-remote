@@ -7,8 +7,7 @@ import { error, json, requireScope, type ChatEnv } from "../../chat/routes/share
 import { identityPrefixed } from "../identity.ts";
 import { upstreamFailure, type UpstreamRouteOptions } from "./shared.ts";
 
-const sleep = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 function toolInput(tool: string, instruction: string): string {
   return (
@@ -21,11 +20,7 @@ async function audioApiEnabled(options: UpstreamRouteOptions): Promise<unknown> 
   return options.upstream.discovery.capabilities().catch(() => null);
 }
 
-
-export function registerMediaRoutes(
-  app: Hono<ChatEnv>,
-  options: UpstreamRouteOptions,
-): void {
+export function registerMediaRoutes(app: Hono<ChatEnv>, options: UpstreamRouteOptions): void {
   const pollMs = options.pollMs ?? 500;
   const runTimeoutMs = options.toolRunTimeoutMs ?? 120_000;
 
@@ -109,8 +104,7 @@ export function registerMediaRoutes(
     return new Response(upstreamResponse.body, {
       status: upstreamResponse.status,
       headers: {
-        "content-type":
-          upstreamResponse.headers.get("content-type") ?? "application/octet-stream",
+        "content-type": upstreamResponse.headers.get("content-type") ?? "application/octet-stream",
       },
     });
   });
@@ -125,11 +119,7 @@ export function registerMediaRoutes(
       return body;
     }
     const model = body.model === undefined ? "" : ` Use the ${body.model} model.`;
-    return toolRun(
-      c,
-      "image_gen",
-      `Generate an image for this prompt: ${body.prompt}.${model}`,
-    );
+    return toolRun(c, "image_gen", `Generate an image for this prompt: ${body.prompt}.${model}`);
   });
 
   app.post("/v1/web/search", async (c) => {
@@ -175,9 +165,7 @@ export function registerMediaRoutes(
     try {
       const input = `Using the browser automation toolset, complete this task and report the outcome: ${body.task}`;
       const payload =
-        principal.type === "api_key"
-          ? { input }
-          : { input: identityPrefixed(input, principal) };
+        principal.type === "api_key" ? { input } : { input: identityPrefixed(input, principal) };
       const created = (await options.upstream.runs.create(payload)) as {
         id?: string;
         run_id?: string;
@@ -205,17 +193,11 @@ export function registerMediaRoutes(
         return denied;
       }
       const body = (await c.req.json().catch(() => ({}))) as unknown;
-      const upstreamResponse = await options.upstream.raw(
-        "POST",
-        path,
-        body,
-        c.req.raw.signal,
-      );
+      const upstreamResponse = await options.upstream.raw("POST", path, body, c.req.raw.signal);
       return new Response(upstreamResponse.body, {
         status: upstreamResponse.status,
         headers: {
-          "content-type":
-            upstreamResponse.headers.get("content-type") ?? "application/json",
+          "content-type": upstreamResponse.headers.get("content-type") ?? "application/json",
         },
       });
     });

@@ -17,20 +17,17 @@ export interface CliResultLike {
 
 export const useProfiles = makeHook(
   "profiles",
-  (client: { profiles: { list(): Promise<unknown[]> } }) =>
-    client.profiles.list(),
+  (client: { profiles: { list(): Promise<unknown[]> } }) => client.profiles.list(),
 );
 
 export const useAgentStatus = makeHook(
   "agent-status",
-  (client: { agent: { status(): Promise<CliResultLike> } }) =>
-    client.agent.status(),
+  (client: { agent: { status(): Promise<CliResultLike> } }) => client.agent.status(),
 );
 
 export const useConfig = makeHook(
   "config",
-  (client: { config: { show(): Promise<CliResultLike> } }) =>
-    client.config.show(),
+  (client: { config: { show(): Promise<CliResultLike> } }) => client.config.show(),
 );
 
 export const useMemory = makeHook(
@@ -44,94 +41,78 @@ export const useMemory = makeHook(
 
 export const useSoul = makeHook(
   "soul",
-  (client: { soul: { get(): Promise<{ content: string }> } }) =>
-    client.soul.get(),
+  (client: { soul: { get(): Promise<{ content: string }> } }) => client.soul.get(),
 );
 
-export const useSkills = makeHook(
-  "skills",
-  (client: { skills: { list(): Promise<unknown> } }) => client.skills.list(),
+export const useSkills = makeHook("skills", (client: { skills: { list(): Promise<unknown> } }) =>
+  client.skills.list(),
 );
 
 export const useBundles = makeHook(
   "bundles",
-  (client: { bundles: { list(): Promise<unknown[]> } }) =>
-    client.bundles.list(),
+  (client: { bundles: { list(): Promise<unknown[]> } }) => client.bundles.list(),
 );
 
 export const useCheckpoints = makeHook(
   "checkpoints",
-  (client: { checkpoints: { list(): Promise<CliResultLike> } }) =>
-    client.checkpoints.list(),
+  (client: { checkpoints: { list(): Promise<CliResultLike> } }) => client.checkpoints.list(),
 );
 
 export const useHooksInfo = makeHook(
   "hooks",
-  (client: { hooks: { list(): Promise<CliResultLike> } }) =>
-    client.hooks.list(),
+  (client: { hooks: { list(): Promise<CliResultLike> } }) => client.hooks.list(),
 );
 
 export const useGateway = makeHook(
   "gateway",
-  (client: { gateway: { status(): Promise<CliResultLike> } }) =>
-    client.gateway.status(),
+  (client: { gateway: { status(): Promise<CliResultLike> } }) => client.gateway.status(),
 );
 
 export const useKanban = makeHook(
   "kanban",
-  (client: { kanban: { tasks(): Promise<CliResultLike> } }) =>
-    client.kanban.tasks(),
+  (client: { kanban: { tasks(): Promise<CliResultLike> } }) => client.kanban.tasks(),
 );
 
 export const useProjects = makeHook(
   "projects",
-  (client: { projects: { list(): Promise<CliResultLike> } }) =>
-    client.projects.list(),
+  (client: { projects: { list(): Promise<CliResultLike> } }) => client.projects.list(),
 );
 
 export const useToolsets = makeHook(
   "toolsets",
-  (client: { toolsets: { list(): Promise<unknown> } }) =>
-    client.toolsets.list(),
+  (client: { toolsets: { list(): Promise<unknown> } }) => client.toolsets.list(),
 );
 
-export const useMcp = makeHook(
-  "mcp",
-  (client: { mcp: { list(): Promise<CliResultLike> } }) => client.mcp.list(),
+export const useMcp = makeHook("mcp", (client: { mcp: { list(): Promise<CliResultLike> } }) =>
+  client.mcp.list(),
 );
 
 export const usePlugins = makeHook(
   "plugins",
-  (client: { plugins: { list(): Promise<CliResultLike> } }) =>
-    client.plugins.list(),
+  (client: { plugins: { list(): Promise<CliResultLike> } }) => client.plugins.list(),
 );
 
 export const useAgentSessions = makeHook(
   "agent-sessions",
-  (client: { agentSessions: { list(): Promise<unknown> } }) =>
-    client.agentSessions.list(),
+  (client: { agentSessions: { list(): Promise<unknown> } }) => client.agentSessions.list(),
 );
 
 export const useCommands = makeHook(
   "commands",
-  (client: { commands: { list(): Promise<unknown> } }) =>
-    client.commands.list(),
+  (client: { commands: { list(): Promise<unknown> } }) => client.commands.list(),
 );
 
-export const useJobsAdmin = makeHook(
-  "jobs",
-  (client: { jobs: { list(): Promise<unknown> } }) => client.jobs.list(),
+export const useJobsAdmin = makeHook("jobs", (client: { jobs: { list(): Promise<unknown> } }) =>
+  client.jobs.list(),
 );
 
-export const useHermesAuth = makeHook(
-  "whoami",
-  (client: { whoami(): Promise<unknown> }) => client.whoami(),
+export const useHermesAuth = makeHook("whoami", (client: { whoami(): Promise<unknown> }) =>
+  client.whoami(),
 );
 
 export const useJourney = makeHook(
   "journey",
-  (client: { memory: { journey(): Promise<CliResultLike> } }) =>
-    client.memory.journey(),
+  (client: { memory: { journey(): Promise<CliResultLike> } }) => client.memory.journey(),
 );
 
 export const useSubagents = makeHook(

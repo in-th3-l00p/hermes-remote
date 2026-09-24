@@ -17,7 +17,10 @@ const types =
   astToString(await openapiTS(stable as never));
 
 let stale = false;
-for (const [path, content] of [[SPEC, json], [TYPES, types]] as const) {
+for (const [path, content] of [
+  [SPEC, json],
+  [TYPES, types],
+] as const) {
   const file = Bun.file(path);
   const current = (await file.exists()) ? await file.text() : null;
   if (current === content) {

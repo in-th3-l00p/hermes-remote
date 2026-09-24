@@ -31,10 +31,7 @@ export class FakeCliBridge implements CliBridge {
     let best: FakeResponse | null = null;
     let bestLength = -1;
     for (const [prefix, response] of this.responses) {
-      if (
-        (joined === prefix || joined.startsWith(`${prefix} `)) &&
-        prefix.length > bestLength
-      ) {
+      if ((joined === prefix || joined.startsWith(`${prefix} `)) && prefix.length > bestLength) {
         best = response;
         bestLength = prefix.length;
       }

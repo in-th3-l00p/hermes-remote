@@ -14,10 +14,7 @@ export interface UseEvents {
   error: string | null;
 }
 
-export function useEvents(options: {
-  client: EventsClientLike;
-  enabled?: boolean;
-}): UseEvents {
+export function useEvents(options: { client: EventsClientLike; enabled?: boolean }): UseEvents {
   const { enabled = true } = options;
   const clientRef = useLatest(options.client);
   const key = clientKey(options.client);

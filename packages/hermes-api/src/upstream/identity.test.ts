@@ -14,10 +14,7 @@ describe("injectRunIdentity", () => {
   });
 
   test("prepends a system entry to array inputs", () => {
-    const result = injectRunIdentity(
-      { input: [{ role: "user", content: "hi" }] },
-      principal,
-    );
+    const result = injectRunIdentity({ input: [{ role: "user", content: "hi" }] }, principal);
     const input = result?.["input"] as { role: string; content: string }[];
     expect(input).toHaveLength(2);
     expect(input[0]?.role).toBe("system");

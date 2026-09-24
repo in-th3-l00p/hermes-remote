@@ -25,9 +25,7 @@ export class ChatStore {
     this.db.run("UPDATE messages SET status = 'error' WHERE status = 'streaming'");
   }
 
-  createSession(
-    owner: { userId?: string | null; keyId?: string | null } = {},
-  ): ChatSession {
+  createSession(owner: { userId?: string | null; keyId?: string | null } = {}): ChatSession {
     const id = randomId();
     const at = this.now().toISOString();
     const userId = owner.userId ?? null;
@@ -49,16 +47,12 @@ export class ChatStore {
   }
 
   getSession(id: string): ChatSession | null {
-    const row = this.db
-      .query<SessionRow, [string]>("SELECT * FROM sessions WHERE id = ?")
-      .get(id);
+    const row = this.db.query<SessionRow, [string]>("SELECT * FROM sessions WHERE id = ?").get(id);
     if (row === null) {
       return null;
     }
     const sessionMessages = this.db
-      .query<MessageRow, [string]>(
-        "SELECT * FROM messages WHERE session_id = ? ORDER BY position",
-      )
+      .query<MessageRow, [string]>("SELECT * FROM messages WHERE session_id = ? ORDER BY position")
       .all(id)
       .map(toMessage);
     return { ...toMeta(row), messages: sessionMessages };
@@ -110,14 +104,9 @@ export class ChatStore {
       this.db.run("UPDATE sessions SET title = ? WHERE id = ?", [changes.title, id]);
     }
     if (changes.archived !== undefined) {
-      this.db.run("UPDATE sessions SET archived = ? WHERE id = ?", [
-        changes.archived ? 1 : 0,
-        id,
-      ]);
+      this.db.run("UPDATE sessions SET archived = ? WHERE id = ?", [changes.archived ? 1 : 0, id]);
     }
-    const row = this.db
-      .query<SessionRow, [string]>("SELECT * FROM sessions WHERE id = ?")
-      .get(id);
+    const row = this.db.query<SessionRow, [string]>("SELECT * FROM sessions WHERE id = ?").get(id);
     return row === null ? null : toMeta(row);
   }
 
@@ -214,19 +203,11 @@ export class ChatStore {
     return messages.finishMessage(this.db, this.now, sessionId, messageId, status);
   }
 
-  editMessage(
-    sessionId: string,
-    messageId: string,
-    content: string,
-  ): ChatMessage | null {
+  editMessage(sessionId: string, messageId: string, content: string): ChatMessage | null {
     return messages.editMessage(this.db, this.now, sessionId, messageId, content);
   }
 
-  toggleReaction(
-    sessionId: string,
-    messageId: string,
-    emoji: string,
-  ): ChatMessage | null {
+  toggleReaction(sessionId: string, messageId: string, emoji: string): ChatMessage | null {
     return messages.toggleReaction(this.db, sessionId, messageId, emoji);
   }
 }

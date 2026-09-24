@@ -7,10 +7,18 @@ describe("keys create", () => {
     const { ctx } = await makeCtx();
     const result = await runCli(
       [
-        "keys", "create", "--name", "ci",
-        "--scope", "chat:invoke", "--scope", "sessions:read",
-        "--user-grantable", "chat:invoke,sessions:read",
-        "--expires", "90d",
+        "keys",
+        "create",
+        "--name",
+        "ci",
+        "--scope",
+        "chat:invoke",
+        "--scope",
+        "sessions:read",
+        "--user-grantable",
+        "chat:invoke,sessions:read",
+        "--expires",
+        "90d",
       ],
       ctx,
     );
@@ -21,29 +29,23 @@ describe("keys create", () => {
 
   test("requires name and scope", async () => {
     const { ctx } = await makeCtx();
-    expect(
-      (await runCli(["keys", "create", "--scope", "chat:invoke"], ctx)).output,
-    ).toContain("requires --name");
-    expect(
-      (await runCli(["keys", "create", "--name", "x"], ctx)).output,
-    ).toContain("at least one --scope");
+    expect((await runCli(["keys", "create", "--scope", "chat:invoke"], ctx)).output).toContain(
+      "requires --name",
+    );
+    expect((await runCli(["keys", "create", "--name", "x"], ctx)).output).toContain(
+      "at least one --scope",
+    );
   });
 
   test("rejects unknown scopes", async () => {
     const { ctx } = await makeCtx();
-    const result = await runCli(
-      ["keys", "create", "--name", "x", "--scope", "nope:nope"],
-      ctx,
-    );
+    const result = await runCli(["keys", "create", "--name", "x", "--scope", "nope:nope"], ctx);
     expect(result.output).toContain("unknown scope: nope:nope");
   });
 
   test("dangerous scopes require --dangerous", async () => {
     const { ctx } = await makeCtx();
-    const denied = await runCli(
-      ["keys", "create", "--name", "x", "--scope", "config:write"],
-      ctx,
-    );
+    const denied = await runCli(["keys", "create", "--name", "x", "--scope", "config:write"], ctx);
     expect(denied.exitCode).toBe(1);
     expect(denied.output).toContain("require --dangerous");
     const allowed = await runCli(
@@ -57,8 +59,14 @@ describe("keys create", () => {
     const { ctx } = await makeCtx();
     const result = await runCli(
       [
-        "keys", "create", "--name", "x",
-        "--scope", "chat:invoke", "--user-grantable", "memory:write",
+        "keys",
+        "create",
+        "--name",
+        "x",
+        "--scope",
+        "chat:invoke",
+        "--user-grantable",
+        "memory:write",
       ],
       ctx,
     );
@@ -95,69 +103,44 @@ describe("keys management", () => {
   test("revoke", async () => {
     const { ctx } = await makeCtx();
     const id = await createKey(ctx);
-    expect((await runCli(["keys", "revoke", id], ctx)).output).toBe(
-      `revoked key ${id}`,
-    );
+    expect((await runCli(["keys", "revoke", id], ctx)).output).toBe(`revoked key ${id}`);
     expect((await runCli(["keys", "revoke", "ffffff"], ctx)).exitCode).toBe(1);
-    expect((await runCli(["keys", "revoke"], ctx)).output).toContain(
-      "requires a key id",
-    );
+    expect((await runCli(["keys", "revoke"], ctx)).output).toContain("requires a key id");
   });
 
   test("grant and ungrant scopes", async () => {
     const { ctx } = await makeCtx();
     const id = await createKey(ctx);
-    const granted = await runCli(
-      ["keys", "grant", id, "--scope", "sessions:read"],
-      ctx,
-    );
+    const granted = await runCli(["keys", "grant", id, "--scope", "sessions:read"], ctx);
     expect(granted.output).toContain("scopes=chat:invoke,sessions:read");
-    const ungranted = await runCli(
-      ["keys", "ungrant", id, "--scope", "chat:invoke"],
-      ctx,
-    );
+    const ungranted = await runCli(["keys", "ungrant", id, "--scope", "chat:invoke"], ctx);
     expect(ungranted.output).toContain("scopes=sessions:read");
   });
 
   test("grant validations", async () => {
     const { ctx } = await makeCtx();
     const id = await createKey(ctx);
-    expect((await runCli(["keys", "grant", id], ctx)).output).toContain(
-      "at least one --scope",
+    expect((await runCli(["keys", "grant", id], ctx)).output).toContain("at least one --scope");
+    expect((await runCli(["keys", "grant", id, "--scope", "bad"], ctx)).output).toContain(
+      "unknown scope: bad",
+    );
+    expect((await runCli(["keys", "grant", id, "--scope", "mcp:manage"], ctx)).output).toContain(
+      "require --dangerous",
     );
     expect(
-      (await runCli(["keys", "grant", id, "--scope", "bad"], ctx)).output,
-    ).toContain("unknown scope: bad");
-    expect(
-      (await runCli(["keys", "grant", id, "--scope", "mcp:manage"], ctx)).output,
-    ).toContain("require --dangerous");
-    expect(
-      (
-        await runCli(
-          ["keys", "grant", id, "--scope", "mcp:manage", "--dangerous"],
-          ctx,
-        )
-      ).exitCode,
+      (await runCli(["keys", "grant", id, "--scope", "mcp:manage", "--dangerous"], ctx)).exitCode,
     ).toBe(0);
     expect(
-      (await runCli(["keys", "grant", "ffffff", "--scope", "chat:invoke"], ctx))
-        .exitCode,
+      (await runCli(["keys", "grant", "ffffff", "--scope", "chat:invoke"], ctx)).exitCode,
     ).toBe(1);
     expect(
-      (
-        await runCli(
-          ["keys", "ungrant", "ffffff", "--scope", "chat:invoke"],
-          ctx,
-        )
-      ).exitCode,
+      (await runCli(["keys", "ungrant", "ffffff", "--scope", "chat:invoke"], ctx)).exitCode,
     ).toBe(1);
   });
 
   test("unknown keys action", async () => {
     const { ctx } = await makeCtx();
-    expect((await runCli(["keys"], ctx)).output).toContain(
-      "unknown keys action: (none)",
-    );
+    expect((await runCli(["keys"], ctx)).output).toContain("unknown keys action: (none)");
     expect((await runCli(["keys", "explode"], ctx)).output).toContain(
       "unknown keys action: explode",
     );

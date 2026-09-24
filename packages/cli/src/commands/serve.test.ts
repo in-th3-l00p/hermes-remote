@@ -47,8 +47,18 @@ describe("serve", () => {
     const { ctx, serveCalls } = await makeCtx();
     await runCli(
       [
-        "serve", "--port", "0", "--anonymous", "--cors", "http://localhost:5173",
-        "--upstream", "http://127.0.0.1:8642", "--upstream-key", "k", "--model", "m",
+        "serve",
+        "--port",
+        "0",
+        "--anonymous",
+        "--cors",
+        "http://localhost:5173",
+        "--upstream",
+        "http://127.0.0.1:8642",
+        "--upstream-key",
+        "k",
+        "--model",
+        "m",
       ],
       ctx,
     );
@@ -61,10 +71,7 @@ describe("serve", () => {
 
   test("maps the supabase jwt secret from flag or env to a jwt provider", async () => {
     const { ctx, serveCalls } = await makeCtx();
-    await runCli(
-      ["serve", "--port", "0", "--supabase-jwt-secret", "s1"],
-      ctx,
-    );
+    await runCli(["serve", "--port", "0", "--supabase-jwt-secret", "s1"], ctx);
     expect(serveCalls[0]?.auth).toEqual({ provider: "jwt", hs256Secret: "s1" });
     ctx.env["SUPABASE_JWT_SECRET"] = "s2";
     await runCli(["serve", "--port", "0"], ctx);
@@ -73,10 +80,7 @@ describe("serve", () => {
 
   test("maps the supabase url from flag or env to a jwks provider", async () => {
     const { ctx, serveCalls } = await makeCtx();
-    await runCli(
-      ["serve", "--port", "0", "--supabase-url", "https://p.supabase.co/"],
-      ctx,
-    );
+    await runCli(["serve", "--port", "0", "--supabase-url", "https://p.supabase.co/"], ctx);
     expect(serveCalls[0]?.auth).toEqual({
       provider: "jwt",
       jwksUrl: "https://p.supabase.co/auth/v1/.well-known/jwks.json",
@@ -141,10 +145,7 @@ describe("serve", () => {
       `${ctx.homeDir}/config.json`,
       JSON.stringify({ auth: { provider: "clerk", secretKey: "sk" } }),
     );
-    await runCli(
-      ["serve", "--port", "0", "--supabase-jwt-secret", "s"],
-      ctx,
-    );
+    await runCli(["serve", "--port", "0", "--supabase-jwt-secret", "s"], ctx);
     expect(serveCalls[0]?.auth).toEqual({ provider: "jwt", hs256Secret: "s" });
   });
 
@@ -174,10 +175,7 @@ describe("serve", () => {
 
   test("upstream without a key fails", async () => {
     const { ctx } = await makeCtx();
-    const result = await runCli(
-      ["serve", "--upstream", "http://x"],
-      ctx,
-    );
+    const result = await runCli(["serve", "--upstream", "http://x"], ctx);
     expect(result.exitCode).toBe(1);
     expect(result.output).toContain("requires a key");
   });
@@ -192,9 +190,7 @@ describe("serve", () => {
     const { ctx, serveCalls } = await makeCtx();
     await runCli(["serve"], ctx);
     expect(serveCalls[0]?.port).toBe(8643);
-    expect((await runCli(["serve", "--port", "hi"], ctx)).output).toContain(
-      "invalid --port: hi",
-    );
+    expect((await runCli(["serve", "--port", "hi"], ctx)).output).toContain("invalid --port: hi");
   });
 
   test("reports a busy port instead of crashing", async () => {
@@ -219,10 +215,7 @@ describe("serve", () => {
 
   test("rate limit flags override config", async () => {
     const { ctx, serveCalls } = await makeCtx();
-    await runCli(
-      ["serve", "--port", "0", "--rate-limit", "5", "--rate-window", "7"],
-      ctx,
-    );
+    await runCli(["serve", "--port", "0", "--rate-limit", "5", "--rate-window", "7"], ctx);
     expect(serveCalls[0]?.rateLimit).toEqual({ limit: 5, windowSeconds: 7 });
   });
 });

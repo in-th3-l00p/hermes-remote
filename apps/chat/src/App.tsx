@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useChat, type ChatMessage, type ChatSessionMeta } from "@intheloop-studio/hermes-remote-react";
+import {
+  useChat,
+  type ChatMessage,
+  type ChatSessionMeta,
+} from "@intheloop-studio/hermes-remote-react";
 import { AuthGate } from "./components/AuthGate.tsx";
 import { Composer } from "./components/Composer.tsx";
 import { Message } from "./components/Message.tsx";
@@ -12,7 +16,9 @@ type Auth = { state: "loading" } | { state: "signedOut" } | { state: "signedIn";
 
 function useAuth(): Auth {
   const [auth, setAuth] = useState<Auth>(
-    supabase === null ? { state: "signedIn", who: DEMO ? "Demo guest" : "Guest" } : { state: "loading" },
+    supabase === null
+      ? { state: "signedIn", who: DEMO ? "Demo guest" : "Guest" }
+      : { state: "loading" },
   );
   useEffect(() => {
     if (supabase === null) {
@@ -22,7 +28,10 @@ function useAuth(): Auth {
       setAuth(
         session === null
           ? { state: "signedOut" }
-          : { state: "signedIn", who: session.user.email || `Guest ${session.user.id.slice(0, 6)}` },
+          : {
+              state: "signedIn",
+              who: session.user.email || `Guest ${session.user.id.slice(0, 6)}`,
+            },
       );
     void supabase.auth.getSession().then(({ data }) => apply(data.session));
     const { data } = supabase.auth.onAuthStateChange((_event, session) => apply(session));
@@ -102,8 +111,8 @@ function Chat({ who }: { who: string }) {
     <div className={`app ${drawer ? "drawer-open" : ""}`}>
       {DEMO && (
         <p className="demo-banner" role="note">
-          Demo mode: this chat runs on built-in sample data in your browser, not a live agent.
-          Set <code>VITE_HERMES_API_URL</code> to connect a real server.
+          Demo mode: this chat runs on built-in sample data in your browser, not a live agent. Set{" "}
+          <code>VITE_HERMES_API_URL</code> to connect a real server.
         </p>
       )}
       <header className="topbar">
@@ -161,7 +170,13 @@ function Chat({ who }: { who: string }) {
           onSignOut={supabase === null ? null : () => void supabase?.auth.signOut()}
         />
         <main className="conversation">
-          <div ref={thread} className="thread" role="log" aria-live="polite" aria-label="Conversation">
+          <div
+            ref={thread}
+            className="thread"
+            role="log"
+            aria-live="polite"
+            aria-label="Conversation"
+          >
             {chat.messages.length === 0 ? (
               <div className="empty">
                 <p className="display">What should the agent do?</p>
@@ -192,7 +207,9 @@ function Chat({ who }: { who: string }) {
             onSend={(content, attachments) => {
               const target = editing;
               setEditing(null);
-              void act(() => (target !== null ? chat.edit(target.id, content) : chat.send(content, attachments)));
+              void act(() =>
+                target !== null ? chat.edit(target.id, content) : chat.send(content, attachments),
+              );
             }}
             onStop={() => void chat.stop()}
             onCancelEdit={() => setEditing(null)}

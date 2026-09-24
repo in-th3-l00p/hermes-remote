@@ -13,8 +13,7 @@ export interface AuthProvider {
 /** Injectable dynamic-import seam so optional SDKs stay optional and testable. */
 export type ModuleLoader = (specifier: string) => Promise<unknown>;
 
-export const defaultModuleLoader: ModuleLoader = (specifier) =>
-  import(specifier);
+export const defaultModuleLoader: ModuleLoader = (specifier) => import(specifier);
 
 export function missingDependency(provider: string, packageName: string): Error {
   return new Error(

@@ -10,10 +10,7 @@ const NOW = new Date("2026-08-24T00:00:00Z");
 describe("RunStore", () => {
   test("records, fetches, and lists newest first", () => {
     let tick = 0;
-    const store = new RunStore(
-      ":memory:",
-      () => new Date(NOW.getTime() + tick++ * 1000),
-    );
+    const store = new RunStore(":memory:", () => new Date(NOW.getTime() + tick++ * 1000));
     expect(store.record("r1", "user:u1")).toEqual({
       id: "r1",
       principal: "user:u1",

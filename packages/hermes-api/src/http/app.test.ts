@@ -28,13 +28,10 @@ const echoAgent: AgentBackend = {
 const SECRET = "sb-secret";
 
 function supabaseToken(sub: string): string {
-  const enc = (o: unknown) =>
-    Buffer.from(JSON.stringify(o)).toString("base64url");
+  const enc = (o: unknown) => Buffer.from(JSON.stringify(o)).toString("base64url");
   const head = enc({ alg: "HS256", typ: "JWT" });
   const body = enc({ sub, email: `${sub}@x.io`, exp: Date.now() / 1000 + 600 });
-  const sig = createHmac("sha256", SECRET)
-    .update(`${head}.${body}`)
-    .digest("base64url");
+  const sig = createHmac("sha256", SECRET).update(`${head}.${body}`).digest("base64url");
   return `${head}.${body}.${sig}`;
 }
 
@@ -60,13 +57,9 @@ describe("createApp", () => {
     expect((await app.fetch(get("/nope"))).status).toBe(401);
     const open = createApp({ anonymous: true });
     expect((await open.fetch(get("/nope"))).status).toBe(404);
-    expect(
-      (
-        await open.fetch(
-          new Request("http://x/v1/status", { method: "POST" }),
-        )
-      ).status,
-    ).toBe(404);
+    expect((await open.fetch(new Request("http://x/v1/status", { method: "POST" }))).status).toBe(
+      404,
+    );
   });
 
   test("whoami without a token is 401, or anonymous when allowed", async () => {
@@ -80,9 +73,7 @@ describe("createApp", () => {
 
   test("api key tokens: no store 503, invalid 401, valid principal", async () => {
     const noStore = createApp();
-    expect(
-      (await noStore.fetch(get("/v1/auth/whoami", "hk_x"))).status,
-    ).toBe(503);
+    expect((await noStore.fetch(get("/v1/auth/whoami", "hk_x"))).status).toBe(503);
     const app = createApp({ store });
     expect((await app.fetch(get("/v1/auth/whoami", "hk_bad"))).status).toBe(401);
     expect(await (await app.fetch(get("/v1/auth/whoami", "hk_good"))).json()).toEqual({
@@ -103,17 +94,13 @@ describe("createApp", () => {
     });
     expect((await app.fetch(get("/v1/auth/whoami", "garbage"))).status).toBe(401);
     const noSecret = createApp({ store });
-    expect(
-      (await noSecret.fetch(get("/v1/auth/whoami", "garbage"))).status,
-    ).toBe(401);
+    expect((await noSecret.fetch(get("/v1/auth/whoami", "garbage"))).status).toBe(401);
   });
 
   test("chat routes require auth unless anonymous", async () => {
     const chat = { store: new ChatStore(), agent: echoAgent };
     const app = createApp({ store, chat });
-    const denied = await app.fetch(
-      new Request("http://x/v1/sessions", { method: "POST" }),
-    );
+    const denied = await app.fetch(new Request("http://x/v1/sessions", { method: "POST" }));
     expect(denied.status).toBe(401);
     const allowed = await app.fetch(
       new Request("http://x/v1/sessions", {
@@ -123,15 +110,17 @@ describe("createApp", () => {
     );
     expect(allowed.status).toBe(201);
     const anonymous = createApp({ chat, anonymous: true });
-    const open = await anonymous.fetch(
-      new Request("http://x/v1/sessions", { method: "POST" }),
-    );
+    const open = await anonymous.fetch(new Request("http://x/v1/sessions", { method: "POST" }));
     expect(open.status).toBe(201);
   });
 
   test("user principals own their sessions", async () => {
     const chat = { store: new ChatStore(), agent: echoAgent };
-    const app = createApp({ chat, authProvider: new JwtAuthProvider({ hs256Secret: SECRET }), anonymous: true });
+    const app = createApp({
+      chat,
+      authProvider: new JwtAuthProvider({ hs256Secret: SECRET }),
+      anonymous: true,
+    });
     const created = await app.fetch(
       new Request("http://x/v1/sessions", {
         method: "POST",
@@ -140,30 +129,20 @@ describe("createApp", () => {
     );
     const session = (await created.json()) as { id: string; userId: string };
     expect(session.userId).toBe("u-1");
-    const mine = await app.fetch(
-      get("/v1/sessions", supabaseToken("u-1")),
-    );
+    const mine = await app.fetch(get("/v1/sessions", supabaseToken("u-1")));
     expect(
-      ((await mine.json()) as { sessions: { id: string }[] }).sessions.map(
-        (s) => s.id,
-      ),
+      ((await mine.json()) as { sessions: { id: string }[] }).sessions.map((s) => s.id),
     ).toEqual([session.id]);
     const theirs = await app.fetch(get("/v1/sessions", supabaseToken("u-2")));
-    expect(
-      ((await theirs.json()) as { sessions: unknown[] }).sessions,
-    ).toEqual([]);
+    expect(((await theirs.json()) as { sessions: unknown[] }).sessions).toEqual([]);
     const stolen = await app.fetch(
       get(`/v1/sessions/${session.id}/messages`, supabaseToken("u-2")),
     );
     expect(stolen.status).toBe(404);
-    const owner = await app.fetch(
-      get(`/v1/sessions/${session.id}/messages`, supabaseToken("u-1")),
-    );
+    const owner = await app.fetch(get(`/v1/sessions/${session.id}/messages`, supabaseToken("u-1")));
     expect(owner.status).toBe(200);
     const apiKeyAccess = createApp({ store, chat });
-    const viaKey = await apiKeyAccess.fetch(
-      get(`/v1/sessions/${session.id}/messages`, "hk_good"),
-    );
+    const viaKey = await apiKeyAccess.fetch(get(`/v1/sessions/${session.id}/messages`, "hk_good"));
     expect(viaKey.status).toBe(404);
     const readAll: KeyVerifier = {
       verifyToken: async () => ({
@@ -201,28 +180,22 @@ describe("createApp", () => {
     expect(session.keyId).toBe("abc123");
     const listed = await app.fetch(get("/v1/sessions", "hk_good"));
     expect(
-      ((await listed.json()) as { sessions: { id: string }[] }).sessions.map(
-        (s) => s.id,
-      ),
+      ((await listed.json()) as { sessions: { id: string }[] }).sessions.map((s) => s.id),
     ).toEqual([session.id]);
     const otherApp = createApp({ store: other, chat });
-    expect(
-      (await otherApp.fetch(get(`/v1/sessions/${session.id}/messages`, "hk_x"))).status,
-    ).toBe(404);
+    expect((await otherApp.fetch(get(`/v1/sessions/${session.id}/messages`, "hk_x"))).status).toBe(
+      404,
+    );
     const otherList = await otherApp.fetch(get(`/v1/sessions?ids=${session.id}`, "hk_x"));
     expect(((await otherList.json()) as { sessions: unknown[] }).sessions).toEqual([]);
-    expect(
-      (await app.fetch(get(`/v1/sessions/${session.id}/messages`))).status,
-    ).toBe(404);
+    expect((await app.fetch(get(`/v1/sessions/${session.id}/messages`))).status).toBe(404);
   });
 
   test("the agent is told who it is speaking with", async () => {
     const seen: string[] = [];
     const capturingAgent: AgentBackend = {
       async *stream(messages) {
-        seen.push(
-          messages[0]?.role === "system" ? (messages[0]?.content ?? "") : "",
-        );
+        seen.push(messages[0]?.role === "system" ? (messages[0]?.content ?? "") : "");
         yield "ok";
       },
     };
@@ -231,10 +204,7 @@ describe("createApp", () => {
         const created = await app.fetch(
           new Request("http://x/v1/sessions", {
             method: "POST",
-            headers:
-              token === undefined
-                ? {}
-                : { authorization: `Bearer ${token}` },
+            headers: token === undefined ? {} : { authorization: `Bearer ${token}` },
           }),
         );
         const { id } = (await created.json()) as { id: string };
@@ -243,9 +213,7 @@ describe("createApp", () => {
             method: "POST",
             headers: {
               "content-type": "application/json",
-              ...(token === undefined
-                ? {}
-                : { authorization: `Bearer ${token}` }),
+              ...(token === undefined ? {} : { authorization: `Bearer ${token}` }),
             },
             body: JSON.stringify({ content: "who am I?" }),
           }),
@@ -268,13 +236,10 @@ describe("createApp", () => {
     expect(seen[2]).toContain("unauthenticated guest");
 
     const anonToken = (() => {
-      const enc = (o: unknown) =>
-        Buffer.from(JSON.stringify(o)).toString("base64url");
+      const enc = (o: unknown) => Buffer.from(JSON.stringify(o)).toString("base64url");
       const head = enc({ alg: "HS256", typ: "JWT" });
       const body = enc({ sub: "guest-7", is_anonymous: true, exp: Date.now() / 1000 + 600 });
-      const sig = createHmac("sha256", SECRET)
-        .update(`${head}.${body}`)
-        .digest("base64url");
+      const sig = createHmac("sha256", SECRET).update(`${head}.${body}`).digest("base64url");
       return `${head}.${body}.${sig}`;
     })();
     await send(userApp, anonToken);
@@ -310,7 +275,9 @@ describe("createApp", () => {
     const direct = createApp({ store: pinned });
     expect((await direct.fetch(viaProxy("10.1.2.3"), "127.0.0.1")).status).toBe(401);
     // IPv4 clients reported as IPv4-mapped IPv6 still match IPv4 pins.
-    expect((await direct.fetch(get("/v1/auth/whoami", "hk_good"), "::ffff:10.9.9.9")).status).toBe(200);
+    expect((await direct.fetch(get("/v1/auth/whoami", "hk_good"), "::ffff:10.9.9.9")).status).toBe(
+      200,
+    );
   });
 
   test("CIDR-restricted keys only work from allowed addresses", async () => {
@@ -338,12 +305,8 @@ describe("createApp", () => {
       authProvider: new JwtAuthProvider({ hs256Secret: SECRET }),
       rateLimit: { limit: 1, windowSeconds: 60 },
     });
-    expect(
-      (await perUser.fetch(get("/v1/auth/whoami", supabaseToken("u-r")))).status,
-    ).toBe(200);
-    expect(
-      (await perUser.fetch(get("/v1/auth/whoami", supabaseToken("u-r")))).status,
-    ).toBe(429);
+    expect((await perUser.fetch(get("/v1/auth/whoami", supabaseToken("u-r")))).status).toBe(200);
+    expect((await perUser.fetch(get("/v1/auth/whoami", supabaseToken("u-r")))).status).toBe(429);
   });
 
   test("anonymous principals rate limit per client ip", async () => {
@@ -385,18 +348,14 @@ describe("createApp", () => {
       authFailureLimit: { limit: 2, windowSeconds: 60 },
     });
     for (let i = 0; i < 4; i += 1) {
-      expect(
-        (await success.fetch(get("/v1/auth/whoami", "hk_good"), "9.9.9.9")).status,
-      ).toBe(200);
+      expect((await success.fetch(get("/v1/auth/whoami", "hk_good"), "9.9.9.9")).status).toBe(200);
     }
   });
 
   test("non-401 auth denials do not count toward the failure limit", async () => {
     const app = createApp({ authFailureLimit: { limit: 1, windowSeconds: 60 } });
     for (let i = 0; i < 3; i += 1) {
-      expect(
-        (await app.fetch(get("/v1/auth/whoami", "hk_x"), "3.3.3.3")).status,
-      ).toBe(503);
+      expect((await app.fetch(get("/v1/auth/whoami", "hk_x"), "3.3.3.3")).status).toBe(503);
     }
   });
 
@@ -443,8 +402,20 @@ describe("createApp", () => {
       }),
     );
     expect(entries).toEqual([
-      { at: "2026-08-24T00:00:00.000Z", method: "GET", path: "/v1/auth/whoami", status: 401, principal: "unauthenticated" },
-      { at: "2026-08-24T00:00:00.000Z", method: "POST", path: "/v1/sessions", status: 201, principal: "key:abc123" },
+      {
+        at: "2026-08-24T00:00:00.000Z",
+        method: "GET",
+        path: "/v1/auth/whoami",
+        status: 401,
+        principal: "unauthenticated",
+      },
+      {
+        at: "2026-08-24T00:00:00.000Z",
+        method: "POST",
+        path: "/v1/sessions",
+        status: 201,
+        principal: "key:abc123",
+      },
     ]);
   });
 
@@ -497,19 +468,11 @@ describe("createApp", () => {
       }),
     );
     expect(preflight.status).toBe(204);
-    expect(preflight.headers.get("access-control-allow-origin")).toBe(
-      "http://localhost:5173",
-    );
+    expect(preflight.headers.get("access-control-allow-origin")).toBe("http://localhost:5173");
     expect(preflight.headers.get("access-control-allow-methods")).toContain("PUT");
-    expect(preflight.headers.get("access-control-allow-headers")).toContain(
-      "x-hermes-profile",
-    );
-    const res = await app.fetch(
-      new Request("http://x/v1/status", { headers: origin }),
-    );
-    expect(res.headers.get("access-control-allow-origin")).toBe(
-      "http://localhost:5173",
-    );
+    expect(preflight.headers.get("access-control-allow-headers")).toContain("x-hermes-profile");
+    const res = await app.fetch(new Request("http://x/v1/status", { headers: origin }));
+    expect(res.headers.get("access-control-allow-origin")).toBe("http://localhost:5173");
     expect(res.headers.get("access-control-expose-headers")).toContain("retry-after");
     const noCors = createApp();
     const plain = await noCors.fetch(get("/v1/status"));

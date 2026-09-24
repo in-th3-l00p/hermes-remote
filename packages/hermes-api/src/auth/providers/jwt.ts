@@ -85,20 +85,13 @@ function toVerifiedUser(
   if (options.issuer !== undefined && claims.iss !== options.issuer) {
     return null;
   }
-  if (
-    options.audience !== undefined &&
-    !audienceMatches(claims.aud, options.audience)
-  ) {
+  if (options.audience !== undefined && !audienceMatches(claims.aud, options.audience)) {
     return null;
   }
   return {
     sub: claims.sub,
-    ...(typeof claims.email === "string" && claims.email !== ""
-      ? { email: claims.email }
-      : {}),
-    ...(typeof claims.is_anonymous === "boolean"
-      ? { isAnonymous: claims.is_anonymous }
-      : {}),
+    ...(typeof claims.email === "string" && claims.email !== "" ? { email: claims.email } : {}),
+    ...(typeof claims.is_anonymous === "boolean" ? { isAnonymous: claims.is_anonymous } : {}),
   };
 }
 
@@ -146,10 +139,7 @@ export class JwtAuthProvider implements AuthProvider {
   }
 
   private async verifySignature(parsed: ParsedToken): Promise<boolean> {
-    if (
-      parsed.header.alg === "HS256" &&
-      this.options.hs256Secret !== undefined
-    ) {
+    if (parsed.header.alg === "HS256" && this.options.hs256Secret !== undefined) {
       const expected = createHmac("sha256", this.options.hs256Secret)
         .update(parsed.signed)
         .digest();

@@ -27,10 +27,7 @@ export async function makeCtx(): Promise<{
   return { ctx, serveCalls };
 }
 
-export async function createKey(
-  ctx: CliContext,
-  extra: string[] = [],
-): Promise<string> {
+export async function createKey(ctx: CliContext, extra: string[] = []): Promise<string> {
   const result = await runCli(
     ["keys", "create", "--name", "ci", "--scope", "chat:invoke", ...extra],
     ctx,

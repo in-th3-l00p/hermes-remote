@@ -3,9 +3,7 @@ import { HermesClient } from "./client.ts";
 
 const sse = (events: { event: string; data: unknown }[]): Response =>
   new Response(
-    events
-      .map((e) => `event: ${e.event}\ndata: ${JSON.stringify(e.data)}\n\n`)
-      .join(""),
+    events.map((e) => `event: ${e.event}\ndata: ${JSON.stringify(e.data)}\n\n`).join(""),
     { headers: { "content-type": "text/event-stream" } },
   );
 
@@ -66,10 +64,7 @@ describe("conversation handle", () => {
     }
     expect(conversation.id).toBe("s1");
     expect(events).toHaveLength(1);
-    expect(calls).toEqual([
-      "POST /v1/sessions",
-      "POST /v1/sessions/s1/messages",
-    ]);
+    expect(calls).toEqual(["POST /v1/sessions", "POST /v1/sessions/s1/messages"]);
     for await (const event of conversation.send("again")) {
       void event;
     }
@@ -86,9 +81,7 @@ describe("conversation handle", () => {
     expect(await conversation.stop()).toEqual({ stopped: true });
     await conversation.react("m2", "🔥");
     expect(await conversation.messages()).toEqual([
-      { id: "m1" } as unknown as Awaited<
-        ReturnType<typeof conversation.messages>
-      >[number],
+      { id: "m1" } as unknown as Awaited<ReturnType<typeof conversation.messages>>[number],
     ]);
     await conversation.remove();
     expect(calls).toEqual([
@@ -103,19 +96,11 @@ describe("conversation handle", () => {
   test("session-bound operations throw before the first send", async () => {
     const { client } = makeClient();
     const conversation = client.conversation();
-    expect(() => conversation.edit("m1", "x")).toThrow(
-      "conversation has no session yet",
-    );
+    expect(() => conversation.edit("m1", "x")).toThrow("conversation has no session yet");
     expect(conversation.stop()).rejects.toThrow("conversation has no session yet");
-    expect(conversation.react("m", "x")).rejects.toThrow(
-      "conversation has no session yet",
-    );
-    expect(conversation.messages()).rejects.toThrow(
-      "conversation has no session yet",
-    );
-    expect(conversation.remove()).rejects.toThrow(
-      "conversation has no session yet",
-    );
+    expect(conversation.react("m", "x")).rejects.toThrow("conversation has no session yet");
+    expect(conversation.messages()).rejects.toThrow("conversation has no session yet");
+    expect(conversation.remove()).rejects.toThrow("conversation has no session yet");
   });
 
   test("passes attachments and abort signals through", async () => {
@@ -123,9 +108,7 @@ describe("conversation handle", () => {
     const conversation = client.conversation("s2");
     const controller = new AbortController();
     for await (const event of conversation.send("look", {
-      attachments: [
-        { name: "a.png", type: "image/png", dataUrl: "data:image/png;base64,AA==" },
-      ],
+      attachments: [{ name: "a.png", type: "image/png", dataUrl: "data:image/png;base64,AA==" }],
       signal: controller.signal,
     })) {
       void event;
@@ -136,11 +119,16 @@ describe("conversation handle", () => {
   test("send also takes the object form sendMessage uses", async () => {
     const { client } = makeClient();
     const seen: unknown[] = [];
-    client.sendMessage = (async function* (id: string, input: unknown) {
+    client.sendMessage = async function* (id: string, input: unknown) {
       seen.push([id, input]);
-    }) as typeof client.sendMessage;
+      yield* [];
+    } as typeof client.sendMessage;
     const conversation = client.conversation("s3");
-    const attachment = { name: "a.png", type: "image/png" as const, dataUrl: "data:image/png;base64,AA==" };
+    const attachment = {
+      name: "a.png",
+      type: "image/png" as const,
+      dataUrl: "data:image/png;base64,AA==",
+    };
     for await (const event of conversation.send({ content: "look", attachments: [attachment] })) {
       void event;
     }

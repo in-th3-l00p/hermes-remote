@@ -56,9 +56,7 @@ export class KeyStore {
     await chmod(this.filePath, 0o600);
   }
 
-  async create(
-    input: CreateKeyInput,
-  ): Promise<{ record: ApiKeyRecord; token: string }> {
+  async create(input: CreateKeyInput): Promise<{ record: ApiKeyRecord; token: string }> {
     const data = await this.load();
     const id = randomHex(6);
     const secret = randomHex(24);
@@ -71,9 +69,7 @@ export class KeyStore {
       createdAt: (input.now ?? new Date()).toISOString(),
       expiresAt: input.expiresAt?.toISOString() ?? null,
       revoked: false,
-      ...(input.cidrs === undefined || input.cidrs.length === 0
-        ? {}
-        : { cidrs: input.cidrs }),
+      ...(input.cidrs === undefined || input.cidrs.length === 0 ? {} : { cidrs: input.cidrs }),
       ...(input.profile === undefined ? {} : { profile: input.profile }),
     };
     data.keys.push(record);
@@ -131,10 +127,7 @@ export class KeyStore {
     });
   }
 
-  async verifyToken(
-    token: string,
-    now: Date = new Date(),
-  ): Promise<ApiKeyRecord | null> {
+  async verifyToken(token: string, now: Date = new Date()): Promise<ApiKeyRecord | null> {
     const match = /^hk_([0-9a-f]+)\.([0-9a-f]+)$/.exec(token);
     if (match === null) {
       return null;

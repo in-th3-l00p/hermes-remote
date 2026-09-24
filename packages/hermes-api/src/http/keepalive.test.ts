@@ -27,9 +27,7 @@ async function readAll(stream: ReadableStream<Uint8Array>): Promise<string> {
 
 describe("keepAlive", () => {
   test("adds comments while the source is quiet, only between frames", async () => {
-    const text = await readAll(
-      keepAlive(slowSource(["data: a\n\n", "data: b", "\n\n"], 60), 20),
-    );
+    const text = await readAll(keepAlive(slowSource(["data: a\n\n", "data: b", "\n\n"], 60), 20));
     expect(text).toContain(": keepalive\n\n");
     expect(text.replaceAll(": keepalive\n\n", "")).toBe("data: a\n\ndata: b\n\n");
     // Never between "data: b" and its terminating blank line.

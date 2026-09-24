@@ -70,10 +70,7 @@ export async function relayCommand(
   command: string,
 ): Promise<RelayedEvent[]> {
   const controller = new AbortController();
-  const timer = setTimeout(
-    () => controller.abort(),
-    options.relayTimeoutMs ?? 60_000,
-  );
+  const timer = setTimeout(() => controller.abort(), options.relayTimeoutMs ?? 60_000);
   try {
     const stream = await options.upstream.sessions.chatStream(
       sessionId,
@@ -100,11 +97,7 @@ export async function runCommand(
   command: string,
 ): Promise<Response> {
   if (!options.commandRelay) {
-    return error(
-      501,
-      "not_supported",
-      "Slash-command relay is disabled on this server",
-    );
+    return error(501, "not_supported", "Slash-command relay is disabled on this server");
   }
   // One command per request: a newline would smuggle in a second one.
   if (/[\u0000-\u001f\u007f]/.test(command)) {
@@ -125,10 +118,7 @@ export async function runCommand(
   }
 }
 
-export function registerCommandRoutes(
-  app: Hono<ChatEnv>,
-  options: CommandRelayOptions,
-): void {
+export function registerCommandRoutes(app: Hono<ChatEnv>, options: CommandRelayOptions): void {
   app.get("/v1/commands", (c) => {
     void c;
     return json(200, {

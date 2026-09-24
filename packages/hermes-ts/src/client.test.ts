@@ -2,11 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { HermesClient } from "./index.ts";
 import type { ChatEvent, ChatMessage } from "./index.ts";
 
-const message = (
-  id: string,
-  role: "user" | "assistant",
-  content: string,
-): ChatMessage => ({
+const message = (id: string, role: "user" | "assistant", content: string): ChatMessage => ({
   id,
   role,
   content,
@@ -17,9 +13,10 @@ const message = (
   status: "done",
 });
 
-function mockFetch(
-  handler: (url: string, init: RequestInit) => Response,
-): { calls: { url: string; init: RequestInit }[]; fetch: typeof fetch } {
+function mockFetch(handler: (url: string, init: RequestInit) => Response): {
+  calls: { url: string; init: RequestInit }[];
+  fetch: typeof fetch;
+} {
   const calls: { url: string; init: RequestInit }[] = [];
   const impl = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
@@ -31,9 +28,7 @@ function mockFetch(
 }
 
 function sseBody(events: { event: string; data: unknown }[]): Response {
-  const text = events
-    .map((e) => `event: ${e.event}\ndata: ${JSON.stringify(e.data)}\n\n`)
-    .join("");
+  const text = events.map((e) => `event: ${e.event}\ndata: ${JSON.stringify(e.data)}\n\n`).join("");
   return new Response(text, {
     status: 200,
     headers: { "content-type": "text/event-stream" },
@@ -55,15 +50,11 @@ describe("HermesClient", () => {
   });
 
   test("reports status", async () => {
-    const { calls, fetch } = mockFetch(() =>
-      Response.json({ ok: true, version: "0.0.1" }),
-    );
+    const { calls, fetch } = mockFetch(() => Response.json({ ok: true, version: "0.0.1" }));
     const client = new HermesClient({ baseUrl: "http://x", token: "t1", fetch });
     expect(await client.status()).toEqual({ ok: true, version: "0.0.1" });
     expect(calls[0]?.url).toBe("http://x/v1/status");
-    expect(
-      (calls[0]?.init.headers as Record<string, string>).authorization,
-    ).toBe("Bearer t1");
+    expect((calls[0]?.init.headers as Record<string, string>).authorization).toBe("Bearer t1");
   });
 
   test("creates sessions and lists messages", async () => {
@@ -74,9 +65,7 @@ describe("HermesClient", () => {
     );
     const client = new HermesClient({ baseUrl: "http://x", fetch });
     expect((await client.createSession()).id).toBe("s1");
-    expect(await client.listMessages("s1")).toEqual([
-      { id: "m1" } as never,
-    ]);
+    expect(await client.listMessages("s1")).toEqual([{ id: "m1" } as never]);
     expect(calls[1]?.url).toBe("http://x/v1/sessions/s1/messages");
   });
 
@@ -150,9 +139,7 @@ describe("HermesClient", () => {
       ]),
     );
     const client = new HermesClient({ baseUrl: "http://x", fetch });
-    const events = await collect(
-      client.sendMessage("s1", { content: "hello" }),
-    );
+    const events = await collect(client.sendMessage("s1", { content: "hello" }));
     expect(events.map((e) => e.event)).toEqual(["user", "delta", "done"]);
     expect(JSON.parse(String(calls[0]?.init.body))).toEqual({
       content: "hello",
@@ -184,9 +171,7 @@ describe("HermesClient", () => {
     );
     const client = new HermesClient({ baseUrl: "http://x", fetch });
     const events = await collect(client.sendMessage("s1", { content: "x" }));
-    expect(events).toEqual([
-      { event: "delta", data: { id: "a1", text: "hi" } },
-    ]);
+    expect(events).toEqual([{ event: "delta", data: { id: "a1", text: "hi" } }]);
   });
 
   test("passes abort signals through and stops turns", async () => {
@@ -197,9 +182,7 @@ describe("HermesClient", () => {
     );
     const client = new HermesClient({ baseUrl: "http://x", fetch });
     const controller = new AbortController();
-    await collect(
-      client.sendMessage("s1", { content: "x" }, { signal: controller.signal }),
-    );
+    await collect(client.sendMessage("s1", { content: "x" }, { signal: controller.signal }));
     expect(calls[0]?.init.signal).toBe(controller.signal);
     await collect(client.editMessage("s1", "m1", "y", { signal: controller.signal }));
     expect(calls[1]?.init.signal).toBe(controller.signal);

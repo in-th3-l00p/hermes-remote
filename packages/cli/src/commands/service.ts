@@ -3,16 +3,12 @@ import { USAGE, fail, ok, type CliContext, type CliResult } from "../context.ts"
 
 export function resolveServeArgv(ctx: CliContext): string[] {
   const bin = ctx.which("hermes-remote");
-  return bin === null
-    ? [ctx.execPath, ctx.entryPath, "serve"]
-    : [bin, "serve"];
+  return bin === null ? [ctx.execPath, ctx.entryPath, "serve"] : [bin, "serve"];
 }
 
 function serviceEnv(ctx: CliContext, argv: string[]): [string, string][] {
   const binDir = dirname(argv[0] as string);
-  const entries: [string, string][] = [
-    ["PATH", `${binDir}:/usr/local/bin:/usr/bin:/bin`],
-  ];
+  const entries: [string, string][] = [["PATH", `${binDir}:/usr/local/bin:/usr/bin:/bin`]];
   const home = ctx.env["HERMES_REMOTE_HOME"];
   if (home !== undefined) {
     entries.push(["HERMES_REMOTE_HOME", home]);
@@ -65,10 +61,7 @@ WantedBy=default.target
 `;
 }
 
-export async function serviceCommand(
-  args: string[],
-  ctx: CliContext,
-): Promise<CliResult> {
+export async function serviceCommand(args: string[], ctx: CliContext): Promise<CliResult> {
   const action = args[0];
   const darwin = ctx.platform === "darwin";
   const unitPath = darwin

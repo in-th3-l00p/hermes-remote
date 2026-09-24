@@ -17,19 +17,14 @@ describe("FsBridge", () => {
     await bridge.write("memories/MEMORY.md", "hello");
     expect(await bridge.read("memories/MEMORY.md")).toBe("hello");
     await bridge.write("memories/USER.md", "user");
-    expect((await bridge.list("memories")).sort()).toEqual([
-      "MEMORY.md",
-      "USER.md",
-    ]);
+    expect((await bridge.list("memories")).sort()).toEqual(["MEMORY.md", "USER.md"]);
     expect(await bridge.remove("memories/USER.md")).toBe(true);
     expect(await bridge.remove("memories/USER.md")).toBe(false);
   });
 
   test("enforces size caps on read and write", async () => {
     const bridge = await makeBridge(10);
-    expect(bridge.write("big.md", "x".repeat(11))).rejects.toBeInstanceOf(
-      BridgeDenied,
-    );
+    expect(bridge.write("big.md", "x".repeat(11))).rejects.toBeInstanceOf(BridgeDenied);
     await bridge.write("ok.md", "x".repeat(10));
     const sneaky = await makeBridge();
     await sneaky.write("grown.md", "y".repeat(50));
@@ -76,9 +71,7 @@ describe("FsBridge", () => {
     await symlink(outside, join(root, "skills", "demo", "outdir"));
     await symlink(join(root, ".env"), join(root, "skills", "demo", "env.txt"));
     expect(bridge.read("skills/demo/out.txt")).rejects.toBeInstanceOf(BridgeDenied);
-    expect(bridge.write("skills/demo/outdir/new.txt", "x")).rejects.toBeInstanceOf(
-      BridgeDenied,
-    );
+    expect(bridge.write("skills/demo/outdir/new.txt", "x")).rejects.toBeInstanceOf(BridgeDenied);
     expect(bridge.read("skills/demo/env.txt")).rejects.toBeInstanceOf(BridgeDenied);
   });
 

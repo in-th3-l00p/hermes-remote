@@ -36,11 +36,7 @@ export class HermesApiError extends Error {
 export type BinaryBody = Blob | ArrayBuffer | Uint8Array;
 
 function isBinary(body: unknown): body is BinaryBody {
-  return (
-    body instanceof Blob ||
-    body instanceof ArrayBuffer ||
-    body instanceof Uint8Array
-  );
+  return body instanceof Blob || body instanceof ArrayBuffer || body instanceof Uint8Array;
 }
 
 export class HttpClient {
@@ -59,8 +55,7 @@ export class HttpClient {
     this.extraHeaders = options.headers ?? {};
     const staticToken = options.token;
     this.tokenProvider =
-      options.tokenProvider ??
-      (staticToken === undefined ? null : () => staticToken);
+      options.tokenProvider ?? (staticToken === undefined ? null : () => staticToken);
     // A 401 retry only helps when a provider can mint a fresh token; a
     // static token would repeat the identical request.
     this.refreshable = options.tokenProvider !== undefined;
@@ -127,9 +122,9 @@ export class HttpClient {
   /** Turns a non-2xx response into a typed HermesApiError. */
   private async checked(res: Response): Promise<Response> {
     if (!res.ok) {
-      const payload = (await res
-        .json()
-        .catch(() => null)) as { error?: { code?: string; message?: string } } | null;
+      const payload = (await res.json().catch(() => null)) as {
+        error?: { code?: string; message?: string };
+      } | null;
       throw new HermesApiError(
         res.status,
         payload?.error?.code ?? "unknown_error",
@@ -145,12 +140,7 @@ export class HttpClient {
   }
 
   /** Authenticated request returning the raw Response (binary/stream bodies). */
-  raw(
-    method: string,
-    path: string,
-    body?: unknown,
-    signal?: AbortSignal,
-  ): Promise<Response> {
+  raw(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<Response> {
     return this.doFetch(method, path, body, signal);
   }
 

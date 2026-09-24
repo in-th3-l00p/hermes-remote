@@ -90,23 +90,18 @@ describe("startServer", () => {
       chat: { store, agent: new DemoAgent() },
       limits: { maxBodyBytes: 100 },
     });
-    const res = await fetch(
-      `http://localhost:${server.port}/v1/sessions/${session.id}/messages`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: new ReadableStream({
-          start(controller) {
-            controller.enqueue(
-              new TextEncoder().encode(
-                JSON.stringify({ content: "x".repeat(1_000) }),
-              ),
-            );
-            controller.close();
-          },
-        }),
-      } as RequestInit,
-    ).catch(() => new Response(null, { status: 413 }));
+    const res = await fetch(`http://localhost:${server.port}/v1/sessions/${session.id}/messages`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            new TextEncoder().encode(JSON.stringify({ content: "x".repeat(1_000) })),
+          );
+          controller.close();
+        },
+      }),
+    } as RequestInit).catch(() => new Response(null, { status: 413 }));
     expect(res.status).toBe(413);
     server.stop();
   });
@@ -122,9 +117,7 @@ describe("startServer", () => {
       const server = await startServer({ port: 0, logPath, auditPath });
       const status = await fetch(`http://localhost:${server.port}/v1/status`);
       expect(status.status).toBe(200);
-      const denied = await fetch(
-        `http://localhost:${server.port}/v1/auth/whoami`,
-      );
+      const denied = await fetch(`http://localhost:${server.port}/v1/auth/whoami`);
       expect(denied.status).toBe(401);
       server.stop();
       expect(errors.mock.calls.length).toBeGreaterThan(0);

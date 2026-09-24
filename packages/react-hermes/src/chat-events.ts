@@ -1,7 +1,4 @@
-import type {
-  ChatEvent,
-  ChatMessage,
-} from "@intheloop-studio/hermes-remote-client";
+import type { ChatEvent, ChatMessage } from "@intheloop-studio/hermes-remote-client";
 
 function placeholder(id: string): ChatMessage {
   return {
@@ -27,24 +24,18 @@ export function applyChatEvent(
         return [...prev, event.data];
       }
       const index = prev.findIndex((m) => m.id === editedId);
-      return index === -1
-        ? [...prev, event.data]
-        : [...prev.slice(0, index), event.data];
+      return index === -1 ? [...prev, event.data] : [...prev.slice(0, index), event.data];
     }
     case "assistant":
       return [...prev, placeholder(event.data.id)];
     case "delta": {
       const { id, text } = event.data;
-      return prev.map((m) =>
-        m.id === id ? { ...m, content: m.content + text } : m,
-      );
+      return prev.map((m) => (m.id === id ? { ...m, content: m.content + text } : m));
     }
     case "done":
       return prev.map((m) => (m.id === event.data.id ? event.data : m));
     case "error":
-      return prev.map((m) =>
-        m.id === event.data.id ? { ...m, status: "error" as const } : m,
-      );
+      return prev.map((m) => (m.id === event.data.id ? { ...m, status: "error" as const } : m));
     default:
       return prev;
   }

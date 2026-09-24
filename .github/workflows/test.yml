@@ -18,7 +18,18 @@ jobs:
       - run: bun test packages
       - run: bun run test:integration:local
       - run: bun scripts/check-snippets.ts
+      - run: bun scripts/openapi.ts --check
       - run: bun run --cwd apps/landing build
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run format:check
   docker:
     runs-on: ubuntu-latest
     steps:

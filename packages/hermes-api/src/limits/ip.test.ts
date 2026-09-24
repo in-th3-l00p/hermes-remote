@@ -28,7 +28,14 @@ describe("ip helpers", () => {
     for (const ok of ["10.0.0.0/8", "10.0.0.1", "::/0", "2001:db8::/32", "0.0.0.0/0"]) {
       expect(isValidCidr(ok)).toBe(true);
     }
-    for (const bad of ["10.0.0.0/33", "2001:db8::/129", "10.0.0/8", "abc", "10.0.0.0/x", "10.0.0.0/-1"]) {
+    for (const bad of [
+      "10.0.0.0/33",
+      "2001:db8::/129",
+      "10.0.0/8",
+      "abc",
+      "10.0.0.0/x",
+      "10.0.0.0/-1",
+    ]) {
       expect(isValidCidr(bad)).toBe(false);
     }
   });

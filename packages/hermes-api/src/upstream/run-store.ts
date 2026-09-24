@@ -60,20 +60,14 @@ export class RunStore {
   }
 
   get(id: string): RunRecord | null {
-    const row = this.db
-      .query<RunRow, [string]>("SELECT * FROM runs WHERE id = ?")
-      .get(id);
+    const row = this.db.query<RunRow, [string]>("SELECT * FROM runs WHERE id = ?").get(id);
     return row === null ? null : toRecord(row);
   }
 
   list(principal: string | null): RunRecord[] {
     const rows =
       principal === null
-        ? this.db
-            .query<RunRow, []>(
-              "SELECT * FROM runs ORDER BY created_at DESC, id DESC",
-            )
-            .all()
+        ? this.db.query<RunRow, []>("SELECT * FROM runs ORDER BY created_at DESC, id DESC").all()
         : this.db
             .query<RunRow, [string]>(
               "SELECT * FROM runs WHERE principal = ? ORDER BY created_at DESC, id DESC",

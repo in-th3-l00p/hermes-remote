@@ -9,11 +9,30 @@ describe("init and config file", () => {
     const { ctx, serveCalls } = await makeCtx();
     const result = await runCli(
       [
-        "init", "--port", "9999", "--host", "0.0.0.0", "--cors", "http://a.test,http://b.test",
-        "--trust-proxy", "127.0.0.1",
-        "--anonymous", "--upstream", "http://up", "--upstream-key", "uk",
-        "--model", "m", "--supabase-url", "https://sb",
-        "--supabase-jwt-secret", "sec", "--rate-limit", "30", "--rate-window", "10",
+        "init",
+        "--port",
+        "9999",
+        "--host",
+        "0.0.0.0",
+        "--cors",
+        "http://a.test,http://b.test",
+        "--trust-proxy",
+        "127.0.0.1",
+        "--anonymous",
+        "--upstream",
+        "http://up",
+        "--upstream-key",
+        "uk",
+        "--model",
+        "m",
+        "--supabase-url",
+        "https://sb",
+        "--supabase-jwt-secret",
+        "sec",
+        "--rate-limit",
+        "30",
+        "--rate-window",
+        "10",
       ],
       ctx,
     );
@@ -41,10 +60,7 @@ describe("init and config file", () => {
 
   test("re-running init merges over the existing config", async () => {
     const { ctx } = await makeCtx();
-    await runCli(
-      ["init", "--port", "9999", "--upstream-key", "uk", "--anonymous"],
-      ctx,
-    );
+    await runCli(["init", "--port", "9999", "--upstream-key", "uk", "--anonymous"], ctx);
     const result = await runCli(["init", "--port", "1234"], ctx);
     expect(result.exitCode).toBe(0);
     const config = await Bun.file(join(ctx.homeDir, "config.json")).json();

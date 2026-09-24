@@ -32,7 +32,9 @@ describe("users command", () => {
     const user = store.upsert({ provider: "auth0", subject: "a" });
     const chat = new ChatStore(join(ctx.homeDir, "chat.db"));
     chat.createSession({ userId: user.id });
-    expect((await runCli(["users", "list"], ctx)).output).toContain(`${user.id}  active  anonymous  auth0:a`);
+    expect((await runCli(["users", "list"], ctx)).output).toContain(
+      `${user.id}  active  anonymous  auth0:a`,
+    );
     expect((await runCli(["users", "show", user.id], ctx)).output).toContain('"provider": "auth0"');
     expect((await runCli(["users", "disable", user.id], ctx)).output).toContain("disabled");
     expect((await runCli(["users", "enable", user.id], ctx)).output).toContain("active");
@@ -40,7 +42,9 @@ describe("users command", () => {
       `deleted user ${user.id} and 1 session(s)`,
     );
     const other = store.upsert({ provider: "auth0", subject: "b" });
-    expect((await runCli(["users", "delete", other.id], ctx)).output).toBe(`deleted user ${other.id}`);
+    expect((await runCli(["users", "delete", other.id], ctx)).output).toBe(
+      `deleted user ${other.id}`,
+    );
     expect((await runCli(["users", "show"], ctx)).exitCode).toBe(1);
     expect((await runCli(["users", "show", "usr_nope"], ctx)).exitCode).toBe(1);
     expect((await runCli(["users", "frobnicate"], ctx)).exitCode).toBe(1);
@@ -74,12 +78,20 @@ describe("doctor", () => {
 
   test("flags risky keys and settings, and an unreachable upstream as an error", async () => {
     const { ctx } = await makeCtx();
-    await runCli(["keys", "create", "--name", "ops", "--scope", "config:write", "--dangerous"], ctx);
+    await runCli(
+      ["keys", "create", "--name", "ops", "--scope", "config:write", "--dangerous"],
+      ctx,
+    );
     await createKey(ctx, ["--expires", "30m"]);
     const later = { ...ctx, now: () => new Date(ctx.now().getTime() + 3_600_000) };
     await Bun.write(
       join(ctx.homeDir, "config.json"),
-      JSON.stringify({ host: "0.0.0.0", anonymous: true, upstreamUrl: "http://127.0.0.1:1/", hermesBinary: "/bin/sh" }),
+      JSON.stringify({
+        host: "0.0.0.0",
+        anonymous: true,
+        upstreamUrl: "http://127.0.0.1:1/",
+        hermesBinary: "/bin/sh",
+      }),
     );
     await loadSigningSecret(ctx.homeDir);
     const failing = await runCli(["doctor"], {
@@ -106,7 +118,10 @@ describe("doctor", () => {
       fetch: (async () => new Response("ok")) as unknown as typeof fetch,
     });
     expect(healthy.output).toContain("answered 200");
-    await Bun.write(join(ctx.homeDir, "config.json"), JSON.stringify({ hermesBinary: "/missing/hermes" }));
+    await Bun.write(
+      join(ctx.homeDir, "config.json"),
+      JSON.stringify({ hermesBinary: "/missing/hermes" }),
+    );
     expect((await runCli(["doctor"], ctx)).output).toContain('"/missing/hermes" not found');
     await writeFile(join(ctx.homeDir, "config.json"), "{broken");
     await chmod(join(ctx.homeDir, "config.json"), 0o600);

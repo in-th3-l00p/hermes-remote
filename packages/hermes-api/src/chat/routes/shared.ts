@@ -33,10 +33,7 @@ export function canAccess(
 ): boolean {
   if (principal.type === "api_key") {
     const all = mode === "read" ? "sessions:read-all" : "sessions:write-all";
-    return (
-      session.keyId === principal.record.id ||
-      principal.record.scopes.includes(all)
-    );
+    return session.keyId === principal.record.id || principal.record.scopes.includes(all);
   }
   if (principal.type === "user") {
     return session.userId === principal.userId;

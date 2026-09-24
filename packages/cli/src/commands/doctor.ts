@@ -19,17 +19,29 @@ export async function doctorCommand(ctx: CliContext, store: KeyStore): Promise<C
   if (!loaded.ok) {
     add("error", loaded.error);
   } else {
-    add("ok", existsSync(join(ctx.homeDir, "config.json")) ? "config.json is valid" : "no config.json (defaults apply)");
+    add(
+      "ok",
+      existsSync(join(ctx.homeDir, "config.json"))
+        ? "config.json is valid"
+        : "no config.json (defaults apply)",
+    );
   }
   const config = loaded.ok ? loaded.config : {};
 
   const keys = await store.list();
   const now = ctx.now().getTime();
-  const live = keys.filter((k) => !k.revoked && (k.expiresAt === null || Date.parse(k.expiresAt) > now));
+  const live = keys.filter(
+    (k) => !k.revoked && (k.expiresAt === null || Date.parse(k.expiresAt) > now),
+  );
   add(live.length > 0 ? "ok" : "warn", `${live.length} usable API key(s)`);
-  const expired = keys.filter((k) => !k.revoked && k.expiresAt !== null && Date.parse(k.expiresAt) <= now);
+  const expired = keys.filter(
+    (k) => !k.revoked && k.expiresAt !== null && Date.parse(k.expiresAt) <= now,
+  );
   if (expired.length > 0) {
-    add("warn", `${expired.length} expired key(s) not revoked: ${expired.map((k) => k.id).join(", ")}`);
+    add(
+      "warn",
+      `${expired.length} expired key(s) not revoked: ${expired.map((k) => k.id).join(", ")}`,
+    );
   }
   const risky = live.filter((k) => k.expiresAt === null && k.scopes.some(isDangerousScope));
   if (risky.length > 0) {

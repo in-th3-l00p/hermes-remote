@@ -15,9 +15,7 @@ function writeGuard(c: Context<ChatEnv>): Response | null {
 }
 
 function chatGuard(c: Context<ChatEnv>): Response | null {
-  return (
-    writeGuard(c) ?? requireScope(c.get("principal"), "chat:invoke")
-  );
+  return writeGuard(c) ?? requireScope(c.get("principal"), "chat:invoke");
 }
 
 export function registerAgentSessionRoutes(
@@ -96,11 +94,7 @@ export function registerAgentSessionRoutes(
     }
     const body = (await c.req.json().catch(() => ({}))) as unknown;
     try {
-      const stream = await sessions.chatStream(
-        c.req.param("id"),
-        body,
-        c.req.raw.signal,
-      );
+      const stream = await sessions.chatStream(c.req.param("id"), body, c.req.raw.signal);
       options.events?.publish("agent_session.turn", { id: c.req.param("id") });
       return new Response(keepAlive(stream), {
         headers: { "content-type": "text/event-stream" },

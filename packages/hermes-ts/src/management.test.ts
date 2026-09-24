@@ -53,7 +53,12 @@ const TABLE: Call[] = [
   [(c) => c.profiles.rename("x", "y"), "PATCH", "/v1/profiles/x", { rename: "y" }],
   [(c) => c.profiles.describe("x", "d"), "PATCH", "/v1/profiles/x", { description: "d" }],
   [(c) => c.profiles.importArchive("x", ARCHIVE), "POST", "/v1/profiles/x/import", ARCHIVE],
-  [(c) => c.profiles.install("x", "https://g.it"), "POST", "/v1/profiles/x/install", { source: "https://g.it" }],
+  [
+    (c) => c.profiles.install("x", "https://g.it"),
+    "POST",
+    "/v1/profiles/x/install",
+    { source: "https://g.it" },
+  ],
   [(c) => c.profiles.update("x"), "POST", "/v1/profiles/x/update"],
   [(c) => c.config.show(), "GET", "/v1/config"],
   [(c) => c.config.get("model"), "GET", "/v1/config/model"],
@@ -79,7 +84,12 @@ const TABLE: Call[] = [
   [(c) => c.memory.user(), "GET", "/v1/memory/user"],
   [(c) => c.memory.setUser("u"), "PUT", "/v1/memory/user", { content: "u" }],
   [(c) => c.memory.add("t"), "POST", "/v1/memory/entries", { action: "add", text: "t" }],
-  [(c) => c.memory.replace("a", "b"), "POST", "/v1/memory/entries", { action: "replace", from: "a", text: "b" }],
+  [
+    (c) => c.memory.replace("a", "b"),
+    "POST",
+    "/v1/memory/entries",
+    { action: "replace", from: "a", text: "b" },
+  ],
   [(c) => c.memory.remove("t"), "POST", "/v1/memory/entries", { action: "remove", text: "t" }],
   [(c) => c.memory.journey(), "GET", "/v1/memory/journey"],
   [(c) => c.memory.providers(), "GET", "/v1/memory/providers"],
@@ -93,7 +103,12 @@ const TABLE: Call[] = [
   [(c) => c.skills.patch("s", "#2"), "PATCH", "/v1/skills/s", { content: "#2" }],
   [(c) => c.skills.remove("s"), "DELETE", "/v1/skills/s"],
   [(c) => c.skills.file("s", "refs/a.md"), "GET", "/v1/skills/s/files/refs/a.md"],
-  [(c) => c.skills.writeFile("s", "refs/a.md", "x"), "PUT", "/v1/skills/s/files/refs/a.md", { content: "x" }],
+  [
+    (c) => c.skills.writeFile("s", "refs/a.md", "x"),
+    "PUT",
+    "/v1/skills/s/files/refs/a.md",
+    { content: "x" },
+  ],
   [(c) => c.skills.hubSearch("q", "official"), "GET", "/v1/skills/hub/search?q=q&source=official"],
   [(c) => c.skills.hubInstall("pdf"), "POST", "/v1/skills/hub/install", { source: "pdf" }],
   [(c) => c.skills.update("s"), "POST", "/v1/skills/s/update"],
@@ -116,7 +131,12 @@ const TABLE: Call[] = [
   [(c) => c.hooks.test("agent:start"), "POST", "/v1/hooks/agent:start/test"],
   [(c) => c.hooks.revokeConsent("rm"), "POST", "/v1/hooks/consent/revoke", { command: "rm" }],
   [(c) => c.webhooks.list(), "GET", "/v1/webhooks/subscriptions"],
-  [(c) => c.webhooks.subscribe("deploys", { prompt: "summarize" }), "POST", "/v1/webhooks/subscriptions", { name: "deploys", prompt: "summarize" }],
+  [
+    (c) => c.webhooks.subscribe("deploys", { prompt: "summarize" }),
+    "POST",
+    "/v1/webhooks/subscriptions",
+    { name: "deploys", prompt: "summarize" },
+  ],
   [(c) => c.webhooks.remove("1"), "DELETE", "/v1/webhooks/subscriptions/1"],
   [(c) => c.gateway.status(), "GET", "/v1/gateway"],
   [(c) => c.gateway.platforms(), "GET", "/v1/gateway/platforms"],
@@ -124,17 +144,47 @@ const TABLE: Call[] = [
   [(c) => c.gateway.stop(), "POST", "/v1/gateway/stop"],
   [(c) => c.gateway.restart(), "POST", "/v1/gateway/restart"],
   [(c) => c.gateway.enroll(), "POST", "/v1/gateway/enroll"],
-  [(c) => c.gateway.setPlatform("telegram", "enabled", "true"), "PUT", "/v1/gateway/platforms/telegram", { key: "enabled", value: "true" }],
-  [(c) => c.messaging.send("telegram:ops", "hi"), "POST", "/v1/messages/send", { target: "telegram:ops", message: "hi" }],
+  [
+    (c) => c.gateway.setPlatform("telegram", "enabled", "true"),
+    "PUT",
+    "/v1/gateway/platforms/telegram",
+    { key: "enabled", value: "true" },
+  ],
+  [
+    (c) => c.messaging.send("telegram:ops", "hi"),
+    "POST",
+    "/v1/messages/send",
+    { target: "telegram:ops", message: "hi" },
+  ],
   [(c) => c.pairing.list(), "GET", "/v1/pairing/codes"],
-  [(c) => c.pairing.approve("telegram", "ABC123"), "POST", "/v1/pairing/codes", { platform: "telegram", code: "ABC123" }],
+  [
+    (c) => c.pairing.approve("telegram", "ABC123"),
+    "POST",
+    "/v1/pairing/codes",
+    { platform: "telegram", code: "ABC123" },
+  ],
   [(c) => c.pairing.clearPending(), "POST", "/v1/pairing/pending/clear"],
   [(c) => c.pairing.revoke("telegram", "42"), "DELETE", "/v1/pairing/users/telegram/42"],
   [(c) => c.kanban.tasks(), "GET", "/v1/kanban/tasks"],
-  [(c) => c.kanban.create("fix", { body: "d" }), "POST", "/v1/kanban/tasks", { title: "fix", body: "d" }],
+  [
+    (c) => c.kanban.create("fix", { body: "d" }),
+    "POST",
+    "/v1/kanban/tasks",
+    { title: "fix", body: "d" },
+  ],
   [(c) => c.kanban.assign("7", "work"), "POST", "/v1/kanban/tasks/7/assign", { profile: "work" }],
-  [(c) => c.kanban.complete("7", { summary: "ok" }), "POST", "/v1/kanban/tasks/7/complete", { summary: "ok" }],
-  [(c) => c.kanban.block("7", "waiting"), "POST", "/v1/kanban/tasks/7/block", { reason: "waiting" }],
+  [
+    (c) => c.kanban.complete("7", { summary: "ok" }),
+    "POST",
+    "/v1/kanban/tasks/7/complete",
+    { summary: "ok" },
+  ],
+  [
+    (c) => c.kanban.block("7", "waiting"),
+    "POST",
+    "/v1/kanban/tasks/7/block",
+    { reason: "waiting" },
+  ],
   [(c) => c.kanban.unblock("7"), "POST", "/v1/kanban/tasks/7/unblock"],
   [(c) => c.kanban.archive("7"), "DELETE", "/v1/kanban/tasks/7"],
   [(c) => c.kanban.comment("7", "nice"), "POST", "/v1/kanban/tasks/7/comments", { text: "nice" }],
@@ -143,7 +193,12 @@ const TABLE: Call[] = [
   [(c) => c.projects.addFolder("app", "/x"), "PATCH", "/v1/projects/app", { path: "/x" }],
   [(c) => c.projects.archive("app"), "DELETE", "/v1/projects/app"],
   [(c) => c.toolsets.list(), "GET", "/v1/toolsets"],
-  [(c) => c.toolsets.set("cli", "web", true), "PUT", "/v1/toolsets/cli", { name: "web", enabled: true }],
+  [
+    (c) => c.toolsets.set("cli", "web", true),
+    "PUT",
+    "/v1/toolsets/cli",
+    { name: "web", enabled: true },
+  ],
   [(c) => c.mcp.list(), "GET", "/v1/mcp"],
   [(c) => c.mcp.add("gh", "https://m"), "POST", "/v1/mcp", { name: "gh", url: "https://m" }],
   [(c) => c.mcp.remove("gh"), "DELETE", "/v1/mcp/gh"],
@@ -157,30 +212,75 @@ const TABLE: Call[] = [
   [(c) => c.agentSessions.list(), "GET", "/v1/agent/sessions"],
   [(c) => c.agentSessions.create({ title: "t" }), "POST", "/v1/agent/sessions", { title: "t" }],
   [(c) => c.agentSessions.get("s1"), "GET", "/v1/agent/sessions/s1"],
-  [(c) => c.agentSessions.update("s1", { title: "u" }), "PATCH", "/v1/agent/sessions/s1", { title: "u" }],
+  [
+    (c) => c.agentSessions.update("s1", { title: "u" }),
+    "PATCH",
+    "/v1/agent/sessions/s1",
+    { title: "u" },
+  ],
   [(c) => c.agentSessions.remove("s1"), "DELETE", "/v1/agent/sessions/s1"],
   [(c) => c.agentSessions.messages("s1"), "GET", "/v1/agent/sessions/s1/messages"],
   [(c) => c.agentSessions.fork("s1"), "POST", "/v1/agent/sessions/s1/fork", {}],
-  [(c) => c.agentSessions.modelLock("s1", "m"), "POST", "/v1/agent/sessions/s1/model", { model: "m" }],
-  [(c) => c.agentSessions.chat("s1", "hi"), "POST", "/v1/agent/sessions/s1/chat", { message: "hi" }],
+  [
+    (c) => c.agentSessions.modelLock("s1", "m"),
+    "POST",
+    "/v1/agent/sessions/s1/model",
+    { model: "m" },
+  ],
+  [
+    (c) => c.agentSessions.chat("s1", "hi"),
+    "POST",
+    "/v1/agent/sessions/s1/chat",
+    { message: "hi" },
+  ],
   [(c) => c.commands.list(), "GET", "/v1/commands"],
-  [(c) => c.commands.run("s1", "/goal status"), "POST", "/v1/agent/sessions/s1/commands", { command: "/goal status" }],
+  [
+    (c) => c.commands.run("s1", "/goal status"),
+    "POST",
+    "/v1/agent/sessions/s1/commands",
+    { command: "/goal status" },
+  ],
   [(c) => c.goals.get("s1"), "GET", "/v1/agent/sessions/s1/goal"],
-  [(c) => c.goals.set("s1", "ship it", { draft: true }), "PUT", "/v1/agent/sessions/s1/goal", { text: "ship it", draft: true }],
+  [
+    (c) => c.goals.set("s1", "ship it", { draft: true }),
+    "PUT",
+    "/v1/agent/sessions/s1/goal",
+    { text: "ship it", draft: true },
+  ],
   [(c) => c.goals.clear("s1"), "DELETE", "/v1/agent/sessions/s1/goal"],
   [(c) => c.goals.pause("s1"), "POST", "/v1/agent/sessions/s1/goal/pause"],
   [(c) => c.goals.resume("s1"), "POST", "/v1/agent/sessions/s1/goal/resume"],
-  [(c) => c.goals.wait("s1", 12, "compile"), "POST", "/v1/agent/sessions/s1/goal/wait", { pid: 12, reason: "compile" }],
+  [
+    (c) => c.goals.wait("s1", 12, "compile"),
+    "POST",
+    "/v1/agent/sessions/s1/goal/wait",
+    { pid: 12, reason: "compile" },
+  ],
   [(c) => c.goals.unwait("s1"), "POST", "/v1/agent/sessions/s1/goal/unwait"],
   [(c) => c.goals.gates("s1"), "GET", "/v1/agent/sessions/s1/goal/gates"],
-  [(c) => c.goals.addGate("s1", "bun test"), "POST", "/v1/agent/sessions/s1/goal/gates", { command: "bun test" }],
+  [
+    (c) => c.goals.addGate("s1", "bun test"),
+    "POST",
+    "/v1/agent/sessions/s1/goal/gates",
+    { command: "bun test" },
+  ],
   [(c) => c.goals.removeGate("s1", 2), "DELETE", "/v1/agent/sessions/s1/goal/gates/2"],
   [(c) => c.goals.clearGates("s1"), "DELETE", "/v1/agent/sessions/s1/goal/gates"],
   [(c) => c.goals.subgoals("s1"), "GET", "/v1/agent/sessions/s1/goal/subgoals"],
-  [(c) => c.goals.addSubgoal("s1", "docs"), "POST", "/v1/agent/sessions/s1/goal/subgoals", { text: "docs" }],
+  [
+    (c) => c.goals.addSubgoal("s1", "docs"),
+    "POST",
+    "/v1/agent/sessions/s1/goal/subgoals",
+    { text: "docs" },
+  ],
   [(c) => c.goals.removeSubgoal("s1", 1), "DELETE", "/v1/agent/sessions/s1/goal/subgoals/1"],
   [(c) => c.goals.clearSubgoals("s1"), "DELETE", "/v1/agent/sessions/s1/goal/subgoals"],
-  [(c) => c.media.images("a cat", "flux"), "POST", "/v1/media/images", { prompt: "a cat", model: "flux" }],
+  [
+    (c) => c.media.images("a cat", "flux"),
+    "POST",
+    "/v1/media/images",
+    { prompt: "a cat", model: "flux" },
+  ],
   [(c) => c.web.search("bun"), "POST", "/v1/web/search", { query: "bun" }],
   [(c) => c.web.extract("https://bun.sh"), "POST", "/v1/web/extract", { url: "https://bun.sh" }],
   [(c) => c.browser.task("screenshot"), "POST", "/v1/browser/tasks", { task: "screenshot" }],
@@ -217,28 +317,24 @@ describe("client namespaces", () => {
   });
 
   test("raw responses come back untouched", async () => {
-    const { client } = makeClient(() =>
-      new Response("BYTES", {
-        headers: { "content-type": "application/octet-stream" },
-      }),
+    const { client } = makeClient(
+      () =>
+        new Response("BYTES", {
+          headers: { "content-type": "application/octet-stream" },
+        }),
     );
     expect(await (await client.profiles.exportArchive("indra")).text()).toBe("BYTES");
     expect(await (await client.backups.create()).text()).toBe("BYTES");
     expect(await (await client.media.tts({ input: "hi" })).text()).toBe("BYTES");
-    expect(
-      await (await client.passthrough.chatCompletions({ messages: [] })).text(),
-    ).toBe("BYTES");
-    expect(await (await client.passthrough.responses({ input: "x" })).text()).toBe(
-      "BYTES",
-    );
+    expect(await (await client.passthrough.chatCompletions({ messages: [] })).text()).toBe("BYTES");
+    expect(await (await client.passthrough.responses({ input: "x" })).text()).toBe("BYTES");
   });
 
   test("streams parse SSE frames", async () => {
     const sse = () =>
-      new Response(
-        'event: run.started\ndata: {"a":1}\n\nevent: run.completed\ndata: {"b":2}\n\n',
-        { headers: { "content-type": "text/event-stream" } },
-      );
+      new Response('event: run.started\ndata: {"a":1}\n\nevent: run.completed\ndata: {"b":2}\n\n', {
+        headers: { "content-type": "text/event-stream" },
+      });
     const { client } = makeClient(sse);
     const collected = [];
     for await (const event of client.agentSessions.chatStream("s1", "hi")) {

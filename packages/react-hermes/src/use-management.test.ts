@@ -125,9 +125,7 @@ describe("useGoal", () => {
         },
       },
     };
-    const { result } = renderHook(() =>
-      useGoal({ client, sessionId: "s1" }),
-    );
+    const { result } = renderHook(() => useGoal({ client, sessionId: "s1" }));
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.goal?.text).toBe("goal for s1 v1");
     await act(async () => {
@@ -179,9 +177,7 @@ describe("useEvents", () => {
     expect(result.current.connected).toBe(true);
     unmount();
     await waitFor(() => expect(aborted).toBe(true));
-    const disabled = renderHook(() =>
-      useEvents({ client, enabled: false }),
-    );
+    const disabled = renderHook(() => useEvents({ client, enabled: false }));
     expect(disabled.result.current.connected).toBe(false);
     expect(disabled.result.current.events).toEqual([]);
   });

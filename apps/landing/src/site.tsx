@@ -44,8 +44,8 @@ export function SiteFooter() {
   return (
     <footer className="wrap site-footer">
       <span>
-        MIT licensed. Built for the{" "}
-        <a href="https://hermes-agent.nousresearch.com">Hermes agent</a> by Nous Research.
+        MIT licensed. Built for the <a href="https://hermes-agent.nousresearch.com">Hermes agent</a>{" "}
+        by Nous Research.
       </span>
       <nav className="footer-links" aria-label="Elsewhere">
         <a href="https://github.com/in-th3-l00p/hermes-remote/releases">Releases</a>

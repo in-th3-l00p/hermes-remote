@@ -7,10 +7,7 @@ function upstreamStatus(health: unknown): string {
   return typeof status === "string" ? status : "ok";
 }
 
-export function registerDiscoveryRoutes(
-  app: Hono<ChatEnv>,
-  options: UpstreamRouteOptions,
-): void {
+export function registerDiscoveryRoutes(app: Hono<ChatEnv>, options: UpstreamRouteOptions): void {
   const { discovery } = options.upstream;
 
   const statusRoutes: [string, () => Promise<unknown>][] = [

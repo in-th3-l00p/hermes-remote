@@ -83,7 +83,10 @@ function makeGate(): { delay: Delay; open(): void } {
   };
 }
 
-async function readSome(res: Response, count: number): Promise<{
+async function readSome(
+  res: Response,
+  count: number,
+): Promise<{
   frames: Frame[];
   reader: ReadableStreamDefaultReader<Uint8Array>;
 }> {
@@ -111,9 +114,10 @@ describe("principals", () => {
         await get(fetchImpl, "/v1/auth/whoami", jwt({ sub: "user-1", email: "dev@example.com" }))
       ).json(),
     ).toEqual({ type: "user", id: "user-1", email: "dev@example.com" });
-    expect(
-      await (await get(fetchImpl, "/v1/auth/whoami", jwt({ sub: "user-2" }))).json(),
-    ).toEqual({ type: "user", id: "user-2" });
+    expect(await (await get(fetchImpl, "/v1/auth/whoami", jwt({ sub: "user-2" }))).json()).toEqual({
+      type: "user",
+      id: "user-2",
+    });
     expect(await (await get(fetchImpl, "/v1/auth/whoami", KEY)).json()).toEqual({
       type: "api_key",
       id: "wkstn",
@@ -185,9 +189,7 @@ describe("discovery", () => {
   test("agent status needs an api key", async () => {
     const fetchImpl = demo();
     expect((await get(fetchImpl, "/v1/agent/status")).status).toBe(403);
-    expect(
-      (await get(fetchImpl, "/v1/agent/status", jwt({ sub: "user_1" }))).status,
-    ).toBe(403);
+    expect((await get(fetchImpl, "/v1/agent/status", jwt({ sub: "user_1" }))).status).toBe(403);
   });
 
   test("agent status honours the profile header", async () => {
@@ -237,9 +239,10 @@ describe("sessions and chat", () => {
 
   test("reads a seeded session's messages", async () => {
     const fetchImpl = demo();
-    const body = (await (
-      await get(fetchImpl, "/v1/sessions/9f21c8a4d301/messages")
-    ).json()) as { messages: { role: string }[]; total: number };
+    const body = (await (await get(fetchImpl, "/v1/sessions/9f21c8a4d301/messages")).json()) as {
+      messages: { role: string }[];
+      total: number;
+    };
     expect(body.total).toBe(4);
     expect(body.messages[0]?.role).toBe("user");
   });
@@ -262,12 +265,10 @@ describe("sessions and chat", () => {
     const done = events.at(-1);
     expect(done?.event).toBe("done");
     expect(done?.data["status"]).toBe("done");
-    expect(deltas.map((d) => d.data["text"]).join("")).toBe(
-      done?.data["content"] as string,
-    );
-    const list = (await (
-      await get(fetchImpl, `/v1/sessions/${session.id}/messages`)
-    ).json()) as { total: number };
+    expect(deltas.map((d) => d.data["text"]).join("")).toBe(done?.data["content"] as string);
+    const list = (await (await get(fetchImpl, `/v1/sessions/${session.id}/messages`)).json()) as {
+      total: number;
+    };
     expect(list.total).toBe(2);
   });
 
@@ -325,9 +326,7 @@ describe("sessions and chat", () => {
       await send(fetchImpl, "POST", "/v1/sessions/9f21c8a4d301/stop", {})
     ).json()) as { stopped: boolean };
     expect(stop.stopped).toBe(false);
-    expect(
-      (await send(fetchImpl, "POST", "/v1/sessions/ffffffffffff/stop", {})).status,
-    ).toBe(404);
+    expect((await send(fetchImpl, "POST", "/v1/sessions/ffffffffffff/stop", {})).status).toBe(404);
   });
 
   test("a second concurrent turn conflicts, and cancel releases it", async () => {
@@ -364,16 +363,21 @@ describe("sessions and chat", () => {
 
   test("editing regenerates from the edited message", async () => {
     const fetchImpl = demo();
-    const res = await send(fetchImpl, "PATCH", "/v1/sessions/9f21c8a4d301/messages/9f21c8a4d3010a", {
-      content: "check the logs instead",
-    });
+    const res = await send(
+      fetchImpl,
+      "PATCH",
+      "/v1/sessions/9f21c8a4d301/messages/9f21c8a4d3010a",
+      {
+        content: "check the logs instead",
+      },
+    );
     const events = await frames(res);
     expect(events[0]?.event).toBe("user");
     expect(events[0]?.data["content"]).toBe("check the logs instead");
     expect(events[0]?.data["editedAt"]).not.toBeNull();
-    const list = (await (
-      await get(fetchImpl, "/v1/sessions/9f21c8a4d301/messages")
-    ).json()) as { messages: { role: string }[] };
+    const list = (await (await get(fetchImpl, "/v1/sessions/9f21c8a4d301/messages")).json()) as {
+      messages: { role: string }[];
+    };
     expect(list.messages.length).toBe(2);
   });
 
@@ -569,13 +573,7 @@ describe("memory, soul, config", () => {
   test("memory write validation and overflow", async () => {
     const fetchImpl = demo();
     expect((await send(fetchImpl, "PUT", "/v1/memory", { content: 5 }, KEY)).status).toBe(400);
-    const overflow = await send(
-      fetchImpl,
-      "PUT",
-      "/v1/memory",
-      { content: "x".repeat(2201) },
-      KEY,
-    );
+    const overflow = await send(fetchImpl, "PUT", "/v1/memory", { content: "x".repeat(2201) }, KEY);
     expect(overflow.status).toBe(400);
     const body = (await overflow.json()) as { error: { code: string } };
     expect(body.error.code).toBe("memory_overflow");
@@ -599,7 +597,13 @@ describe("memory, soul, config", () => {
     ).json()) as { content: string };
     expect(replaced.content).toBe("line two");
     const removed = (await (
-      await send(fetchImpl, "POST", "/v1/memory/entries", { action: "remove", text: "line two" }, KEY)
+      await send(
+        fetchImpl,
+        "POST",
+        "/v1/memory/entries",
+        { action: "remove", text: "line two" },
+        KEY,
+      )
     ).json()) as { content: string };
     expect(removed.content).toBe("");
   });
@@ -621,19 +625,18 @@ describe("memory, soul, config", () => {
       ).status,
     ).toBe(404);
     expect(
+      (await send(fetchImpl, "POST", "/v1/memory/entries", { action: "replace", text: "x" }, KEY))
+        .status,
+    ).toBe(404);
+    expect(
       (
         await send(
           fetchImpl,
           "POST",
           "/v1/memory/entries",
-          { action: "replace", text: "x" },
+          { action: "remove", text: "missing" },
           KEY,
         )
-      ).status,
-    ).toBe(404);
-    expect(
-      (
-        await send(fetchImpl, "POST", "/v1/memory/entries", { action: "remove", text: "missing" }, KEY)
       ).status,
     ).toBe(404);
     const overflow = await send(
@@ -693,9 +696,9 @@ describe("memory, soul, config", () => {
     expect(updated.raw).toBe("hermes-4-70b");
     await send(fetchImpl, "DELETE", "/v1/config/model.name", undefined, KEY);
     expect((await get(fetchImpl, "/v1/config/model.name", KEY)).status).toBe(502);
-    expect(
-      (await send(fetchImpl, "PUT", "/v1/config/model.name", { value: "" }, KEY)).status,
-    ).toBe(400);
+    expect((await send(fetchImpl, "PUT", "/v1/config/model.name", { value: "" }, KEY)).status).toBe(
+      400,
+    );
     expect((await send(fetchImpl, "PATCH", "/v1/config/model.name", {}, KEY)).status).toBe(404);
     expect((await get(fetchImpl, "/v1/config/bad/key", KEY)).status).toBe(404);
   });
@@ -755,14 +758,18 @@ describe("event firehose", () => {
 describe("session tools", () => {
   test("rename, archive, list archived and search, like the server", async () => {
     const fetchImpl = demo();
-    const created = (await (await fetchImpl(`${BASE}/v1/sessions`, { method: "POST" })).json()) as { id: string };
+    const created = (await (await fetchImpl(`${BASE}/v1/sessions`, { method: "POST" })).json()) as {
+      id: string;
+    };
     const patch = (body: unknown) =>
       fetchImpl(`${BASE}/v1/sessions/${created.id}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
       });
-    expect(((await (await patch({ title: "  Trip plans  " })).json()) as { title: string }).title).toBe("Trip plans");
+    expect(
+      ((await (await patch({ title: "  Trip plans  " })).json()) as { title: string }).title,
+    ).toBe("Trip plans");
     expect((await patch({})).status).toBe(400);
     expect(
       (await fetchImpl(`${BASE}/v1/sessions/${created.id}`, { method: "PATCH", body: "{" })).status,
@@ -770,15 +777,21 @@ describe("session tools", () => {
     expect((await patch({ title: "" })).status).toBe(400);
     const archived = (await (await patch({ archived: true })).json()) as { archived: boolean };
     expect(archived.archived).toBe(true);
-    const active = (await (await get(fetchImpl, "/v1/sessions")).json()) as { sessions: { id: string }[] };
+    const active = (await (await get(fetchImpl, "/v1/sessions")).json()) as {
+      sessions: { id: string }[];
+    };
     expect(active.sessions.map((s) => s.id)).not.toContain(created.id);
     const onlyArchived = (await (await get(fetchImpl, "/v1/sessions?archived=true")).json()) as {
       sessions: { id: string }[];
     };
     expect(onlyArchived.sessions.map((s) => s.id)).toEqual([created.id]);
-    const found = (await (await get(fetchImpl, "/v1/sessions/search?q=TRIP")).json()) as { sessions: { id: string }[] };
+    const found = (await (await get(fetchImpl, "/v1/sessions/search?q=TRIP")).json()) as {
+      sessions: { id: string }[];
+    };
     expect(found.sessions.map((s) => s.id)).toContain(created.id);
-    const byMessage = (await (await get(fetchImpl, "/v1/sessions/search?q=zzz-nothing")).json()) as { sessions: unknown[] };
+    const byMessage = (await (
+      await get(fetchImpl, "/v1/sessions/search?q=zzz-nothing")
+    ).json()) as { sessions: unknown[] };
     expect(byMessage.sessions).toEqual([]);
     expect((await get(fetchImpl, "/v1/sessions/search?q=")).status).toBe(400);
     expect(

@@ -13,12 +13,12 @@ describe("createAuthProvider", () => {
         publishableKey: "pk",
       }),
     ).toBeInstanceOf(SupabaseAuthProvider);
-    expect(
-      createAuthProvider({ provider: "clerk", secretKey: "sk" }),
-    ).toBeInstanceOf(ClerkAuthProvider);
-    expect(
-      createAuthProvider({ provider: "jwt", hs256Secret: "s" }),
-    ).toBeInstanceOf(JwtAuthProvider);
+    expect(createAuthProvider({ provider: "clerk", secretKey: "sk" })).toBeInstanceOf(
+      ClerkAuthProvider,
+    );
+    expect(createAuthProvider({ provider: "jwt", hs256Secret: "s" })).toBeInstanceOf(
+      JwtAuthProvider,
+    );
     expect(createAuthProvider({ provider: "none" })).toBeNull();
   });
 
@@ -39,10 +39,7 @@ describe("createAuthProvider", () => {
       { provider: "supabase", url: "https://x.supabase.co", publishableKey: "pk" },
       loadModule,
     );
-    const clerk = createAuthProvider(
-      { provider: "clerk", jwtKey: "pem" },
-      loadModule,
-    );
+    const clerk = createAuthProvider({ provider: "clerk", jwtKey: "pem" }, loadModule);
     expect(await supabase?.verify("tok")).toBeNull();
     expect(await clerk?.verify("tok")).toEqual({ sub: "u" });
     expect(loaded.sort()).toEqual(["@clerk/backend", "@supabase/supabase-js"]);

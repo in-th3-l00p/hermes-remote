@@ -7,9 +7,10 @@ interface Recorded {
   body: unknown;
 }
 
-function makeClient(
-  responder: (path: string) => Response = () => Response.json({ ok: true }),
-): { client: HermesClient; calls: Recorded[] } {
+function makeClient(responder: (path: string) => Response = () => Response.json({ ok: true })): {
+  client: HermesClient;
+  calls: Recorded[];
+} {
   const calls: Recorded[] = [];
   const client = new HermesClient({
     baseUrl: "http://x",
@@ -19,8 +20,7 @@ function makeClient(
       calls.push({
         method: init?.method ?? "GET",
         path,
-        body:
-          init?.body === undefined ? undefined : JSON.parse(String(init?.body)),
+        body: init?.body === undefined ? undefined : JSON.parse(String(init?.body)),
       });
       return responder(path);
     }) as unknown as typeof fetch,

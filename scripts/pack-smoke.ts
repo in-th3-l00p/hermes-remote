@@ -19,7 +19,9 @@ for (const pkg of ["hermes-api", "cli", "hermes-ts", "react-hermes"]) {
 }
 /** npm pack names a tarball <scope>-<name>-<version>.tgz. */
 const tarball = async (pkg: string): Promise<string> => {
-  const { name, version } = (await Bun.file(join(root, "packages", pkg, "package.json")).json()) as {
+  const { name, version } = (await Bun.file(
+    join(root, "packages", pkg, "package.json"),
+  ).json()) as {
     name: string;
     version: string;
   };
@@ -33,7 +35,17 @@ const deps = {
 };
 writeFileSync(
   join(app, "package.json"),
-  JSON.stringify({ name: "pack-smoke", private: true, type: "module", dependencies: { ...deps, react: "^19.0.0", "@types/react": "^19.0.0", typescript: "^5.7.0" }, overrides: deps }, null, 2),
+  JSON.stringify(
+    {
+      name: "pack-smoke",
+      private: true,
+      type: "module",
+      dependencies: { ...deps, react: "^19.0.0", "@types/react": "^19.0.0", typescript: "^5.7.0" },
+      overrides: deps,
+    },
+    null,
+    2,
+  ),
 );
 await $`bun install`.cwd(app).quiet();
 
@@ -43,19 +55,30 @@ const step = async (name: string, run: () => Promise<unknown>) => {
 };
 
 await step("cli runs under bun", async () => {
-  const out = await $`bun node_modules/@intheloop-studio/hermes-remote-cli/src/cli.ts help`.cwd(app).text();
+  const out = await $`bun node_modules/@intheloop-studio/hermes-remote-cli/src/cli.ts help`
+    .cwd(app)
+    .text();
   if (!out.includes("hermes-remote <command>")) throw new Error(out);
 });
 await step("server library imports under bun", async () => {
-  const out = await $`bun -e ${'import { createApp, VERSION } from "@intheloop-studio/hermes-remote"; const r = await createApp().fetch(new Request("http://x/v1/status")); console.log(VERSION, r.status)'}`.cwd(app).text();
+  const out =
+    await $`bun -e ${'import { createApp, VERSION } from "@intheloop-studio/hermes-remote"; const r = await createApp().fetch(new Request("http://x/v1/status")); console.log(VERSION, r.status)'}`
+      .cwd(app)
+      .text();
   if (!out.trim().endsWith("200")) throw new Error(out);
 });
-await step("client and react import under bun (the \"bun\" export condition)", async () => {
-  const out = await $`bun -e ${'const c = await import("@intheloop-studio/hermes-remote-client"); const r = await import("@intheloop-studio/hermes-remote-react"); console.log(typeof c.HermesClient, typeof r.useChat)'}`.cwd(app).text();
+await step('client and react import under bun (the "bun" export condition)', async () => {
+  const out =
+    await $`bun -e ${'const c = await import("@intheloop-studio/hermes-remote-client"); const r = await import("@intheloop-studio/hermes-remote-react"); console.log(typeof c.HermesClient, typeof r.useChat)'}`
+      .cwd(app)
+      .text();
   if (out.trim() !== "function function") throw new Error(out);
 });
 await step("client and react import under node (ESM)", async () => {
-  const out = await $`node --input-type=module -e ${'const c = await import("@intheloop-studio/hermes-remote-client"); const r = await import("@intheloop-studio/hermes-remote-react"); console.log(typeof c.HermesClient, typeof r.useChat)'}`.cwd(app).text();
+  const out =
+    await $`node --input-type=module -e ${'const c = await import("@intheloop-studio/hermes-remote-client"); const r = await import("@intheloop-studio/hermes-remote-react"); console.log(typeof c.HermesClient, typeof r.useChat)'}`
+      .cwd(app)
+      .text();
   if (out.trim() !== "function function") throw new Error(out);
 });
 await step("client types resolve for node16 consumers", async () => {
@@ -65,7 +88,17 @@ await step("client types resolve for node16 consumers", async () => {
   );
   writeFileSync(
     join(app, "tsconfig.json"),
-    JSON.stringify({ compilerOptions: { module: "node16", moduleResolution: "node16", strict: true, noEmit: true, skipLibCheck: false, types: [] }, files: ["consumer.ts"] }),
+    JSON.stringify({
+      compilerOptions: {
+        module: "node16",
+        moduleResolution: "node16",
+        strict: true,
+        noEmit: true,
+        skipLibCheck: false,
+        types: [],
+      },
+      files: ["consumer.ts"],
+    }),
   );
   await $`bun x tsc -p .`.cwd(app);
 });

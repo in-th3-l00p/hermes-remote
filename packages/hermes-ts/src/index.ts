@@ -40,13 +40,7 @@ export {
   ToolsetsResource,
   WebhooksResource,
 } from "./management.ts";
-export type {
-  Bundle,
-  CliResult,
-  MemoryFile,
-  ProfileInfo,
-  SkillFile,
-} from "./management.ts";
+export type { Bundle, CliResult, MemoryFile, ProfileInfo, SkillFile } from "./management.ts";
 export { Conversation } from "./conversation.ts";
 export type { ConversationSendOptions } from "./conversation.ts";
 export { DiscoveryResource } from "./discovery.ts";

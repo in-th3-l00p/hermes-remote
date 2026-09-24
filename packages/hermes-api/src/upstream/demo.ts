@@ -78,10 +78,7 @@ export class DemoUpstream implements Upstream {
         id: `run_${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`,
         status: "completed",
         input,
-        output:
-          typeof input === "string"
-            ? JSON.stringify({ echo: input })
-            : "demo output",
+        output: typeof input === "string" ? JSON.stringify({ echo: input }) : "demo output",
       };
       this.runStore.set(run.id, run);
       return { ...run };

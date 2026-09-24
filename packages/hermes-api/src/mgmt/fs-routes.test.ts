@@ -34,11 +34,7 @@ async function makeApp(scopes: string[]) {
   return { app, home };
 }
 
-const req = (
-  path: string,
-  method = "GET",
-  body?: unknown,
-): Request =>
+const req = (path: string, method = "GET", body?: unknown): Request =>
   new Request(`http://x${path}`, {
     method,
     headers: {
@@ -56,30 +52,24 @@ describe("memory routes", () => {
       chars: 0,
       limit: 2200,
     });
-    expect(
-      (await app.fetch(req("/v1/memory", "PUT", { content: "remember" }))).status,
-    ).toBe(200);
+    expect((await app.fetch(req("/v1/memory", "PUT", { content: "remember" }))).status).toBe(200);
     expect(await (await app.fetch(req("/v1/memory"))).json()).toEqual({
       content: "remember",
       chars: 8,
       limit: 2200,
     });
     expect(
-      (
-        await app.fetch(
-          req("/v1/memory/user", "PUT", { content: "x".repeat(1376) }),
-        )
-      ).status,
+      (await app.fetch(req("/v1/memory/user", "PUT", { content: "x".repeat(1376) }))).status,
     ).toBe(400);
+    expect((await app.fetch(req("/v1/memory/user", "PUT", { content: "a user" }))).status).toBe(
+      200,
+    );
     expect(
       (
-        await app.fetch(req("/v1/memory/user", "PUT", { content: "a user" }))
-      ).status,
-    ).toBe(200);
-    expect(
-      ((await (await app.fetch(req("/v1/memory/user"))).json()) as {
-        limit: number;
-      }).limit,
+        (await (await app.fetch(req("/v1/memory/user"))).json()) as {
+          limit: number;
+        }
+      ).limit,
     ).toBe(1375);
     expect((await app.fetch(req("/v1/memory", "PUT", {}))).status).toBe(400);
   });
@@ -87,30 +77,24 @@ describe("memory routes", () => {
   test("entries add, replace, remove", async () => {
     const { app } = await makeApp(["memory:read", "memory:write"]);
     const post = (body: unknown) => app.fetch(req("/v1/memory/entries", "POST", body));
-    expect(
-      await (await post({ action: "add", text: "likes bun" })).json(),
-    ).toEqual({ content: "likes bun", chars: 9, limit: 2200 });
+    expect(await (await post({ action: "add", text: "likes bun" })).json()).toEqual({
+      content: "likes bun",
+      chars: 9,
+      limit: 2200,
+    });
     await post({ action: "add", text: "ships fast" });
     const replaced = await post({
       action: "replace",
       from: "likes bun",
       text: "loves bun",
     });
-    expect(((await replaced.json()) as { content: string }).content).toBe(
-      "loves bun\nships fast",
-    );
-    expect(
-      (await post({ action: "replace", from: "ghost", text: "x" })).status,
-    ).toBe(404);
+    expect(((await replaced.json()) as { content: string }).content).toBe("loves bun\nships fast");
+    expect((await post({ action: "replace", from: "ghost", text: "x" })).status).toBe(404);
     const removed = await post({ action: "remove", text: "ships fast" });
-    expect(((await removed.json()) as { content: string }).content).toBe(
-      "loves bun",
-    );
+    expect(((await removed.json()) as { content: string }).content).toBe("loves bun");
     expect((await post({ action: "remove", text: "ghost" })).status).toBe(404);
     expect((await post({ action: "explode", text: "x" })).status).toBe(400);
-    expect(
-      (await post({ action: "add", text: "y".repeat(2300) })).status,
-    ).toBe(400);
+    expect((await post({ action: "add", text: "y".repeat(2300) })).status).toBe(400);
   });
 
   test("memory requires an api key with the scope", async () => {
@@ -139,60 +123,38 @@ describe("skill file routes", () => {
     const { app, home } = await makeApp(["skills:read", "skills:write"]);
     expect((await app.fetch(req("/v1/skills/ghost"))).status).toBe(404);
     expect(
-      (
-        await app.fetch(
-          req("/v1/skills", "POST", { name: "notes", content: "# notes" }),
-        )
-      ).status,
+      (await app.fetch(req("/v1/skills", "POST", { name: "notes", content: "# notes" }))).status,
     ).toBe(201);
     expect(
-      (
-        await app.fetch(
-          req("/v1/skills", "POST", { name: "notes", content: "dup" }),
-        )
-      ).status,
+      (await app.fetch(req("/v1/skills", "POST", { name: "notes", content: "dup" }))).status,
     ).toBe(409);
     expect(await (await app.fetch(req("/v1/skills/notes"))).json()).toEqual({
       name: "notes",
       content: "# notes",
     });
     await app.fetch(req("/v1/skills/notes", "PATCH", { content: "# v2" }));
-    expect(await Bun.file(join(home, "skills/notes/SKILL.md")).text()).toBe(
-      "# v2",
-    );
+    expect(await Bun.file(join(home, "skills/notes/SKILL.md")).text()).toBe("# v2");
     await app.fetch(
       req("/v1/skills/notes/files/references/tips.md", "PUT", {
         content: "tip",
       }),
     );
     expect(
-      await (
-        await app.fetch(req("/v1/skills/notes/files/references/tips.md"))
-      ).json(),
+      await (await app.fetch(req("/v1/skills/notes/files/references/tips.md"))).json(),
     ).toEqual({ path: "references/tips.md", content: "tip" });
-    expect(
-      (await app.fetch(req("/v1/skills/notes/files/missing.md"))).status,
-    ).toBe(404);
-    expect(
-      await (await app.fetch(req("/v1/skills/notes", "DELETE"))).json(),
-    ).toEqual({ deleted: true });
+    expect((await app.fetch(req("/v1/skills/notes/files/missing.md"))).status).toBe(404);
+    expect(await (await app.fetch(req("/v1/skills/notes", "DELETE"))).json()).toEqual({
+      deleted: true,
+    });
     expect((await app.fetch(req("/v1/skills/notes"))).status).toBe(404);
     expect((await app.fetch(req("/v1/skills", "POST", {}))).status).toBe(400);
-    expect(
-      (await app.fetch(req("/v1/skills/notes", "PATCH", {}))).status,
-    ).toBe(400);
-    expect(
-      (
-        await app.fetch(req("/v1/skills/notes/files/x.md", "PUT", {}))
-      ).status,
-    ).toBe(400);
+    expect((await app.fetch(req("/v1/skills/notes", "PATCH", {}))).status).toBe(400);
+    expect((await app.fetch(req("/v1/skills/notes/files/x.md", "PUT", {}))).status).toBe(400);
   });
 
   test("denied paths are rejected", async () => {
     const { app } = await makeApp(["skills:read"]);
-    expect(
-      (await app.fetch(req("/v1/skills/notes/files/..%2F..%2F.env"))).status,
-    ).toBe(400);
+    expect((await app.fetch(req("/v1/skills/notes/files/..%2F..%2F.env"))).status).toBe(400);
   });
 
   test("skill files stay inside their own skill directory", async () => {
@@ -226,26 +188,21 @@ describe("bundles, cron output, subagents", () => {
     expect(await (await app.fetch(req("/v1/bundles"))).json()).toEqual({
       bundles: [],
     });
-    await app.fetch(
-      req("/v1/bundles/research", "PUT", { content: "skills: [a, b]" }),
-    );
-    expect(
-      await Bun.file(join(home, "skill-bundles/research.yaml")).text(),
-    ).toBe("skills: [a, b]");
+    await app.fetch(req("/v1/bundles/research", "PUT", { content: "skills: [a, b]" }));
+    expect(await Bun.file(join(home, "skill-bundles/research.yaml")).text()).toBe("skills: [a, b]");
     expect(await (await app.fetch(req("/v1/bundles"))).json()).toEqual({
       bundles: [{ name: "research", content: "skills: [a, b]" }],
     });
-    expect(
-      await (await app.fetch(req("/v1/bundles/research"))).json(),
-    ).toEqual({ name: "research", content: "skills: [a, b]" });
+    expect(await (await app.fetch(req("/v1/bundles/research"))).json()).toEqual({
+      name: "research",
+      content: "skills: [a, b]",
+    });
     expect((await app.fetch(req("/v1/bundles/ghost"))).status).toBe(404);
-    expect(
-      await (await app.fetch(req("/v1/bundles/research", "DELETE"))).json(),
-    ).toEqual({ deleted: true });
+    expect(await (await app.fetch(req("/v1/bundles/research", "DELETE"))).json()).toEqual({
+      deleted: true,
+    });
     expect((await app.fetch(req("/v1/bundles/ghost", "DELETE"))).status).toBe(404);
-    expect(
-      (await app.fetch(req("/v1/bundles/research", "PUT", {}))).status,
-    ).toBe(400);
+    expect((await app.fetch(req("/v1/bundles/research", "PUT", {}))).status).toBe(400);
   });
 
   test("malformed json bodies are rejected", async () => {
@@ -260,9 +217,7 @@ describe("bundles, cron output, subagents", () => {
         body: "{not json",
       });
     expect((await app.fetch(badJson("/v1/memory", "PUT"))).status).toBe(400);
-    expect(
-      (await app.fetch(badJson("/v1/memory/entries", "POST"))).status,
-    ).toBe(400);
+    expect((await app.fetch(badJson("/v1/memory/entries", "POST"))).status).toBe(400);
     expect((await app.fetch(badJson("/v1/skills", "POST"))).status).toBe(400);
   });
 
@@ -296,9 +251,7 @@ describe("bundles, cron output, subagents", () => {
       ["/v1/subagents"],
     ];
     for (const [path, method = "GET"] of cases) {
-      const res = await app.fetch(
-        req(path, method, method === "GET" ? undefined : {}),
-      );
+      const res = await app.fetch(req(path, method, method === "GET" ? undefined : {}));
       expect(`${method} ${path} ${res.status}`).toBe(`${method} ${path} 403`);
     }
   });
@@ -307,13 +260,9 @@ describe("bundles, cron output, subagents", () => {
     const { app, home } = await makeApp(["skills:write"]);
     await writeFile(join(home, "skills"), "not a directory");
     const log = spyOn(console, "error").mockImplementation(() => {});
-    const res = await app.fetch(
-      req("/v1/skills", "POST", { name: "notes", content: "# notes" }),
-    );
+    const res = await app.fetch(req("/v1/skills", "POST", { name: "notes", content: "# notes" }));
     expect(res.status).toBe(500);
-    expect(((await res.json()) as { error: { code: string } }).error.code).toBe(
-      "internal_error",
-    );
+    expect(((await res.json()) as { error: { code: string } }).error.code).toBe("internal_error");
     expect(log).toHaveBeenCalled();
     log.mockRestore();
   });
@@ -322,15 +271,14 @@ describe("bundles, cron output, subagents", () => {
     const { app, home } = await makeApp(["crons:read", "subagents:read"]);
     await mkdir(join(home, "cron/output/579a"), { recursive: true });
     await writeFile(join(home, "cron/output/579a/run1.md"), "cron says hi");
-    expect(
-      await (await app.fetch(req("/v1/jobs/579a/output"))).json(),
-    ).toEqual({ outputs: ["run1.md"] });
-    expect(
-      await (await app.fetch(req("/v1/jobs/579a/output/run1.md"))).json(),
-    ).toEqual({ name: "run1.md", content: "cron says hi" });
-    expect(
-      (await app.fetch(req("/v1/jobs/579a/output/ghost.md"))).status,
-    ).toBe(404);
+    expect(await (await app.fetch(req("/v1/jobs/579a/output"))).json()).toEqual({
+      outputs: ["run1.md"],
+    });
+    expect(await (await app.fetch(req("/v1/jobs/579a/output/run1.md"))).json()).toEqual({
+      name: "run1.md",
+      content: "cron says hi",
+    });
+    expect((await app.fetch(req("/v1/jobs/579a/output/ghost.md"))).status).toBe(404);
     await mkdir(join(home, "cache/delegation/live"), { recursive: true });
     await writeFile(join(home, "cache/delegation/live/child-1.jsonl"), "{}");
     expect(await (await app.fetch(req("/v1/subagents"))).json()).toEqual({
@@ -356,7 +304,9 @@ describe("bundles, cron output, subagents", () => {
     for (const action of ["steer", "stop"]) {
       const res = await app.fetch(req(`/v1/subagents/child-2/${action}`, "POST", {}));
       expect(res.status).toBe(501);
-      expect(((await res.json()) as { error: { message: string } }).error.message).toContain("/agents");
+      expect(((await res.json()) as { error: { message: string } }).error.message).toContain(
+        "/agents",
+      );
     }
   });
 });

@@ -32,7 +32,10 @@ export function Examples() {
           <a className="button" href={`/examples/${showcase.slug}/`}>
             How it's built
           </a>
-          <a className="button" href="https://github.com/in-th3-l00p/hermes-remote/tree/main/apps/chat">
+          <a
+            className="button"
+            href="https://github.com/in-th3-l00p/hermes-remote/tree/main/apps/chat"
+          >
             Source on GitHub
           </a>
         </div>

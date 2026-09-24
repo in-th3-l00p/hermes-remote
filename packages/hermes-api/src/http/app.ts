@@ -145,13 +145,10 @@ export function createApp(options: AppOptions = {}): App {
   app.use(
     bodyLimit({
       maxSize: limits.maxBodyBytes,
-      onError: (c) =>
-        errorResponse(c, 413, "payload_too_large", "Request body too large"),
+      onError: (c) => errorResponse(c, 413, "payload_too_large", "Request body too large"),
     }),
   );
-  app.use(
-    authFailureLimiter(options.authFailureLimit ?? DEFAULT_AUTH_FAILURE_LIMIT),
-  );
+  app.use(authFailureLimiter(options.authFailureLimit ?? DEFAULT_AUTH_FAILURE_LIMIT));
   const { users: userOptions, ...authOptions } = options;
   app.use(
     authMiddleware({
@@ -206,9 +203,7 @@ export function createApp(options: AppOptions = {}): App {
           : { authProviderName: options.authProvider.name }),
         anonymous: options.anonymous === true,
         events,
-        ...(options.upstream.pollMs === undefined
-          ? {}
-          : { pollMs: options.upstream.pollMs }),
+        ...(options.upstream.pollMs === undefined ? {} : { pollMs: options.upstream.pollMs }),
         ...(options.upstream.toolRunTimeoutMs === undefined
           ? {}
           : { toolRunTimeoutMs: options.upstream.toolRunTimeoutMs }),

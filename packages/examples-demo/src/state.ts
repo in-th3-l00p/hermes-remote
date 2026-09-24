@@ -126,11 +126,7 @@ export class DemoState {
   }
 
   /** Rewrites a user message and drops everything after it (regeneration). */
-  editMessage(
-    session: DemoSession,
-    messageId: string,
-    content: string,
-  ): DemoMessage | null {
+  editMessage(session: DemoSession, messageId: string, content: string): DemoMessage | null {
     const index = session.messages.findIndex((m) => m.id === messageId);
     const message = session.messages[index];
     if (message === undefined || message.role !== "user") {

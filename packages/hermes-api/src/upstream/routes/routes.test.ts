@@ -15,13 +15,10 @@ import { upstreamFailure } from "./shared.ts";
 const SECRET = "sb-secret";
 
 function userToken(sub: string): string {
-  const enc = (o: unknown) =>
-    Buffer.from(JSON.stringify(o)).toString("base64url");
+  const enc = (o: unknown) => Buffer.from(JSON.stringify(o)).toString("base64url");
   const head = enc({ alg: "HS256", typ: "JWT" });
   const body = enc({ sub, exp: Date.now() / 1000 + 600 });
-  const sig = createHmac("sha256", SECRET)
-    .update(`${head}.${body}`)
-    .digest("base64url");
+  const sig = createHmac("sha256", SECRET).update(`${head}.${body}`).digest("base64url");
   return `${head}.${body}.${sig}`;
 }
 
@@ -89,9 +86,9 @@ describe("discovery routes", () => {
       discovery: { ...demo.discovery, health: async () => ({ status: "degraded" }) },
     } as Upstream;
     const degradedApp = demoApp({ upstream: { upstream: degraded } });
-    expect(await (await degradedApp.fetch(get("/v1/health"))).json()).toMatchObject(
-      { status: "degraded" },
-    );
+    expect(await (await degradedApp.fetch(get("/v1/health"))).json()).toMatchObject({
+      status: "degraded",
+    });
     const unreachable = {
       ...demo,
       raw: demo.raw.bind(demo),
@@ -210,25 +207,21 @@ describe("run routes", () => {
     expect(run.input).toContain("<user-context>");
     expect(run.input).toContain("inspect the moon");
 
-    const mine = (await (
-      await app.fetch(get("/v1/runs", userToken("u-1")))
-    ).json()) as { runs: { id: string }[] };
+    const mine = (await (await app.fetch(get("/v1/runs", userToken("u-1")))).json()) as {
+      runs: { id: string }[];
+    };
     expect(mine.runs.map((r) => r.id)).toEqual([run.id]);
-    const theirs = (await (
-      await app.fetch(get("/v1/runs", userToken("u-2")))
-    ).json()) as { runs: unknown[] };
+    const theirs = (await (await app.fetch(get("/v1/runs", userToken("u-2")))).json()) as {
+      runs: unknown[];
+    };
     expect(theirs.runs).toEqual([]);
-    expect(
-      (await app.fetch(get(`/v1/runs/${run.id}`, userToken("u-2")))).status,
-    ).toBe(404);
-    expect(
-      (await app.fetch(get(`/v1/runs/${run.id}`, userToken("u-1")))).status,
-    ).toBe(200);
+    expect((await app.fetch(get(`/v1/runs/${run.id}`, userToken("u-2")))).status).toBe(404);
+    expect((await app.fetch(get(`/v1/runs/${run.id}`, userToken("u-1")))).status).toBe(200);
     const viaKey = await app.fetch(get(`/v1/runs/${run.id}`, "hk_good"));
     expect(viaKey.status).toBe(200);
-    const allRuns = (await (
-      await app.fetch(get("/v1/runs", "hk_good"))
-    ).json()) as { runs: unknown[] };
+    const allRuns = (await (await app.fetch(get("/v1/runs", "hk_good"))).json()) as {
+      runs: unknown[];
+    };
     expect(allRuns.runs).toHaveLength(1);
     expect((await app.fetch(get("/v1/runs/unknown", "hk_good"))).status).toBe(404);
   });
@@ -242,9 +235,7 @@ describe("run routes", () => {
     for (const body of [{}, { input: 5 }]) {
       const res = await app.fetch(send("/v1/runs", body, "POST", userToken("u-1")));
       expect(res.status).toBe(400);
-      expect(((await res.json()) as { error: { code: string } }).error.code).toBe(
-        "invalid_run",
-      );
+      expect(((await res.json()) as { error: { code: string } }).error.code).toBe("invalid_run");
     }
   });
 
@@ -253,23 +244,21 @@ describe("run routes", () => {
       store: keyStore(["chat:invoke"]),
       upstream: { upstream: new DemoUpstream(), runStore: new RunStore() },
     });
-    const res = await app.fetch(send("/v1/runs", { input: "x".repeat(100_001) }, "POST", "hk_good"));
+    const res = await app.fetch(
+      send("/v1/runs", { input: "x".repeat(100_001) }, "POST", "hk_good"),
+    );
     expect(res.status).toBe(400);
   });
 
   test("api key runs pass through without identity injection", async () => {
     const app = demoApp({ anonymous: false, store: keyStore(["chat:invoke"]) });
-    const created = await app.fetch(
-      send("/v1/runs", { input: "raw input" }, "POST", "hk_good"),
-    );
+    const created = await app.fetch(send("/v1/runs", { input: "raw input" }, "POST", "hk_good"));
     expect(((await created.json()) as { input: string }).input).toBe("raw input");
   });
 
   test("array input gets a prepended system entry", async () => {
     const app = demoApp();
-    const created = await app.fetch(
-      send("/v1/runs", { input: [{ role: "user", content: "hi" }] }),
-    );
+    const created = await app.fetch(send("/v1/runs", { input: [{ role: "user", content: "hi" }] }));
     const run = (await created.json()) as {
       input: { role: string; content: string }[];
     };
@@ -286,19 +275,25 @@ describe("run routes", () => {
     expect(events.headers.get("content-type")).toBe("text/event-stream");
     expect(await events.text()).toContain("event: run.completed");
     expect(
-      ((await (
-        await app.fetch(send(`/v1/runs/${id}/steer`, { text: "left" }))
-      ).json()) as { steered: boolean }).steered,
+      (
+        (await (await app.fetch(send(`/v1/runs/${id}/steer`, { text: "left" }))).json()) as {
+          steered: boolean;
+        }
+      ).steered,
     ).toBe(true);
     expect(
-      ((await (
-        await app.fetch(send(`/v1/runs/${id}/approval`, { approved: true }))
-      ).json()) as { approved: boolean }).approved,
+      (
+        (await (await app.fetch(send(`/v1/runs/${id}/approval`, { approved: true }))).json()) as {
+          approved: boolean;
+        }
+      ).approved,
     ).toBe(true);
     expect(
-      ((await (await app.fetch(send(`/v1/runs/${id}/stop`, {}))).json()) as {
-        status: string;
-      }).status,
+      (
+        (await (await app.fetch(send(`/v1/runs/${id}/stop`, {}))).json()) as {
+          status: string;
+        }
+      ).status,
     ).toBe("stopped");
   });
 
@@ -306,14 +301,12 @@ describe("run routes", () => {
     const app = demoApp();
     expect((await app.fetch(send("/v1/runs", "not-an-object"))).status).toBe(400);
     expect(
-      (
-        await app.fetch(
-          new Request("http://x/v1/runs", { method: "POST", body: "{{{" }),
-        )
-      ).status,
+      (await app.fetch(new Request("http://x/v1/runs", { method: "POST", body: "{{{" }))).status,
     ).toBe(400);
     const scoped = demoApp({ anonymous: false, store: keyStore(["sessions:read"]) });
-    expect((await scoped.fetch(send("/v1/runs", { input: "x" }, "POST", "hk_good"))).status).toBe(403);
+    expect((await scoped.fetch(send("/v1/runs", { input: "x" }, "POST", "hk_good"))).status).toBe(
+      403,
+    );
   });
 
   test("maps upstream failures to 502 and missing run ids to 502", async () => {
@@ -364,9 +357,9 @@ describe("run routes", () => {
     expect((await app.fetch(get("/v1/runs/r1", "hk_good"))).status).toBe(403);
     expect((await app.fetch(get("/v1/runs/r1/events", "hk_good"))).status).toBe(403);
     for (const action of ["stop", "steer", "approval"]) {
-      expect(
-        (await app.fetch(send(`/v1/runs/r1/${action}`, {}, "POST", "hk_good"))).status,
-      ).toBe(403);
+      expect((await app.fetch(send(`/v1/runs/r1/${action}`, {}, "POST", "hk_good"))).status).toBe(
+        403,
+      );
     }
   });
 
@@ -412,12 +405,8 @@ describe("malformed json bodies default to empty objects", () => {
     const app = demoApp();
     const created = await app.fetch(send("/v1/runs", { input: "x" }));
     const { id } = (await created.json()) as { id: string };
-    expect(
-      (await app.fetch(rawSend(`/v1/runs/${id}/steer`, "POST"))).status,
-    ).toBe(200);
-    expect(
-      (await app.fetch(rawSend(`/v1/runs/${id}/approval`, "POST"))).status,
-    ).toBe(200);
+    expect((await app.fetch(rawSend(`/v1/runs/${id}/steer`, "POST"))).status).toBe(200);
+    expect((await app.fetch(rawSend(`/v1/runs/${id}/approval`, "POST"))).status).toBe(200);
   });
 
   test("job create and update tolerate malformed bodies", async () => {
@@ -428,9 +417,7 @@ describe("malformed json bodies default to empty objects", () => {
     const created = await app.fetch(rawSend("/v1/jobs", "POST", "hk_good"));
     expect(created.status).toBe(200);
     const { id } = (await created.json()) as { id: string };
-    expect(
-      (await app.fetch(rawSend(`/v1/jobs/${id}`, "PATCH", "hk_good"))).status,
-    ).toBe(200);
+    expect((await app.fetch(rawSend(`/v1/jobs/${id}`, "PATCH", "hk_good"))).status).toBe(200);
   });
 
   test("agent session writes tolerate malformed bodies", async () => {
@@ -443,18 +430,10 @@ describe("malformed json bodies default to empty objects", () => {
     const { session } = (await created.json()) as { session: { id: string } };
     const base = `/v1/agent/sessions/${session.id}`;
     expect((await app.fetch(rawSend(base, "PATCH", "hk_good"))).status).toBe(200);
-    expect(
-      (await app.fetch(rawSend(`${base}/fork`, "POST", "hk_good"))).status,
-    ).toBe(200);
-    expect(
-      (await app.fetch(rawSend(`${base}/model`, "POST", "hk_good"))).status,
-    ).toBe(200);
-    expect(
-      (await app.fetch(rawSend(`${base}/chat`, "POST", "hk_good"))).status,
-    ).toBe(200);
-    const stream = await app.fetch(
-      rawSend(`${base}/chat/stream`, "POST", "hk_good"),
-    );
+    expect((await app.fetch(rawSend(`${base}/fork`, "POST", "hk_good"))).status).toBe(200);
+    expect((await app.fetch(rawSend(`${base}/model`, "POST", "hk_good"))).status).toBe(200);
+    expect((await app.fetch(rawSend(`${base}/chat`, "POST", "hk_good"))).status).toBe(200);
+    const stream = await app.fetch(rawSend(`${base}/chat/stream`, "POST", "hk_good"));
     expect(stream.status).toBe(200);
     expect(stream.headers.get("content-type")).toBe("text/event-stream");
     await stream.text();
@@ -527,32 +506,28 @@ describe("job routes", () => {
 
   test("api keys with crons scopes get the full lifecycle", async () => {
     const app = demoApp({ anonymous: false, store: cronKeys });
-    const created = await app.fetch(
-      send("/v1/jobs", { name: "sweep" }, "POST", "hk_good"),
-    );
+    const created = await app.fetch(send("/v1/jobs", { name: "sweep" }, "POST", "hk_good"));
     expect(created.status).toBe(200);
     const { id } = (await created.json()) as { id: string };
     expect(
-      ((await (await app.fetch(get("/v1/jobs", "hk_good"))).json()) as {
-        jobs: unknown[];
-      }).jobs,
+      (
+        (await (await app.fetch(get("/v1/jobs", "hk_good"))).json()) as {
+          jobs: unknown[];
+        }
+      ).jobs,
     ).toHaveLength(1);
     expect((await app.fetch(get(`/v1/jobs/${id}`, "hk_good"))).status).toBe(200);
     expect(
-      (
-        await app.fetch(send(`/v1/jobs/${id}`, { name: "renamed" }, "PATCH", "hk_good"))
-      ).status,
+      (await app.fetch(send(`/v1/jobs/${id}`, { name: "renamed" }, "PATCH", "hk_good"))).status,
     ).toBe(200);
     for (const action of ["pause", "resume", "run"]) {
       expect(
         (await app.fetch(send(`/v1/jobs/${id}/${action}`, {}, "POST", "hk_good"))).status,
       ).toBe(200);
     }
-    expect(
-      (
-        await app.fetch(send(`/v1/jobs/${id}`, undefined, "DELETE", "hk_good"))
-      ).status,
-    ).toBe(200);
+    expect((await app.fetch(send(`/v1/jobs/${id}`, undefined, "DELETE", "hk_good"))).status).toBe(
+      200,
+    );
     expect((await app.fetch(get(`/v1/jobs/${id}`, "hk_good"))).status).toBe(502);
   });
 
@@ -575,9 +550,9 @@ describe("job routes", () => {
   test("jobs enforce read and write scopes", async () => {
     const readOnly = demoApp({ anonymous: false, store: keyStore(["crons:read"]) });
     expect((await readOnly.fetch(get("/v1/jobs", "hk_good"))).status).toBe(200);
-    expect(
-      (await readOnly.fetch(send("/v1/jobs", { name: "x" }, "POST", "hk_good"))).status,
-    ).toBe(403);
+    expect((await readOnly.fetch(send("/v1/jobs", { name: "x" }, "POST", "hk_good"))).status).toBe(
+      403,
+    );
     expect(
       (await readOnly.fetch(send("/v1/jobs/j1", { name: "y" }, "PATCH", "hk_good"))).status,
     ).toBe(403);
