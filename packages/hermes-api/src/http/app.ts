@@ -24,6 +24,7 @@ import {
   profileMiddleware,
 } from "./middleware.ts";
 import { whoamiBody } from "./whoami.ts";
+import { registerUserRoutes, type UserStore, type UserTokenIssuer } from "../users/index.ts";
 
 export interface AuditEntry {
   at: string;
@@ -52,6 +53,11 @@ export interface AppOptions {
   upstream?: UpstreamAppOptions;
   /** Enables the profile, config, and agent-management routes. */
   management?: ManagementOptions;
+  /**
+   * Token exchange and user records: enables POST /v1/auth/token, the
+   * /v1/users routes, and authentication of the tokens they mint.
+   */
+  users?: { store: UserStore; issuer: UserTokenIssuer };
   /** Provider for end-user bearer tokens (Supabase, Clerk, generic JWT, or custom). */
   authProvider?: AuthProvider;
   /** Allow unauthenticated access to chat routes (demo / anonymous mode). */
@@ -120,7 +126,13 @@ export function createApp(options: AppOptions = {}): App {
   app.use(
     authFailureLimiter(options.authFailureLimit ?? DEFAULT_AUTH_FAILURE_LIMIT),
   );
-  app.use(authMiddleware(options));
+  const { users: userOptions, ...authOptions } = options;
+  app.use(
+    authMiddleware({
+      ...authOptions,
+      ...(userOptions === undefined ? {} : { users: { ...userOptions, now } }),
+    }),
+  );
   if (options.rateLimit !== undefined) {
     app.use(principalRateLimiter(options.rateLimit));
   }
@@ -130,6 +142,13 @@ export function createApp(options: AppOptions = {}): App {
   }
 
   app.get("/v1/auth/whoami", (c) => c.json(whoamiBody(c.get("principal"))));
+  if (options.users !== undefined) {
+    registerUserRoutes(app, {
+      ...options.users,
+      ...(options.chat === undefined ? {} : { chat: options.chat.store }),
+      now,
+    });
+  }
   registerEventRoutes(app, events, options.eventsHeartbeatMs ?? 15_000);
   if (options.management !== undefined) {
     registerProfileRoutes(app, options.management);

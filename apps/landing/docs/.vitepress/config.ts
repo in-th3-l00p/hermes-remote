@@ -37,6 +37,7 @@ export default defineConfig({
           { text: "Supabase provider", link: "/auth/supabase" },
           { text: "Clerk provider", link: "/auth/clerk" },
           { text: "Custom providers", link: "/auth/custom" },
+          { text: "Token exchange", link: "/auth/token-exchange" },
         ],
       },
       {

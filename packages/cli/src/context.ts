@@ -14,6 +14,8 @@ export interface ServeRequest {
   anonymous: boolean;
   corsOrigins: string[];
   trustProxy: string[];
+  /** Signs user tokens minted by token exchange. */
+  signingSecret: string;
   auth: AuthProviderConfig | null;
   hermesBinary: string;
   profileHomes: Record<string, string>;
@@ -31,6 +33,8 @@ export interface CliContext {
   env: Record<string, string | undefined>;
   which(name: string): string | null;
   serve(request: ServeRequest): Promise<{ port: number }>;
+  /** Network access for `doctor`; defaults to the global fetch. */
+  fetch?: typeof fetch;
 }
 
 export const USAGE = `hermes-remote <command>
@@ -51,8 +55,12 @@ Commands:
        [--cidr <a.b.c.d/n,...>] [--dangerous]
   keys list | show <id> | revoke <id> | rotate <id>
   keys grant <id> --scope <s> | ungrant <id> --scope <s>
+  users list | show <id> | disable <id> | enable <id>
+  users delete <id> [--cascade]                     manage token-exchange users
   service install | uninstall | status              run serve on boot
   logs [--tail 50]                                  show server logs
+  audit tail [--lines 50]                           show recent audit entries
+  doctor                                            check the setup
 `;
 
 export function ok(output: string): CliResult {

@@ -8,6 +8,9 @@ hermes-remote serve [flags]         run the API server
 hermes-remote keys <action>         manage API keys
 hermes-remote service <action>      run serve on boot
 hermes-remote logs [--tail 50]      show server logs
+hermes-remote audit tail [--lines 50] show recent audit entries
+hermes-remote users list|show|disable|enable|delete   manage token-exchange users
+hermes-remote doctor                check the setup
 ```
 
 ## init
@@ -89,3 +92,30 @@ hermes-remote logs --tail 100
 ```
 
 Tails the server log (`~/.hermes-remote/logs/server.log`). The audit log is a separate file; see [Rate limits and audit log](/server/operations).
+
+## audit
+
+```bash
+hermes-remote audit tail --lines 20
+```
+
+Prints the newest entries of `~/.hermes-remote/audit.log` (JSON lines).
+
+## users
+
+```bash
+hermes-remote users list
+hermes-remote users show usr_07a54c651a055be3f163
+hermes-remote users disable usr_07a54c651a055be3f163
+hermes-remote users delete usr_07a54c651a055be3f163 --cascade
+```
+
+Manages users created by [token exchange](/auth/token-exchange). `disable` takes effect on the running server immediately: the user's outstanding tokens stop working. `delete --cascade` also removes their chat sessions.
+
+## doctor
+
+```bash
+hermes-remote doctor
+```
+
+Checks the local setup and prints one line per finding: `✓` fine, `!` advice (expired keys still unrevoked, dangerous keys without expiry, a non-loopback bind, anonymous mode, a missing `hermes` binary, no upstream), `✗` a problem (invalid `config.json`, an unreachable upstream). It exits non-zero only when there is a `✗`.

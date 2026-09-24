@@ -25,6 +25,7 @@ import { ProfileRegistry } from "../profiles/registry.ts";
 import { DemoUpstream } from "../upstream/demo.ts";
 import { RunStore } from "../upstream/run-store.ts";
 import { createApp, type App } from "./app.ts";
+import { UserStore, UserTokenIssuer } from "../users/index.ts";
 import { describe, expect, test } from "bun:test";
 import {
   AUTH_SCOPES,
@@ -81,15 +82,17 @@ function matrixApp(anonymous: boolean): App {
       homeFor: () => home,
     },
     eventsHeartbeatMs: 60_000,
+    users: { store: new UserStore(), issuer: new UserTokenIssuer("m".repeat(32)) },
   });
 }
 
-const SAMPLES = ["abc123", "1", "demo", "x1"];
+const SAMPLES = ["abc123", "1", "demo", "x1", "usr_0123456789abcdef0123"];
 
 /** Replaces route parameters with sample values their patterns accept. */
 function concretePath(path: string): string {
   return path
-    .replace(/:(\w+)(\{([^}]*)\})?/g, (_m, _name: string, _p, pattern?: string) => {
+    // Patterns may contain braces themselves (e.g. `{20}` quantifiers).
+    .replace(/:(\w+)(\{((?:[^{}]|\{[^}]*\})*)\})?/g, (_m, _name: string, _p, pattern?: string) => {
       if (pattern === undefined) {
         return "x1";
       }
@@ -127,6 +130,15 @@ const ALL_SCOPES = [...TIER1_SCOPES, ...TIER2_SCOPES, ...TIER3_SCOPES, ...AUTH_S
 const EXPECTED: Record<string, string> = {
   "GET /v1/status": "public",
   "GET /v1/auth/whoami": "authenticated",
+  "POST /v1/auth/token": "key:auth:users",
+  "GET /v1/users": "key:auth:users",
+  "GET /v1/users/:id{usr_[0-9a-f]{20}}": "key:auth:users",
+  "PATCH /v1/users/:id{usr_[0-9a-f]{20}}": "key:auth:users",
+  "POST /v1/users/:id{usr_[0-9a-f]{20}}/disable": "key:auth:users",
+  "POST /v1/users/:id{usr_[0-9a-f]{20}}/enable": "key:auth:users",
+  "DELETE /v1/users/:id{usr_[0-9a-f]{20}}": "key:auth:users",
+  "POST /v1/users/:id{usr_[0-9a-f]{20}}/identities": "key:auth:users",
+  "DELETE /v1/users/:id{usr_[0-9a-f]{20}}/identities/:provider": "key:auth:users",
   "GET /v1/events": "key:events:subscribe",
   "GET /v1/profiles": "key:status:read",
   "GET /v1/profiles/:name{[A-Za-z0-9_][A-Za-z0-9_-]*}": "key:status:read",

@@ -10,6 +10,8 @@ import {
   HermesUpstream,
   ProfileRegistry,
   RunStore,
+  UserStore,
+  UserTokenIssuer,
   startServer,
 } from "@intheloop-studio/hermes-remote";
 
@@ -55,6 +57,10 @@ const ctx: CliContext = {
         profiles: new ProfileRegistry({ cli, homeFor: profileHome }),
         homeFor: (profile) =>
           profile === null ? hermesHome : profileHome(profile),
+      },
+      users: {
+        store: new UserStore(join(homeDir, "users.db")),
+        issuer: new UserTokenIssuer(request.signingSecret),
       },
       chat: {
         store: new ChatStore(join(homeDir, "chat.db")),

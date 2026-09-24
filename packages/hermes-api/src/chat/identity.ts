@@ -22,10 +22,42 @@ function safeEmail(value: string | undefined): string | null {
   return value !== undefined && EMAIL.test(value) ? value : null;
 }
 
+/**
+ * What the agent learns about a token-exchange user, per agent_visibility.
+ * Only a few plain profile fields are ever shared; metadata never is.
+ */
+function exchangedIdentity(
+  userId: string,
+  visibility: "anonymous" | "pseudonymous" | "full",
+  profile: Record<string, unknown>,
+): string {
+  if (visibility === "anonymous") {
+    return "a platform user whose identity is not shared";
+  }
+  const id = safeId(userId);
+  if (visibility === "pseudonymous") {
+    return `a returning platform user (stable user id: ${id})`;
+  }
+  const fields: string[] = [`user id: ${id}`];
+  for (const key of ["name", "locale", "timezone"] as const) {
+    const value = profile[key];
+    if (typeof value === "string" && value.trim() !== "") {
+      fields.push(`${key}: ${safeName(value)}`);
+    }
+  }
+  const email = safeEmail(typeof profile["email"] === "string" ? profile["email"] : undefined);
+  if (email !== null) {
+    fields.push(`email: ${email}`);
+  }
+  return `a platform user (${fields.join(", ")})`;
+}
+
 /** Tells the agent who it is speaking with, without leaking platform data. */
 export function identityTurn(principal: Principal): AgentTurnMessage {
   let identity: string;
-  if (principal.type === "user") {
+  if (principal.type === "user" && principal.visibility !== undefined) {
+    identity = exchangedIdentity(principal.userId, principal.visibility, principal.profile ?? {});
+  } else if (principal.type === "user") {
     const id = safeId(principal.userId);
     const email = safeEmail(principal.email);
     identity =
