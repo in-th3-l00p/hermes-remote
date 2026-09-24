@@ -1,3 +1,6 @@
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { Context, Hono } from "hono";
 import { error, type ChatEnv } from "../chat/routes/shared.ts";
 import { profileArgs } from "../profiles/registry.ts";
@@ -36,6 +39,9 @@ async function resolveParams(
       }
       continue;
     }
+    if (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") {
+      return error(400, "invalid_request", `${p.name} must be a string, number or boolean`);
+    }
     const text = String(value);
     if (invalidParam(text)) {
       return error(400, "invalid_request", `${p.name} must not start with "-"`);
@@ -66,6 +72,9 @@ function cliHandler(spec: CliRouteSpec, options: ManagementOptions) {
     const denied = requireKeyScope(c.get("principal"), spec.scope);
     if (denied !== null) {
       return denied;
+    }
+    if (spec.unsupported !== undefined) {
+      return error(501, "not_supported", spec.unsupported);
     }
     const values = await resolveParams(c, spec);
     if (values instanceof Response) {
@@ -121,7 +130,8 @@ export function registerMgmtRoutes(
       denied ??
       withUploadedArchive(c, async (path) =>
         cliResponse(
-          await options.cli.run([...profileArgs(currentProfile(c)), "import", path], {
+          // -f: the CLI would otherwise wait for an interactive confirmation.
+          await options.cli.run([...profileArgs(currentProfile(c)), "import", path, "-f"], {
             timeoutMs: 300_000,
           }),
         ),
@@ -134,15 +144,30 @@ export function registerMgmtRoutes(
     if (denied !== null) {
       return denied;
     }
-    const result = await options.cli.run(
-      [...profileArgs(currentProfile(c)), "backup"],
-      { timeoutMs: 300_000 },
-    );
-    if (!result.ok) {
-      return cliResponse(result);
+    // `hermes backup` writes a zip file rather than stdout: point it at a
+    // private temp path, stream the file back, and remove it.
+    const dir = await mkdtemp(join(tmpdir(), "hermes-remote-backup-"));
+    const path = join(dir, "backup.zip");
+    try {
+      const result = await options.cli.run(
+        [...profileArgs(currentProfile(c)), "backup", "-o", path],
+        { timeoutMs: 300_000 },
+      );
+      if (!result.ok) {
+        return cliResponse(result);
+      }
+      const archive = await readFile(path).catch(() => null);
+      if (archive === null) {
+        return error(502, "cli_error", "hermes backup did not write an archive");
+      }
+      return new Response(archive, {
+        headers: {
+          "content-type": "application/zip",
+          "content-disposition": 'attachment; filename="hermes-backup.zip"',
+        },
+      });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
     }
-    return new Response(result.stdoutBytes ?? result.stdout, {
-      headers: { "content-type": "application/octet-stream" },
-    });
   });
 }
