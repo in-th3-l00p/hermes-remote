@@ -64,6 +64,8 @@ export function registerSessionRoutes(
     if (session === null || !canAccess(session, principal, "write")) {
       return error(404, "session_not_found", "Unknown session");
     }
+    // A running turn would keep streaming into a deleted session.
+    options.turns?.get(session.id)?.abort();
     store.deleteSession(session.id);
     return json(200, { deleted: true });
   });

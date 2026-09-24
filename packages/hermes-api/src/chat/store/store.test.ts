@@ -64,6 +64,22 @@ describe("ChatStore", () => {
     expect(store.listSessions({ keyId: "k1" }).map((s) => s.id)).toEqual([owned.id]);
   });
 
+  test("messages left streaming by a crash are marked as errors on startup", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "hermes-chat-db-"));
+    const path = join(dir, "chat.db");
+    const crashed = new ChatStore(path, now);
+    const session = crashed.createSession();
+    const reply = crashed.addMessage(session.id, {
+      role: "assistant",
+      content: "half",
+      status: "streaming",
+    });
+    const restarted = new ChatStore(path, now);
+    const message = restarted.getSession(session.id)?.messages.find((m) => m.id === reply?.id);
+    expect(message?.status).toBe("error");
+    expect(message?.content).toBe("half");
+  });
+
   test("titles sessions from the first user message", () => {
     const store = new ChatStore(":memory:", now);
     const session = store.createSession();

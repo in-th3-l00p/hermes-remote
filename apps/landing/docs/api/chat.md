@@ -61,7 +61,9 @@ While the agent is thinking and no tokens arrive, the stream carries a `: keepal
 | `done` | The final assistant message |
 | `error` | `{ id, message }` when the agent fails |
 
-The server accumulates deltas into the store as it streams, so a client that disconnects mid-stream still finds the full reply in history. `POST /v1/sessions/:id/stop` aborts the turn server-side; the partial content is committed and arrives as `done`.
+The server accumulates deltas into the store as it streams. If the client disconnects mid-stream, the turn is cancelled upstream (so no tokens are spent on a reply nobody reads) and the partial reply is kept in history with status `done`. `POST /v1/sessions/:id/stop` does the same explicitly and the partial content arrives as `done`. Deleting a session also stops its running turn.
+
+One turn runs per session at a time. A send or edit while a turn is streaming gets 409 `turn_in_flight` and changes nothing. If the server restarts mid-turn, the unfinished reply is marked `error` on startup.
 
 ## Attachments
 

@@ -3,7 +3,7 @@ import type { ChatMessage } from "../store/index.ts";
 import type { Limits } from "../../limits/index.ts";
 import { canAccess, error, json, requireScope, type ChatEnv, type ChatOptions } from "./shared.ts";
 import { pageParams, parseAttachments, type SendBody } from "./validate.ts";
-import { streamTurn } from "./sse.ts";
+import { streamTurn, turnInFlight } from "./sse.ts";
 
 export function registerMessageRoutes(
   app: Hono<ChatEnv>,
@@ -51,6 +51,10 @@ export function registerMessageRoutes(
     ) {
       return error(400, "invalid_message", "content (string) is required");
     }
+    const busy = turnInFlight(options, sessionId);
+    if (busy !== null) {
+      return busy;
+    }
     const userMessage = store.addMessage(sessionId, {
       role: "user",
       content: body.content,
@@ -78,6 +82,10 @@ export function registerMessageRoutes(
       body.content.length > limits.maxMessageChars
     ) {
       return error(400, "invalid_message", "content (string) is required");
+    }
+    const busy = turnInFlight(options, sessionId);
+    if (busy !== null) {
+      return busy;
     }
     const edited = store.editMessage(sessionId, c.req.param("mid"), body.content);
     if (edited === null) {

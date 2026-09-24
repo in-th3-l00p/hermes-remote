@@ -314,6 +314,17 @@ describe("chat routes", () => {
     expect(
       ((await busy.json()) as { error: { code: string } }).error.code,
     ).toBe("turn_in_flight");
+    const firstId = store.getSession(session.id)?.messages[0]?.id ?? "";
+    const busyEdit = await app.fetch(
+      post(`/v1/sessions/${session.id}/messages/${firstId}`, { content: "edited" }, "PATCH"),
+    );
+    expect(busyEdit.status).toBe(409);
+    // Rejected requests leave history exactly as it was.
+    const during = store.getSession(session.id)?.messages ?? [];
+    expect(during.map((m) => [m.role, m.content])).toEqual([
+      ["user", "go"],
+      ["assistant", "partial "],
+    ]);
     (release as unknown as () => void)();
     await pending;
     const after = await app.fetch(
@@ -321,6 +332,30 @@ describe("chat routes", () => {
     );
     expect(after.status).toBe(200);
     await after.text();
+  });
+
+  test("deleting a session stops its running turn", async () => {
+    let seenSignal: AbortSignal | undefined;
+    const waitingAgent: AgentBackend = {
+      async *stream(_messages, signal) {
+        seenSignal = signal;
+        yield "partial ";
+        await new Promise((r) => setTimeout(r, 200));
+      },
+    };
+    const { app, store } = makeApp(waitingAgent);
+    const session = store.createSession();
+    const pending = Promise.resolve(
+      app.fetch(post(`/v1/sessions/${session.id}/messages`, { content: "go" })),
+    ).then((res) => res.text());
+    await new Promise((r) => setTimeout(r, 20));
+    const deleted = await app.fetch(
+      new Request(`http://x/v1/sessions/${session.id}`, { method: "DELETE" }),
+    );
+    expect(deleted.status).toBe(200);
+    expect(seenSignal?.aborted).toBe(true);
+    await pending;
+    expect(store.getSession(session.id)).toBeNull();
   });
 
   test("client disconnect aborts the turn and keeps the partial reply", async () => {
