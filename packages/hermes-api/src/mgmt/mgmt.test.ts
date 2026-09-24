@@ -275,6 +275,27 @@ describe("management catalog", () => {
     expect(invalid.status).toBe(400);
   });
 
+  test("cli output is redacted on success and failure", async () => {
+    const fake = new FakeCliBridge({
+      "profile list": { stdout: PROFILE_TABLE },
+      "config show": { stdout: "model: opus\nOPENAI_API_KEY=sk-live-abcdef123456\n" },
+      doctor: { exitCode: 1, stderr: "auth failed for token ghp_0123456789abcdefghijABCD" },
+    });
+    const app = makeApp(fake, keyStore(["config:read", "status:read"]));
+    const shown = (await (
+      await app.fetch(
+        new Request("http://x/v1/config", { headers: { authorization: "Bearer hk_good" } }),
+      )
+    ).json()) as { raw: string };
+    expect(shown.raw).toBe("model: opus\nOPENAI_API_KEY=[redacted]\n");
+    const failed = (await (
+      await app.fetch(
+        new Request("http://x/v1/agent/doctor", { headers: { authorization: "Bearer hk_good" } }),
+      )
+    ).json()) as { error: { message: string } };
+    expect(failed.error.message).not.toContain("ghp_0123");
+  });
+
   test("backup import takes an uploaded archive, never a server path", async () => {
     const fake = new FakeCliBridge({
       "profile list": { stdout: PROFILE_TABLE },

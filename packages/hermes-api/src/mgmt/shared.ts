@@ -1,4 +1,5 @@
 import type { Context } from "hono";
+import { redact } from "./redact.ts";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -27,7 +28,7 @@ export function requireKeyScope(
 
 export function cliResponse(result: CliResultData): Response {
   if (result.ok) {
-    return Response.json({ ok: true, raw: result.stdout });
+    return Response.json({ ok: true, raw: redact(result.stdout) });
   }
   if (result.unavailable === true) {
     return Response.json(
@@ -40,7 +41,7 @@ export function cliResponse(result: CliResultData): Response {
       { status: 503 },
     );
   }
-  const message = (result.stderr.trim() || result.stdout.trim()).slice(-2000);
+  const message = redact(result.stderr.trim() || result.stdout.trim()).slice(-2000);
   return Response.json(
     { error: { code: "cli_error", message, exitCode: result.exitCode } },
     { status: 502 },

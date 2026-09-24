@@ -33,10 +33,12 @@ async function defaultSpawn(
     timedOut = true;
     proc.kill();
   }, timeoutMs);
+  // Bun's own readers, not `new Response(...)`: the global Response can be
+  // replaced (e.g. by a DOM shim) and must not affect process I/O.
   const [exitCode, stdoutBytes, stderr] = await Promise.all([
     proc.exited,
-    new Response(proc.stdout).bytes(),
-    new Response(proc.stderr).text(),
+    Bun.readableStreamToBytes(proc.stdout),
+    Bun.readableStreamToText(proc.stderr),
   ]);
   const stdout = new TextDecoder().decode(stdoutBytes);
   clearTimeout(timer);

@@ -6,6 +6,7 @@ Three things to know before using any of them:
 
 * **Responses are `{ "ok": true, "raw": "<command output>" }`.** The server does not parse the CLI's output; the `raw` string is what the command printed. Failures map to 502 `cli_error` with the exit code and stderr.
 * **They are best-effort against hermes 0.20.x.** The argv templates target that version's subcommand names. If your agent is newer and a subcommand moved, the route still runs and `raw` carries the CLI's actual complaint. Validate the routes you depend on when the agent updates.
+* **Secrets are redacted.** Before CLI output (`raw`, and error messages) leaves the server, values of settings whose names mark them as secret (`*_KEY`, `*TOKEN*`, `*SECRET*`, `password`, …) and recognizable credentials (bearer tokens, JWTs, provider key prefixes, `hk_` keys) are replaced with `[redacted]`. Treat this as defense in depth, not a reason to grant `config:read` broadly.
 * **API keys only.** Every route below refuses user tokens, and most scopes are tier 2 or tier 3 (tier 3 needs `--dangerous` at key creation). All routes honor `X-Hermes-Profile`.
 
 ```bash
