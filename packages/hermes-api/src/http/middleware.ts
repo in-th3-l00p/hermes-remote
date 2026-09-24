@@ -121,22 +121,32 @@ export function principalRateLimiter(
   });
 }
 
+/**
+ * Successful reads that are routine end-user traffic and would drown the
+ * log. Every other read (config, logs, memory, files, ...) is audited.
+ */
+const ROUTINE_READS =
+  /^\/v1\/(status|health|capabilities|auth\/whoami|models(\/options)?|skills|toolsets|commands|events|sessions(\/.*)?|runs(\/.*)?)$/;
+
 export function auditMiddleware(
   audit: (entry: AuditEntry) => void,
   now: () => Date,
 ): MiddlewareHandler<ChatEnv> {
   return async (c, next) => {
     await next();
-    if (c.req.method === "GET" && c.res.status !== 401) {
+    const path = new URL(c.req.url).pathname;
+    if (c.req.method === "GET" && c.res.status < 400 && ROUTINE_READS.test(path)) {
       return;
     }
     const principal = c.get("principal") as Principal | undefined;
+    const ip = c.env.clientIp;
     audit({
       at: now().toISOString(),
       method: c.req.method,
-      path: new URL(c.req.url).pathname,
+      path,
       status: c.res.status,
       principal: principal === undefined ? "unauthenticated" : principalKey(principal),
+      ...(ip === undefined ? {} : { ip }),
     });
   };
 }

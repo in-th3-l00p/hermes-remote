@@ -15,11 +15,12 @@ Exceeding either returns 429 with a `retry-after` header and this body:
 
 ## Audit log
 
-`~/.hermes-remote/audit.log` is append-only JSONL. Every non-GET request and every 401 lands there with the acting principal:
+`~/.hermes-remote/audit.log` is append-only JSONL (mode 0600). Every mutation, every refused or failed request (status 400 and up, including 401, 403 and 429), and every read outside routine chat and discovery traffic (config, logs, memory, files, profiles, ...) lands there with the acting principal and client address. Key changes made with `hermes-remote keys` are recorded too, as `CLI` entries with principal `host`:
 
 ```json
-{"at":"2026-08-31T12:00:00.000Z","method":"POST","path":"/v1/sessions","status":201,"principal":"key:ab12cd34"}
-{"at":"2026-08-31T12:00:05.000Z","method":"GET","path":"/v1/sessions","status":401,"principal":"unauthenticated"}
+{"at":"2026-08-31T12:00:00.000Z","method":"POST","path":"/v1/sessions","status":201,"principal":"key:ab12cd34","ip":"203.0.113.7"}
+{"at":"2026-08-31T12:00:05.000Z","method":"GET","path":"/v1/sessions","status":401,"principal":"unauthenticated","ip":"198.51.100.4"}
+{"at":"2026-08-31T12:01:00.000Z","method":"CLI","path":"keys revoke ab12cd34","status":0,"principal":"host"}
 ```
 
 Ship it to your log pipeline; nothing rotates it for you.
@@ -36,6 +37,8 @@ Defaults, overridable via the `limits` option when embedding the server:
 | Attachment data URL length | 2,000,000 characters |
 
 Oversized bodies get 413 `payload_too_large`; oversized messages and attachments get 400 `invalid_message`.
+
+Fixed caps on other inputs: image prompts, web search queries and browser tasks up to 8,000 characters; a run's `input` up to 100,000 characters when serialized; reactions up to 16 characters without whitespace, and at most 20 distinct reactions per message.
 
 ## The demo agent
 

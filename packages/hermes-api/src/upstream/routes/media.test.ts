@@ -84,6 +84,18 @@ describe("tool runs", () => {
     expect(runStore.get(body.runId)).not.toBeNull();
   });
 
+  test("tool inputs are capped at 8,000 characters", async () => {
+    const app = demoApp();
+    const long = "x".repeat(8_001);
+    for (const [path, body] of [
+      ["/v1/media/images", { prompt: long }],
+      ["/v1/web/search", { query: long }],
+      ["/v1/browser/tasks", { task: long }],
+    ] as const) {
+      expect((await app.fetch(post(path, body))).status).toBe(400);
+    }
+  });
+
   test("web extract validates urls; images validate prompts", async () => {
     const app = demoApp();
     expect((await app.fetch(post("/v1/web/extract", { url: "ftp://x" }))).status).toBe(400);

@@ -448,6 +448,19 @@ describe("createApp", () => {
     ]);
   });
 
+  test("audits sensitive reads and every refusal, with the client address", async () => {
+    const entries: { path: string; status: number; ip?: string }[] = [];
+    const chat = { store: new ChatStore(), agent: echoAgent };
+    const app = createApp({ store, chat, audit: (e) => entries.push(e) });
+    await app.fetch(get("/v1/sessions", "hk_good"), "10.0.0.7");
+    await app.fetch(get("/v1/memory", "hk_good"), "10.0.0.7");
+    await app.fetch(get("/v1/sessions/ffff/messages", "hk_good"), "10.0.0.7");
+    expect(entries.map((e) => [e.path, e.status, e.ip])).toEqual([
+      ["/v1/memory", 404, "10.0.0.7"],
+      ["/v1/sessions/ffff/messages", 404, "10.0.0.7"],
+    ]);
+  });
+
   test("multi-origin CORS echoes the matching origin", async () => {
     const app = createApp({
       corsOrigins: ["http://a.test", "http://b.test"],

@@ -19,6 +19,13 @@ async function audioApiEnabled(options: UpstreamRouteOptions): Promise<unknown> 
   return options.upstream.discovery.capabilities().catch(() => null);
 }
 
+/** Tool inputs share the chat message cap: they are prompts to a paid model. */
+const MAX_TOOL_INPUT = 8_000;
+
+function toolText(value: unknown): value is string {
+  return typeof value === "string" && value.trim() !== "" && value.length <= MAX_TOOL_INPUT;
+}
+
 export function registerMediaRoutes(
   app: Hono<ChatEnv>,
   options: UpstreamRouteOptions,
@@ -121,8 +128,8 @@ export function registerMediaRoutes(
       prompt?: unknown;
       model?: unknown;
     } | null;
-    if (typeof body?.prompt !== "string" || body.prompt.trim() === "") {
-      return error(400, "invalid_request", "prompt (string) is required");
+    if (!toolText(body?.prompt)) {
+      return error(400, "invalid_request", `prompt (string, up to ${MAX_TOOL_INPUT} characters) is required`);
     }
     const model =
       typeof body.model === "string" ? ` Use the ${body.model} model.` : "";
@@ -141,8 +148,8 @@ export function registerMediaRoutes(
     const body = (await c.req.json().catch(() => null)) as {
       query?: unknown;
     } | null;
-    if (typeof body?.query !== "string" || body.query.trim() === "") {
-      return error(400, "invalid_request", "query (string) is required");
+    if (!toolText(body?.query)) {
+      return error(400, "invalid_request", `query (string, up to ${MAX_TOOL_INPUT} characters) is required`);
     }
     return toolRun(c, "web_search", `Search the web for: ${body.query}.`);
   });
@@ -176,8 +183,8 @@ export function registerMediaRoutes(
     const body = (await c.req.json().catch(() => null)) as {
       task?: unknown;
     } | null;
-    if (typeof body?.task !== "string" || body.task.trim() === "") {
-      return error(400, "invalid_request", "task (string) is required");
+    if (!toolText(body?.task)) {
+      return error(400, "invalid_request", `task (string, up to ${MAX_TOOL_INPUT} characters) is required`);
     }
     try {
       const input = `Using the browser automation toolset, complete this task and report the outcome: ${body.task}`;

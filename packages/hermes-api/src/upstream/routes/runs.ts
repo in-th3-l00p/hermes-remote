@@ -21,6 +21,9 @@ function createdRunId(created: unknown): string | null {
   return null;
 }
 
+/** Serialized size cap for a run's input; runs go to a paid upstream model. */
+const MAX_RUN_INPUT = 100_000;
+
 export function registerRunRoutes(
   app: Hono<ChatEnv>,
   options: UpstreamRouteOptions,
@@ -37,6 +40,9 @@ export function registerRunRoutes(
     const body = (await c.req.json().catch(() => null)) as unknown;
     if (body === null || typeof body !== "object" || Array.isArray(body)) {
       return error(400, "invalid_run", "A JSON object body is required");
+    }
+    if (JSON.stringify((body as Record<string, unknown>)["input"] ?? "").length > MAX_RUN_INPUT) {
+      return error(400, "invalid_run", `input is limited to ${MAX_RUN_INPUT} characters`);
     }
     const payload =
       principal.type === "api_key"

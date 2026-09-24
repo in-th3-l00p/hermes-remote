@@ -506,6 +506,22 @@ describe("chat routes", () => {
     ).toBe(400);
   });
 
+  test("reactions are short tokens with a per-message cap", async () => {
+    const { app, store } = makeApp();
+    const session = store.createSession();
+    const message = store.addMessage(session.id, { role: "user", content: "hi" });
+    const react = (emoji: string) =>
+      app.fetch(post(`/v1/sessions/${session.id}/messages/${message?.id}/reactions`, { emoji }));
+    expect((await react("x".repeat(17))).status).toBe(400);
+    expect((await react("two words")).status).toBe(400);
+    for (let i = 0; i < 20; i += 1) {
+      expect((await react(`r${i}`)).status).toBe(200);
+    }
+    expect((await react("r20")).status).toBe(400);
+    // Toggling an existing reaction off still works at the cap.
+    expect((await react("r0")).status).toBe(200);
+  });
+
   test("unmatched chat-shaped routes fall through to 404", async () => {
     const { app, store } = makeApp();
     const session = store.createSession();

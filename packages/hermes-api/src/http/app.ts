@@ -31,6 +31,8 @@ export interface AuditEntry {
   path: string;
   status: number;
   principal: string;
+  /** Client address as resolved for this request, when known. */
+  ip?: string;
 }
 
 export interface UpstreamAppOptions {

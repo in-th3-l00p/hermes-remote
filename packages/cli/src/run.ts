@@ -1,4 +1,5 @@
-import { join } from "node:path";
+import { appendFile, mkdir } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { KeyStore } from "@intheloop-studio/hermes-remote";
 import { initCommand } from "./commands/init.ts";
 import { keysCommand } from "./commands/keys.ts";
@@ -8,6 +9,26 @@ import { serviceCommand } from "./commands/service.ts";
 import { USAGE, fail, type CliContext, type CliResult } from "./context.ts";
 
 export type { CliContext, CliResult, ServeRequest } from "./context.ts";
+
+const KEY_MUTATIONS = new Set(["create", "revoke", "rotate", "grant", "ungrant"]);
+
+/** Key changes made on the host land in the same audit log as API traffic. */
+async function recordKeyAction(
+  auditPath: string,
+  now: Date,
+  action: string,
+  id: string | undefined,
+): Promise<void> {
+  const entry = {
+    at: now.toISOString(),
+    method: "CLI",
+    path: `keys ${action}${action === "create" || id === undefined ? "" : ` ${id}`}`,
+    status: 0,
+    principal: "host",
+  };
+  await mkdir(dirname(auditPath), { recursive: true });
+  await appendFile(auditPath, `${JSON.stringify(entry)}\n`, { mode: 0o600 });
+}
 
 export async function runCli(
   args: string[],
@@ -22,7 +43,12 @@ export async function runCli(
     return { exitCode: command === undefined ? 1 : 0, output: USAGE };
   }
   if (command === "keys") {
-    return keysCommand(args.slice(1), store, ctx.now());
+    const result = await keysCommand(args.slice(1), store, ctx.now());
+    const action = args[1];
+    if (result.exitCode === 0 && action !== undefined && KEY_MUTATIONS.has(action)) {
+      await recordKeyAction(auditPath, ctx.now(), action, args[2]);
+    }
+    return result;
   }
   if (command === "service") {
     return serviceCommand(args.slice(1), ctx);

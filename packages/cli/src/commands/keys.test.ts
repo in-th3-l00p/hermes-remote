@@ -231,3 +231,19 @@ describe("keys hygiene", () => {
     expect((await runCli(["keys", "list"], later)).output).toContain("expired");
   });
 });
+
+describe("keys audit", () => {
+  test("key changes on the host are appended to the audit log", async () => {
+    const { ctx } = await makeCtx();
+    const id = await createKey(ctx);
+    await runCli(["keys", "revoke", id], ctx);
+    await runCli(["keys", "list"], ctx);
+    await runCli(["keys", "revoke", "ffffff"], ctx);
+    const lines = (await Bun.file(`${ctx.homeDir}/audit.log`).text())
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line) as { method: string; path: string; principal: string });
+    expect(lines.map((l) => l.path)).toEqual(["keys create", `keys revoke ${id}`]);
+    expect(lines.every((l) => l.method === "CLI" && l.principal === "host")).toBe(true);
+  });
+});

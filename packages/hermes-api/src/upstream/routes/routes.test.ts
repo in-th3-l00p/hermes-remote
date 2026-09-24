@@ -248,6 +248,15 @@ describe("run routes", () => {
     }
   });
 
+  test("run input is capped", async () => {
+    const app = demoApp({
+      store: keyStore(["chat:invoke"]),
+      upstream: { upstream: new DemoUpstream(), runStore: new RunStore() },
+    });
+    const res = await app.fetch(send("/v1/runs", { input: "x".repeat(100_001) }, "POST", "hk_good"));
+    expect(res.status).toBe(400);
+  });
+
   test("api key runs pass through without identity injection", async () => {
     const app = demoApp({ anonymous: false, store: keyStore(["chat:invoke"]) });
     const created = await app.fetch(

@@ -5,6 +5,10 @@ import { canAccess, error, json, requireScope, type ChatEnv, type ChatOptions } 
 import { pageParams, parseAttachments, type SendBody } from "./validate.ts";
 import { streamTurn, turnInFlight } from "./sse.ts";
 
+/** A reaction is one emoji or short token, not a free-text field. */
+const MAX_REACTION_CHARS = 16;
+const MAX_REACTIONS_PER_MESSAGE = 20;
+
 export function registerMessageRoutes(
   app: Hono<ChatEnv>,
   options: ChatOptions,
@@ -110,8 +114,22 @@ export function registerMessageRoutes(
       const body = (await c.req.json().catch(() => null)) as {
         emoji?: unknown;
       } | null;
-      if (body === null || typeof body.emoji !== "string" || body.emoji === "") {
-        return error(400, "invalid_reaction", "emoji (string) is required");
+      if (
+        body === null ||
+        typeof body.emoji !== "string" ||
+        body.emoji === "" ||
+        body.emoji.length > MAX_REACTION_CHARS ||
+        /[\s\u0000-\u001f]/.test(body.emoji)
+      ) {
+        return error(400, "invalid_reaction", "emoji must be a short string without spaces");
+      }
+      const target = session.messages.find((m) => m.id === c.req.param("mid"));
+      if (
+        target !== undefined &&
+        target.reactions[body.emoji] === undefined &&
+        Object.keys(target.reactions).length >= MAX_REACTIONS_PER_MESSAGE
+      ) {
+        return error(400, "invalid_reaction", "Too many distinct reactions on this message");
       }
       const message = store.toggleReaction(sessionId, c.req.param("mid"), body.emoji);
       if (message === null) {
