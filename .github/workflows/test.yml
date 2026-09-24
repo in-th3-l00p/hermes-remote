@@ -6,27 +6,51 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # The pinned toolchain from .bun-version, and the oldest Bun the
+        # packages' engines field accepts.
+        bun: [pinned, "1.3.0"]
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version-file: ${{ matrix.bun == 'pinned' && '.bun-version' || '' }}
+          bun-version: ${{ matrix.bun != 'pinned' && matrix.bun || '' }}
       - run: bun install --frozen-lockfile
       - run: bun run --cwd packages/hermes-ts build
       - run: bun run --cwd packages/react-hermes build
       - run: bun run typecheck
       - run: bun test packages
+      - run: bun test scripts
       - run: bun run test:integration:local
       - run: bun scripts/check-snippets.ts
       - run: bun scripts/openapi.ts --check
+      - run: bun scripts/check-versions.ts
+      # Builds the website, the VitePress docs and the chat app it embeds.
       - run: bun run --cwd apps/landing build
+  packages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: bun install --frozen-lockfile
+      - run: bun run --cwd packages/hermes-ts build
+      - run: bun run --cwd packages/react-hermes build
+      - name: install the packed tarballs and run them under Bun and Node
+        run: bun scripts/pack-smoke.ts
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
       - run: bun run lint
       - run: bun run format:check
