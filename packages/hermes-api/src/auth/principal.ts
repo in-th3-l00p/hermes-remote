@@ -43,7 +43,11 @@ export async function authenticate(
   options: AuthenticateOptions,
 ): Promise<Principal | AuthDenial> {
   const header = request.headers.get("authorization");
-  const token = header?.startsWith("Bearer ") ? header.slice(7) : null;
+  // Auth schemes are case-insensitive (RFC 7235); only Bearer is accepted.
+  const token = header === null ? null : (/^bearer +(.+)$/i.exec(header)?.[1] ?? null);
+  if (header !== null && token === null) {
+    return denial(401, "unauthorized", "Only Bearer authorization is supported");
+  }
   if (token === null) {
     return options.anonymous === true
       ? { type: "anonymous", ...(clientIp === undefined ? {} : { ip: clientIp }) }

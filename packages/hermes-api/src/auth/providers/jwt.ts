@@ -13,6 +13,7 @@ export interface JwtProviderOptions {
 interface JwtClaims {
   sub?: unknown;
   exp?: unknown;
+  nbf?: unknown;
   iss?: unknown;
   aud?: unknown;
   email?: unknown;
@@ -30,9 +31,18 @@ function base64UrlDecode(text: string): string {
   return Buffer.from(text, "base64url").toString("utf8");
 }
 
+const BASE64URL = /^[A-Za-z0-9_-]+$/;
+/** Tolerated clock skew for `nbf`. */
+const NBF_LEEWAY_MS = 30_000;
+/** Minimum gap between JWKS refetches triggered by unknown key ids. */
+const JWKS_REFETCH_MS = 30_000;
+const JWKS_TIMEOUT_MS = 5_000;
+
 function parseToken(token: string): ParsedToken | null {
   const parts = token.split(".");
-  if (parts.length !== 3) {
+  // Strict base64url: no padding or alternate alphabets, so each token has
+  // exactly one encoding.
+  if (parts.length !== 3 || !parts.every((p) => BASE64URL.test(p))) {
     return null;
   }
   const [headerPart, claimsPart, signature] = parts as [string, string, string];
@@ -61,6 +71,12 @@ function toVerifiedUser(
   now: Date,
 ): VerifiedUser | null {
   if (typeof claims.exp !== "number" || claims.exp * 1000 <= now.getTime()) {
+    return null;
+  }
+  if (
+    claims.nbf !== undefined &&
+    (typeof claims.nbf !== "number" || claims.nbf * 1000 > now.getTime() + NBF_LEEWAY_MS)
+  ) {
     return null;
   }
   if (typeof claims.sub !== "string" || claims.sub === "") {
@@ -96,7 +112,9 @@ interface Jwk {
 
 /**
  * Zero-dependency verifier for HS256 shared-secret or ES256 JWKS tokens.
- * JWKS keys are cached; an unknown `kid` triggers one refetch.
+ * JWKS keys are cached; an unknown `kid` triggers a refetch at most every
+ * 30 seconds, with a 5 second timeout, so forged key ids can't turn the
+ * server into a fetch amplifier.
  */
 export class JwtAuthProvider implements AuthProvider {
   readonly name = "jwt";
@@ -104,6 +122,7 @@ export class JwtAuthProvider implements AuthProvider {
   private readonly fetchImpl: typeof fetch;
   private readonly now: () => Date;
   private keys = new Map<string, CryptoKey>();
+  private lastFetch = Number.NEGATIVE_INFINITY;
 
   constructor(options: JwtProviderOptions) {
     if (options.jwksUrl === undefined && options.hs256Secret === undefined) {
@@ -157,14 +176,18 @@ export class JwtAuthProvider implements AuthProvider {
   }
 
   private async keyFor(kid: string): Promise<CryptoKey | undefined> {
-    if (!this.keys.has(kid)) {
+    const at = this.now().getTime();
+    if (!this.keys.has(kid) && at - this.lastFetch >= JWKS_REFETCH_MS) {
+      this.lastFetch = at;
       await this.loadKeys().catch(() => undefined);
     }
     return this.keys.get(kid);
   }
 
   private async loadKeys(): Promise<void> {
-    const res = await this.fetchImpl(this.options.jwksUrl as string);
+    const res = await this.fetchImpl(this.options.jwksUrl as string, {
+      signal: AbortSignal.timeout(JWKS_TIMEOUT_MS),
+    });
     if (!res.ok) {
       return;
     }

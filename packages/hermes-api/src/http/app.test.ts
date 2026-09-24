@@ -281,6 +281,20 @@ describe("createApp", () => {
     expect(seen[3]).toContain("a guest signed in anonymously (stable user id: guest-7)");
   });
 
+  test("the auth scheme is case-insensitive and only Bearer is accepted", async () => {
+    const app = createApp({ store, anonymous: true });
+    const withHeader = (value: string) =>
+      new Request("http://x/v1/auth/whoami", { headers: { authorization: value } });
+    expect((await app.fetch(withHeader("bearer hk_good"))).status).toBe(200);
+    expect((await app.fetch(withHeader("BEARER hk_good"))).status).toBe(200);
+    // Even in anonymous mode a malformed or foreign scheme is refused.
+    for (const value of ["Basic dXNlcjpwYXNz", "Bearer", "Token hk_good"]) {
+      const res = await app.fetch(withHeader(value));
+      expect(res.status).toBe(401);
+    }
+    expect((await app.fetch(new Request("http://x/v1/auth/whoami"))).status).toBe(200);
+  });
+
   test("CIDR pins see the real client behind a trusted proxy", async () => {
     const pinned: KeyVerifier = {
       verifyToken: async () => ({ ...record, cidrs: ["10.0.0.0/8"] }),

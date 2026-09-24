@@ -4,7 +4,7 @@ Everything the clients do is plain HTTP plus server-sent events, so any language
 
 ## Authentication
 
-Every route except `GET /v1/status` requires `Authorization: Bearer <token>`. `GET /v1/status` returns `{ ok, version }` with the installed server version and is the endpoint to use for load-balancer and uptime probes; `GET /v1/health` (authenticated) also reports upstream readiness. The token is either an `hk_` API key or a user JWT verified by the configured [auth provider](/auth/). Unauthenticated requests get 401 on every path, even unknown ones.
+Every route except `GET /v1/status` requires `Authorization: Bearer <token>`. `GET /v1/status` returns `{ ok, version }` with the installed server version and is the endpoint to use for load-balancer and uptime probes; `GET /v1/health` (authenticated) also reports upstream readiness. The token is either an `hk_` API key or a user JWT verified by the configured [auth provider](/auth/). The scheme name is case-insensitive; any other scheme (for example `Basic`) is refused with 401, even in anonymous mode. JWTs must be canonical base64url, and `exp` and `nbf` (with 30 seconds of clock-skew allowance) are enforced. Unauthenticated requests get 401 on every path, even unknown ones.
 
 ```bash
 curl -s http://localhost:8643/v1/auth/whoami -H "Authorization: Bearer $TOKEN"
