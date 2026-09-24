@@ -1,6 +1,6 @@
 {
   "name": "@intheloop-studio/hermes-remote",
-  "version": "4.1.0",
+  "version": "4.1.1",
   "description": "Secure web API for a local Hermes agent (Hermes Remote server)",
   "license": "MIT",
   "author": "Tisca Catalin",

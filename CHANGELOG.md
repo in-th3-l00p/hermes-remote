@@ -2,6 +2,16 @@
 
 Release history: 3.2.0 (client and React 1.2.0) is the first version published to npm under the `@intheloop-studio/hermes-remote*` names, on 2026-08-31. 2.0.0 to 3.1.0 were development versions that were not published to npm or tagged; only `v0.1.0` and `v1.0.0` tags exist from before the tag-driven release workflow. From 3.2.1 on, every release is a `v*` tag that the release workflow publishes.
 
+## 4.1.1 (unreleased)
+
+Release engineering and documentation; no API changes. Client and React hooks 2.0.1.
+
+* **Packages.** The server and CLI declare `engines: { bun: ">=1.3.0" }`; the client and hooks publish their source next to `dist` (fixing imports of the client under Bun) and leave tests out. A pack smoke test installs the tarballs into a fresh project and runs them under Bun and Node.
+* **CLI.** `hermes-remote help` lists `keys create --profile` and the settings that only exist in `config.json`.
+* **Tooling.** ESLint and Prettier run in CI, Dependabot watches dependencies, actions and the Docker base image, and `bun run dev` starts the chat app in demo mode.
+* **CI and releases.** Bun is pinned in `.bun-version`, and the oldest supported Bun (1.3.0) is tested too. Releases check that the tag matches the version, run the full checks and publish with npm provenance. CI also checks that the packages depend on each other's current versions, that the changelog names the current version, and that docs links resolve.
+* **Docs.** New pages: compatibility, troubleshooting and a production hardening checklist; a guide to using the API from any language. Security pages, ARCHITECTURE, HANDOFF and the CLI docs now match the code, and the release history is reconciled.
+
 ## 4.1.0 (unreleased)
 
 Product and website. Server and CLI 4.1.0.

@@ -71,7 +71,7 @@
     },
     "packages/cli": {
       "name": "@intheloop-studio/hermes-remote-cli",
-      "version": "4.1.0",
+      "version": "4.1.1",
       "bin": {
         "hermes-remote": "./src/cli.ts",
         "hermes-api": "./src/cli.ts",
@@ -86,7 +86,7 @@
     },
     "packages/hermes-api": {
       "name": "@intheloop-studio/hermes-remote",
-      "version": "4.1.0",
+      "version": "4.1.1",
       "dependencies": {
         "hono": "^4.13.5",
         "hono-rate-limiter": "^0.5.3",
@@ -108,11 +108,11 @@
     },
     "packages/hermes-ts": {
       "name": "@intheloop-studio/hermes-remote-client",
-      "version": "2.0.0",
+      "version": "2.0.1",
     },
     "packages/react-hermes": {
       "name": "@intheloop-studio/hermes-remote-react",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "dependencies": {
         "@intheloop-studio/hermes-remote-client": "^2.0.0",
       },
