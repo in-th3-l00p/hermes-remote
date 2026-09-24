@@ -131,6 +131,7 @@ const EXPECTED: Record<string, string> = {
   "GET /v1/status": "public",
   "GET /v1/auth/whoami": "authenticated",
   "GET /v1/openapi.json": "authenticated",
+  "GET /v1/metrics": "key:status:read",
   "POST /v1/auth/token": "key:auth:users",
   "GET /v1/users": "key:auth:users",
   "GET /v1/users/:id{usr_[0-9a-f]{20}}": "key:auth:users",

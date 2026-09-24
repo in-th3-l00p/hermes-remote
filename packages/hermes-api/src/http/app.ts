@@ -24,6 +24,8 @@ import {
   profileMiddleware,
 } from "./middleware.ts";
 import { whoamiBody } from "./whoami.ts";
+import { Metrics } from "../metrics/index.ts";
+import { requireKeyScope } from "../mgmt/shared.ts";
 import { buildOpenApi } from "../openapi/index.ts";
 import { registerUserRoutes, type UserStore, type UserTokenIssuer } from "../users/index.ts";
 
@@ -75,6 +77,8 @@ export interface AppOptions {
   /** Fixed window applied to failed auth attempts per client ip; always on. */
   authFailureLimit?: RateLimitOptions;
   audit?: (entry: AuditEntry) => void;
+  /** Prometheus metrics behind GET /v1/metrics; created when absent. */
+  metrics?: Metrics;
   /** Lifecycle event bus backing GET /v1/events; created when absent. */
   events?: EventBus;
   /** Enables the slash-command relay through upstream session chat. */
@@ -107,6 +111,26 @@ export function createApp(options: AppOptions = {}): App {
   const events = options.events ?? new EventBus(now);
   const app = new Hono<ChatEnv>();
   let routes: RouteInfo[] = [];
+  const metrics = options.metrics ?? new Metrics();
+  metrics.gauge(
+    "hermes_chat_turns_in_flight",
+    "Chat turns currently streaming",
+    () => options.chat?.turns?.size ?? 0,
+  );
+  // First middleware: every response, including refusals, is measured.
+  app.use(async (c, next) => {
+    const started = performance.now();
+    await next();
+    // The matched route pattern, not the raw path, keeps label cardinality bounded.
+    const labels = { method: c.req.method, route: c.req.routePath, status: String(c.res.status) };
+    metrics.count("hermes_http_requests_total", "HTTP requests by route and status", labels);
+    metrics.observe(
+      "hermes_http_request_duration_seconds",
+      "Time to response headers (streams keep going after this)",
+      { method: c.req.method, route: c.req.routePath },
+      (performance.now() - started) / 1000,
+    );
+  });
 
   const origins = options.corsOrigins ?? [];
   if (origins.length > 0) {
@@ -144,6 +168,13 @@ export function createApp(options: AppOptions = {}): App {
   }
 
   app.get("/v1/auth/whoami", (c) => c.json(whoamiBody(c.get("principal"))));
+  app.get("/v1/metrics", (c) => {
+    const denied = requireKeyScope(c.get("principal"), "status:read");
+    return (
+      denied ??
+      c.body(metrics.render(), 200, { "content-type": "text/plain; version=0.0.4; charset=utf-8" })
+    );
+  });
   // Built on first request, when every route is registered.
   let openapi: Record<string, unknown> | null = null;
   app.get("/v1/openapi.json", (c) => {
@@ -197,7 +228,7 @@ export function createApp(options: AppOptions = {}): App {
     }
   }
   if (options.chat !== undefined) {
-    app.route("/", chatRoutes(options.chat, limits));
+    app.route("/", chatRoutes({ ...options.chat, metrics }, limits));
   }
   app.notFound((c) => errorResponse(c, 404, "not_found", "Unknown route"));
   // Last resort: every failure leaves as the JSON error envelope.

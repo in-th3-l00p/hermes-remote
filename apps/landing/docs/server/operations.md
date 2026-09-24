@@ -47,3 +47,26 @@ When no upstream is configured, chat routes answer from a built-in offline demo 
 ## Running as a service
 
 `hermes-remote service install` writes a launchd plist (macOS) or a systemd user unit (Linux) so the server starts on boot with the config file. `hermes-remote logs --tail 100` tails the server log. For TLS, reverse proxies, and hardening, see [Deploying](/tutorials/deploying).
+
+## Metrics
+
+`GET /v1/metrics` serves Prometheus metrics to API keys holding `status:read`:
+
+| Metric | Type | Labels |
+| ------ | ---- | ------ |
+| `hermes_http_requests_total` | counter | `method`, `route` (the route pattern, never a raw id), `status` |
+| `hermes_http_request_duration_seconds` | histogram | `method`, `route`; time to response headers (streams continue after it) |
+| `hermes_chat_turns_total` | counter | `outcome`: `completed`, `stopped`, `failed` |
+| `hermes_chat_turns_in_flight` | gauge | |
+
+A Prometheus scrape job only needs a bearer token:
+
+```yaml
+scrape_configs:
+  - job_name: hermes-remote
+    metrics_path: /v1/metrics
+    authorization: { credentials: hk_... }
+    static_configs: [{ targets: ["127.0.0.1:8643"] }]
+```
+
+Worth alerting on: a rising share of 5xx responses (the agent or the `hermes` CLI is unavailable), `hermes_chat_turns_total{outcome="failed"}`, and 401/429 bursts (credential guessing).

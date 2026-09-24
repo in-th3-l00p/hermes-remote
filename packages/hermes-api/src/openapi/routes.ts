@@ -34,6 +34,7 @@ const N = ":n{[0-9]+}";
 /** Documentation for every route not generated from the management catalog. */
 export const ROUTE_DOCS: Record<string, RouteDoc> = {
   "GET /v1/status": doc("System", "public", undefined, "Liveness and installed version", { response: s.Status }),
+  "GET /v1/metrics": doc("System", "key", "status:read", "Prometheus metrics", { response: "download" }),
   "GET /v1/openapi.json": doc("System", "any", undefined, "This OpenAPI document"),
   "GET /v1/auth/whoami": doc("Auth", "any", undefined, "The principal the server resolved for this token", { response: s.WhoAmI }),
   "POST /v1/auth/token": doc("Auth", "key", "auth:users", "Exchange an external identity for a scoped user token", { body: s.TokenExchange, response: s.TokenExchangeResult, status: 201 }),
