@@ -13,10 +13,10 @@ event: run.created
 data: {"at":"2026-08-31T12:00:00.000Z","id":"run_1"}
 
 event: agent_session.turn
-data: {"at":"2026-08-31T12:00:09.000Z","sessionId":"sess_1"}
+data: {"at":"2026-08-31T12:00:09.000Z","id":"sess_1"}
 ```
 
-Event types currently published: `run.created` (also for media/web/browser tool runs), `run.stopped`, `agent_session.turn` (a chat or stream turn on an agent session), and `command` (a relayed slash command). Each frame's `data` carries an ISO `at` timestamp plus the event fields.
+Event types currently published: `run.created` (also for media/web/browser tool runs), `run.stopped`, `agent_session.turn` (a chat or stream turn on an agent session; `id` is the agent session id), and `command` (a relayed slash command). Each frame's `data` carries an ISO `at` timestamp plus the event fields.
 
 The stream opens with a `: connected` comment so headers arrive immediately, and a comment-line heartbeat (`: heartbeat`) is sent every 15 seconds so proxies do not drop the connection. Close the connection to unsubscribe; there is no replay, the stream starts at now.
 

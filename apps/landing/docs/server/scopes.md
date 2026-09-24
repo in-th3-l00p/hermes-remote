@@ -8,7 +8,7 @@ Every request resolves to exactly one principal before any route logic runs:
 | User | `Bearer <jwt>` verified by the auth provider | End-user scopes, own resources only |
 | Anonymous | none (only with `--anonymous`) | End-user scopes, sessions addressed by id |
 
-Unauthenticated requests get 401 on every route, known or not, so the route map does not leak.
+Unauthenticated requests get 401 on every route, known or not, so the route map does not leak. The one exception is `GET /v1/status`, which is public and returns only `{ ok, version }` for load balancer and uptime checks.
 
 ## API keys
 

@@ -6,3 +6,6 @@ coverage/
 .env.*
 *.swp
 .vercel/
+
+# Supabase CLI link state (project refs, local only)
+apps/landing/supabase/.temp/

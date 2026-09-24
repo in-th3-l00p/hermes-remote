@@ -34,4 +34,4 @@ Real bugs found and fixed along the way, kept here so they stay fixed:
 
 ## CI
 
-Two GitHub Actions workflows: `test` (install, build clients, typecheck, `bun test packages` with the coverage gate, parse-check every ts/tsx snippet in these docs) on every push and PR, and `release` on `v*` tags (test, build, publish all four packages to npm under the `@intheloop-studio` scope, attach tarballs to an auto-generated GitHub release).
+Two GitHub Actions workflows. `test` runs on every push and PR: typecheck, `bun test packages` with the coverage gate (on the pinned Bun and on the oldest supported one), the integration suite against an in-process fake agent, a syntax check of every ts/tsx snippet in these docs (syntax only, not types), the OpenAPI snapshot and version checks, the site and docs build, lint and formatting, a smoke test of the packed npm tarballs under Bun and Node, and a Docker image build. `release` runs on `v*` tags: the same checks, then publishes all four packages to npm with provenance and attaches the tarballs to an auto-generated GitHub release.

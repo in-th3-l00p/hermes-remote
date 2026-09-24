@@ -70,8 +70,10 @@ Bun everywhere, TypeScript strict everywhere. Two test tiers:
 bun install
 bun run test               # unit tests, no external deps, 100% line+function coverage enforced
 bun run typecheck          # build the clients first; cross-package types resolve from dist
-bun run test:integration   # needs a live Hermes agent; gated by HERMES_INTEGRATION=1
-bun scripts/check-snippets.ts   # every ts/tsx fence in the docs must parse
+bun run test:integration:local  # integration suite against an in-process fake agent (runs in CI)
+bun run test:integration   # the same suite against a live Hermes agent; gated by HERMES_INTEGRATION=1
+bun run lint && bun run format:check
+bun scripts/check-snippets.ts   # every ts/tsx fence in the docs must parse (syntax only, not types)
 ```
 
 Every feature ships with tests in the same commit. See [CONTRIBUTING.md](CONTRIBUTING.md) and the [engineering notes](https://hermes-remote.tiscacatalin.com/docs/internals/engineering.html).

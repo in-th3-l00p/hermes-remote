@@ -47,12 +47,13 @@ Commands:
        [--upstream <url>] [--upstream-key <key>]
        [--model <m>] [--supabase-url <url>] [--supabase-jwt-secret <s>]
        [--rate-limit <n>] [--rate-window <seconds>]
-       user auth providers (supabase, clerk, jwt, custom) are configured
-       via the "auth" section of config.json; see the docs
+       config.json only: "auth" (user auth providers: supabase, clerk,
+       jwt, custom), "hermesBinary", "profileHomes", "commandRelay";
+       see the docs
 
   keys create --name <name> --scope <s>             create an API key
        [--scope <s> ...] [--user-grantable <s,s>] [--expires 90d]
-       [--cidr <a.b.c.d/n,...>] [--dangerous]
+       [--cidr <a.b.c.d/n,...>] [--profile <name>] [--dangerous]
   keys list | show <id> | revoke <id> | rotate <id>
   keys grant <id> --scope <s> | ungrant <id> --scope <s>
   users list | show <id> | disable <id> | enable <id>
