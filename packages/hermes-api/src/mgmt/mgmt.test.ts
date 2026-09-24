@@ -272,6 +272,41 @@ describe("management catalog", () => {
     expect(invalid.status).toBe(400);
   });
 
+  test("backup import takes an uploaded archive, never a server path", async () => {
+    const fake = new FakeCliBridge({
+      "profile list": { stdout: PROFILE_TABLE },
+      import: { stdout: "restored" },
+    });
+    const app = makeApp(fake, keyStore(["backups:manage"]));
+    const send = (body: string | Uint8Array, type: string) =>
+      app.fetch(
+        new Request("http://x/v1/backups/import", {
+          method: "POST",
+          headers: { authorization: "Bearer hk_good", "content-type": type },
+          body,
+        }),
+      );
+    const legacy = await send(JSON.stringify({ path: "/etc/passwd" }), "application/json");
+    expect(legacy.status).toBe(400);
+    const restored = await send(new Uint8Array([1, 2, 3]), "application/octet-stream");
+    expect(await restored.json()).toEqual({ ok: true, raw: "restored" });
+    const argv = fake.calls.at(-1) ?? [];
+    expect(argv[0]).toBe("import");
+    expect(argv[1]).not.toBe("/etc/passwd");
+    const denied = makeApp(fake, keyStore(["status:read"]));
+    expect(
+      (
+        await denied.fetch(
+          new Request("http://x/v1/backups/import", {
+            method: "POST",
+            headers: { authorization: "Bearer hk_good" },
+            body: new Uint8Array([1]),
+          }),
+        )
+      ).status,
+    ).toBe(403);
+  });
+
   test("backups stream the archive or map failures", async () => {
     const fake = new FakeCliBridge({
       "profile list": { stdout: PROFILE_TABLE },

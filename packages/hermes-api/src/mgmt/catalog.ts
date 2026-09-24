@@ -129,5 +129,4 @@ export const MGMT_ROUTES: CliRouteSpec[] = [
   { method: "post", path: "/v1/plugins/:name/enable", scope: "plugins:manage", argv: ["plugins", "enable", "{name}"], params: [param("name")] },
   { method: "post", path: "/v1/plugins/:name/disable", scope: "plugins:manage", argv: ["plugins", "disable", "{name}"], params: [param("name")] },
   { method: "post", path: "/v1/plugins/:name/validate", scope: "plugins:manage", argv: ["plugins", "validate", "{name}"], params: [param("name")] },
-  { method: "post", path: "/v1/backups/import", scope: "backups:manage", argv: ["import", "{path}"], params: [body("path", true)], timeoutMs: 300_000 },
 ];

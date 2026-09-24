@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, test } from "bun:test";
 import { FakeCliBridge } from "../bridge/index.ts";
 import { createApp, type KeyVerifier } from "../index.ts";
@@ -333,20 +334,49 @@ describe("profile routes", () => {
     expect(
       (await post("/v1/profiles/creative/install", { source: "-bad" })).status,
     ).toBe(400);
-    expect((await post("/v1/profiles/creative/import", {})).status).toBe(400);
     expect(
-      (await post("/v1/profiles/creative/import", { path: "-bad" })).status,
+      (await post("/v1/profiles/creative/import", { path: "/etc/passwd" })).status,
     ).toBe(400);
-    const imported = await post("/v1/profiles/creative/import", {
-      path: "/backups/creative.tar",
+    const upload = (path: string, bytes: Uint8Array) =>
+      app.fetch(
+        new Request(`http://x${path}`, {
+          method: "POST",
+          headers: {
+            authorization: "Bearer hk_good",
+            "content-type": "application/octet-stream",
+          },
+          body: bytes,
+        }),
+      );
+    expect(
+      (await upload("/v1/profiles/creative/import", new Uint8Array())).status,
+    ).toBe(400);
+    const seen: { bytes: Uint8Array | null } = { bytes: null };
+    fake.on("profile import", () => {
+      seen.bytes = new Uint8Array(readFileSync(fake.calls.at(-1)?.[2] ?? ""));
+      return { stdout: "imported" };
     });
+    const archive = new Uint8Array([0x1f, 0x8b, 0x08, 0xff, 0x00]);
+    const imported = await upload("/v1/profiles/creative/import", archive);
     expect(imported.status).toBe(200);
     expect(await imported.json()).toEqual({ ok: true, raw: "imported" });
-    expect(fake.calls.at(-1)).toEqual([
-      "profile",
-      "import",
-      "/backups/creative.tar",
-    ]);
+    expect(seen.bytes).toEqual(archive);
+    const tempPath = fake.calls.at(-1)?.[2] ?? "";
+    expect(fake.calls.at(-1)?.slice(0, 2)).toEqual(["profile", "import"]);
+    expect(existsSync(tempPath)).toBe(false);
+  });
+
+  test("profile names can never become CLI flags", async () => {
+    const fake = new FakeCliBridge({ "profile list": { stdout: PROFILE_TABLE } });
+    const app = managedApp({
+      fake,
+      store: keyStore(["status:read", "profiles:manage"]),
+    });
+    for (const name of ["--help", "-p", "--force"]) {
+      const res = await app.fetch(get(`/v1/profiles/${name}`, "hk_good"));
+      expect(res.status).toBe(404);
+    }
+    expect(fake.calls.filter((argv) => argv.includes("show"))).toEqual([]);
   });
 
   test("cli failures map to 502", async () => {

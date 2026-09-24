@@ -8,6 +8,8 @@ interface Recorded {
   headers: Record<string, string>;
 }
 
+const ARCHIVE = new Uint8Array([0x1f, 0x8b, 0x00, 0xff]);
+
 function makeClient(
   responder: (path: string) => Response = () => Response.json({ ok: true, raw: "" }),
 ): { client: HermesClient; calls: Recorded[] } {
@@ -24,7 +26,11 @@ function makeClient(
         method: init?.method ?? "GET",
         path: String(url).replace("http://x", ""),
         body:
-          init?.body === undefined ? undefined : JSON.parse(String(init?.body)),
+          init?.body === undefined
+            ? undefined
+            : typeof init.body === "string"
+              ? JSON.parse(init.body)
+              : init.body,
         headers,
       });
       return responder(String(url).replace("http://x", ""));
@@ -46,7 +52,7 @@ const TABLE: Call[] = [
   [(c) => c.profiles.remove("x"), "DELETE", "/v1/profiles/x"],
   [(c) => c.profiles.rename("x", "y"), "PATCH", "/v1/profiles/x", { rename: "y" }],
   [(c) => c.profiles.describe("x", "d"), "PATCH", "/v1/profiles/x", { description: "d" }],
-  [(c) => c.profiles.importArchive("x", "/tmp/a.zip"), "POST", "/v1/profiles/x/import", { path: "/tmp/a.zip" }],
+  [(c) => c.profiles.importArchive("x", ARCHIVE), "POST", "/v1/profiles/x/import", ARCHIVE],
   [(c) => c.profiles.install("x", "https://g.it"), "POST", "/v1/profiles/x/install", { source: "https://g.it" }],
   [(c) => c.profiles.update("x"), "POST", "/v1/profiles/x/update"],
   [(c) => c.config.show(), "GET", "/v1/config"],
@@ -148,7 +154,7 @@ const TABLE: Call[] = [
   [(c) => c.plugins.enable("p"), "POST", "/v1/plugins/p/enable"],
   [(c) => c.plugins.disable("p"), "POST", "/v1/plugins/p/disable"],
   [(c) => c.plugins.validate("p"), "POST", "/v1/plugins/p/validate"],
-  [(c) => c.backups.importArchive("/tmp/b.zip"), "POST", "/v1/backups/import", { path: "/tmp/b.zip" }],
+  [(c) => c.backups.importArchive(ARCHIVE), "POST", "/v1/backups/import", ARCHIVE],
   [(c) => c.subagents.list(), "GET", "/v1/subagents"],
   [(c) => c.agentSessions.list(), "GET", "/v1/agent/sessions"],
   [(c) => c.agentSessions.create({ title: "t" }), "POST", "/v1/agent/sessions", { title: "t" }],
@@ -190,6 +196,15 @@ describe("client namespaces", () => {
       expect(calls).toHaveLength(1);
       expect(`${calls[0]?.method} ${calls[0]?.path}`).toBe(`${method} ${path}`);
       expect(calls[0]?.body).toEqual(body);
+    }
+  });
+
+  test("archives upload as raw bytes", async () => {
+    for (const archive of [ARCHIVE, ARCHIVE.buffer, new Blob([ARCHIVE])]) {
+      const { client, calls } = makeClient();
+      await client.backups.importArchive(archive);
+      expect(calls[0]?.headers["content-type"]).toBe("application/octet-stream");
+      expect(calls[0]?.body).toBe(archive);
     }
   });
 

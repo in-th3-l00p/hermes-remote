@@ -89,7 +89,7 @@ curl -s "$BASE/v1/agent/status" -H "Authorization: Bearer $HK_TOKEN"
 | `DELETE /v1/mcp/:name` | `mcp:manage` | `mcp remove <name>` |
 | `GET /v1/plugins` | `plugins:manage` | `plugins list` |
 | `POST /v1/plugins/:name/enable` / `/disable` / `/validate` | `plugins:manage` | `plugins <action> <name>` |
-| `POST /v1/backups/import` body `{path}` | `backups:manage` | `import <path>` |
+| `POST /v1/backups/import` body: the archive bytes (`application/octet-stream`) | `backups:manage` | `import <temp file>` |
 
 Long operations (skill installs, audits, security audit, curator runs, backup imports) get extended timeouts of two to five minutes.
 

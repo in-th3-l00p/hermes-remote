@@ -1,4 +1,7 @@
 import type { Context } from "hono";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { error, requireScope, type ChatEnv } from "../chat/routes/shared.ts";
 import type { CliBridge, CliResultData } from "../bridge/index.ts";
 import type { Principal } from "../auth/index.ts";
@@ -33,6 +36,36 @@ export function cliResponse(result: CliResultData): Response {
   );
 }
 
+/**
+ * Writes the request body (an uploaded archive) to a private temp file,
+ * hands its path to `run`, and removes it afterwards. Callers never name a
+ * server-local path.
+ */
+export async function withUploadedArchive(
+  c: Context<ChatEnv>,
+  run: (path: string) => Promise<Response>,
+): Promise<Response> {
+  if ((c.req.header("content-type") ?? "").startsWith("application/json")) {
+    return error(
+      400,
+      "invalid_request",
+      "Upload the archive as the request body (application/octet-stream)",
+    );
+  }
+  const bytes = new Uint8Array(await c.req.arrayBuffer());
+  if (bytes.byteLength === 0) {
+    return error(400, "invalid_request", "An archive body is required");
+  }
+  const dir = await mkdtemp(join(tmpdir(), "hermes-remote-import-"));
+  const path = join(dir, "archive");
+  try {
+    await writeFile(path, bytes, { mode: 0o600 });
+    return await run(path);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
 export function invalidParam(value: string): boolean {
   return value.startsWith("-");
 }
@@ -45,8 +78,12 @@ export async function runCli(
   c: Context<ChatEnv>,
   cli: CliBridge,
   argv: string[],
+  timeoutMs?: number,
 ): Promise<Response> {
   return cliResponse(
-    await cli.run([...profileArgs(currentProfile(c)), ...argv]),
+    await cli.run(
+      [...profileArgs(currentProfile(c)), ...argv],
+      timeoutMs === undefined ? undefined : { timeoutMs },
+    ),
   );
 }

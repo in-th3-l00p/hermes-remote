@@ -7,6 +7,7 @@ import {
   currentProfile,
   invalidParam,
   requireKeyScope,
+  withUploadedArchive,
   type ManagementOptions,
 } from "./shared.ts";
 
@@ -111,6 +112,20 @@ export function registerMgmtRoutes(
         body.enabled ? "enable" : "disable",
         body.name,
       ]),
+    );
+  });
+
+  app.post("/v1/backups/import", async (c) => {
+    const denied = requireKeyScope(c.get("principal"), "backups:manage");
+    return (
+      denied ??
+      withUploadedArchive(c, async (path) =>
+        cliResponse(
+          await options.cli.run([...profileArgs(currentProfile(c)), "import", path], {
+            timeoutMs: 300_000,
+          }),
+        ),
+      )
     );
   });
 
