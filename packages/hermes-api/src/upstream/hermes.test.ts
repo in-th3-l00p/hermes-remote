@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { HermesUpstream } from "./hermes.ts";
+import { HermesUpstream, seg } from "./hermes.ts";
 import { HermesAgent, HermesUpstreamError } from "../chat/index.ts";
 
 interface Recorded {
@@ -243,6 +243,19 @@ describe("HermesUpstream", () => {
       },
       { method: "GET", path: "/v1/models", auth: "Bearer sekrit", body: undefined },
     ]);
+  });
+
+  test("ids that could change the request path never reach the agent", async () => {
+    const calls: Recorded[] = [];
+    const up = upstreamWith(() => Response.json({}), calls);
+    for (const id of ["../../sessions/victim", "a/b", "..", ".hidden", "a%2Fb", "", "x".repeat(201)]) {
+      expect(() => seg(id)).toThrow(HermesUpstreamError);
+      expect(up.jobs.get(id)).rejects.toBeInstanceOf(HermesUpstreamError);
+      expect(up.sessions.remove(id)).rejects.toBeInstanceOf(HermesUpstreamError);
+      expect(up.runs.events(id)).rejects.toBeInstanceOf(HermesUpstreamError);
+    }
+    expect(calls).toEqual([]);
+    expect(seg("job_1.a:b-c")).toBe("job_1.a%3Ab-c");
   });
 
   test("uses the real fetch by default", () => {

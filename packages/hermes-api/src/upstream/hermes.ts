@@ -14,6 +14,20 @@ export interface HermesUpstreamOptions {
   fetch?: typeof fetch;
 }
 
+const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$/;
+
+/**
+ * An upstream id as a single URL path segment. Ids that could change the
+ * request path (slashes, dot segments, encoded characters) never reach the
+ * agent, which is called with its own all-powerful key.
+ */
+export function seg(id: string): string {
+  if (!ID_PATTERN.test(id)) {
+    throw new HermesUpstreamError(400, "Invalid id");
+  }
+  return encodeURIComponent(id);
+}
+
 /** Bridges every non-chat surface of a Hermes agent's API server. */
 export class HermesUpstream implements Upstream {
   readonly chat: HermesAgent;
@@ -78,17 +92,17 @@ export class HermesUpstream implements Upstream {
 
   readonly runs: UpstreamRuns = {
     create: (body) => this.request("POST", "/v1/runs", body),
-    get: (id) => this.request("GET", `/v1/runs/${id}`),
+    get: async (id) => this.request("GET", `/v1/runs/${seg(id)}`),
     events: async (id, signal) => {
-      const res = await this.doFetch("GET", `/v1/runs/${id}/events`, undefined, signal);
+      const res = await this.doFetch("GET", `/v1/runs/${seg(id)}/events`, undefined, signal);
       if (res.body === null) {
         throw new HermesUpstreamError(res.status, "Run event stream had no body");
       }
       return res.body;
     },
-    stop: (id) => this.request("POST", `/v1/runs/${id}/stop`, {}),
-    steer: (id, body) => this.request("POST", `/v1/runs/${id}/steer`, body),
-    approve: (id, body) => this.request("POST", `/v1/runs/${id}/approval`, body),
+    stop: async (id) => this.request("POST", `/v1/runs/${seg(id)}/stop`, {}),
+    steer: async (id, body) => this.request("POST", `/v1/runs/${seg(id)}/steer`, body),
+    approve: async (id, body) => this.request("POST", `/v1/runs/${seg(id)}/approval`, body),
   };
 
   raw(
@@ -111,16 +125,16 @@ export class HermesUpstream implements Upstream {
   readonly sessions: UpstreamSessions = {
     list: () => this.request("GET", "/api/sessions"),
     create: (body) => this.request("POST", "/api/sessions", body),
-    get: (id) => this.request("GET", `/api/sessions/${id}`),
-    update: (id, body) => this.request("PATCH", `/api/sessions/${id}`, body),
-    remove: (id) => this.request("DELETE", `/api/sessions/${id}`),
-    messages: (id) => this.request("GET", `/api/sessions/${id}/messages`),
-    fork: (id, body) => this.request("POST", `/api/sessions/${id}/fork`, body),
-    chat: (id, body) => this.request("POST", `/api/sessions/${id}/chat`, body),
+    get: async (id) => this.request("GET", `/api/sessions/${seg(id)}`),
+    update: async (id, body) => this.request("PATCH", `/api/sessions/${seg(id)}`, body),
+    remove: async (id) => this.request("DELETE", `/api/sessions/${seg(id)}`),
+    messages: async (id) => this.request("GET", `/api/sessions/${seg(id)}/messages`),
+    fork: async (id, body) => this.request("POST", `/api/sessions/${seg(id)}/fork`, body),
+    chat: async (id, body) => this.request("POST", `/api/sessions/${seg(id)}/chat`, body),
     chatStream: async (id, body, signal) => {
       const res = await this.doFetch(
         "POST",
-        `/api/sessions/${id}/chat/stream`,
+        `/api/sessions/${seg(id)}/chat/stream`,
         body,
         signal,
       );
@@ -129,17 +143,17 @@ export class HermesUpstream implements Upstream {
       }
       return res.body;
     },
-    modelLock: (id, body) => this.request("POST", `/api/sessions/${id}/model`, body),
+    modelLock: async (id, body) => this.request("POST", `/api/sessions/${seg(id)}/model`, body),
   };
 
   readonly jobs: UpstreamJobs = {
     list: () => this.request("GET", "/api/jobs"),
-    get: (id) => this.request("GET", `/api/jobs/${id}`),
+    get: async (id) => this.request("GET", `/api/jobs/${seg(id)}`),
     create: (body) => this.request("POST", "/api/jobs", body),
-    update: (id, body) => this.request("PATCH", `/api/jobs/${id}`, body),
-    remove: (id) => this.request("DELETE", `/api/jobs/${id}`),
-    pause: (id) => this.request("POST", `/api/jobs/${id}/pause`, {}),
-    resume: (id) => this.request("POST", `/api/jobs/${id}/resume`, {}),
-    trigger: (id) => this.request("POST", `/api/jobs/${id}/run`, {}),
+    update: async (id, body) => this.request("PATCH", `/api/jobs/${seg(id)}`, body),
+    remove: async (id) => this.request("DELETE", `/api/jobs/${seg(id)}`),
+    pause: async (id) => this.request("POST", `/api/jobs/${seg(id)}/pause`, {}),
+    resume: async (id) => this.request("POST", `/api/jobs/${seg(id)}/resume`, {}),
+    trigger: async (id) => this.request("POST", `/api/jobs/${seg(id)}/run`, {}),
   };
 }
