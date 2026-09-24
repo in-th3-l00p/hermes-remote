@@ -18,6 +18,8 @@ export function registerEventRoutes(
     const events = bus.subscribe(signal);
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
+        // Flush headers now instead of waiting for the first event.
+        controller.enqueue(encoder.encode(": connected\n\n"));
         const heartbeat = setInterval(() => {
           try {
             controller.enqueue(encoder.encode(": heartbeat\n\n"));

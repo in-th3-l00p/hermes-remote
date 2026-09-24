@@ -51,6 +51,8 @@ data: {"id":"a1","role":"assistant","content":"Hi there.","status":"done"}
 
 ## The SSE events
 
+While the agent is thinking and no tokens arrive, the stream carries a `: keepalive` comment every 15 seconds, always between events. SSE parsers ignore comment lines, so clients need no special handling.
+
 | Event | Payload |
 | ----- | ------- |
 | `user` | The stored user message, echoed back |
@@ -59,11 +61,13 @@ data: {"id":"a1","role":"assistant","content":"Hi there.","status":"done"}
 | `done` | The final assistant message |
 | `error` | `{ id, message }` when the agent fails |
 
-The server accumulates deltas into the store as it streams, so a client that disconnects mid-stream still finds the full reply in history. `POST /v1/sessions/:id/stop` aborts the turn server-side; the partial content is committed and arrives as `done`.
+The server accumulates deltas into the store as it streams. If the client disconnects mid-stream, the turn is cancelled upstream (so no tokens are spent on a reply nobody reads) and the partial reply is kept in history with status `done`. `POST /v1/sessions/:id/stop` does the same explicitly and the partial content arrives as `done`. Deleting a session also stops its running turn.
+
+One turn runs per session at a time. A send or edit while a turn is streaming gets 409 `turn_in_flight` and changes nothing. If the server restarts mid-turn, the unfinished reply is marked `error` on startup.
 
 ## Attachments
 
-Attachments are image data URLs, forwarded to the upstream model as vision content parts:
+Attachments are inline base64 image data URLs (`image/png`, `image/jpeg`, `image/gif` or `image/webp`; the `type` must match the data URL, and names are at most 255 characters), forwarded to the upstream model as vision content parts. Remote URLs and SVG are refused with 400:
 
 ```bash
 curl -N -X POST "$BASE/v1/sessions/$SESSION/messages" \
@@ -89,4 +93,6 @@ curl -s -X POST "$BASE/v1/sessions/$SESSION/messages/$MESSAGE/reactions" \
 
 ## Identity injection
 
-Every turn prepends one system message built from the verified principal: the user id and email, the API key name, or "guest" with a stable id for anonymous callers. Nothing else ever goes in. Ask the agent "who am I?" and it answers from that context alone.
+Every turn prepends one system message built from the verified principal: the user id and email for users, "a guest signed in anonymously" with a stable id when the auth provider marks the token anonymous (for example Supabase anonymous sign-ins), the API key name for keys, or "an unauthenticated guest" in `--anonymous` mode (no id is shared, since the only identifier would be the client IP). Nothing else ever goes in. Ask the agent "who am I?" and it answers from that context alone.
+
+Claims are reduced to safe shapes before they are used: ids and key names keep a plain character set, and an email claim that isn't a plain address is left out rather than echoed, so a crafted claim can't read as an instruction.

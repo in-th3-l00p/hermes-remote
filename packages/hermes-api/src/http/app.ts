@@ -1,9 +1,13 @@
+import { VERSION } from "../version.ts";
 import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
+import { BridgeDenied } from "../bridge/index.ts";
+import { HermesUpstreamError } from "../chat/index.ts";
 import { bodyLimit } from "hono/body-limit";
 import type { AuthProvider, KeyVerifier } from "../auth/index.ts";
 import { chatRoutes, type ChatEnv, type ChatOptions } from "../chat/index.ts";
 import { RunStore, upstreamRoutes, type Upstream } from "../upstream/index.ts";
-import { DEFAULT_LIMITS, type Limits, type RateLimitOptions } from "../limits/index.ts";
+import { DEFAULT_LIMITS, clientIp, type Limits, type RateLimitOptions } from "../limits/index.ts";
 import { registerProfileRoutes } from "../profiles/index.ts";
 import { registerFsRoutes, registerMgmtRoutes } from "../mgmt/index.ts";
 import { registerCommandRoutes } from "../mgmt/commands.ts";
@@ -27,6 +31,8 @@ export interface AuditEntry {
   path: string;
   status: number;
   principal: string;
+  /** Client address as resolved for this request, when known. */
+  ip?: string;
 }
 
 export interface UpstreamAppOptions {
@@ -52,6 +58,11 @@ export interface AppOptions {
   anonymous?: boolean;
   /** Origins allowed for browser calls; enables CORS handling. */
   corsOrigins?: string[];
+  /**
+   * CIDRs of reverse proxies whose X-Forwarded-For is trusted. Without it the
+   * socket peer is the client, which is what CIDR pinning and per-IP limits see.
+   */
+  trustProxy?: string[];
   limits?: Partial<Limits>;
   rateLimit?: RateLimitOptions;
   /** Fixed window applied to failed auth attempts per client ip; always on. */
@@ -83,7 +94,7 @@ const DEFAULT_AUTH_FAILURE_LIMIT: RateLimitOptions = {
 };
 
 export function createApp(options: AppOptions = {}): App {
-  const version = options.version ?? "1.0.0";
+  const version = options.version ?? VERSION;
   const limits: Limits = { ...DEFAULT_LIMITS, ...options.limits };
   const now = options.now ?? (() => new Date());
   const events = options.events ?? new EventBus(now);
@@ -162,12 +173,46 @@ export function createApp(options: AppOptions = {}): App {
     app.route("/", chatRoutes(options.chat, limits));
   }
   app.notFound((c) => errorResponse(c, 404, "not_found", "Unknown route"));
+  // Last resort: every failure leaves as the JSON error envelope.
+  app.onError((err, c) => {
+    if (err instanceof HTTPException) {
+      return err.getResponse();
+    }
+    if (err instanceof HermesUpstreamError) {
+      return c.json(
+        {
+          error: {
+            code: "upstream_error",
+            message: err.message,
+            upstreamStatus: err.status,
+          },
+        },
+        502,
+      );
+    }
+    if (err instanceof BridgeDenied) {
+      return errorResponse(c, 400, "path_denied", err.reason);
+    }
+    // Bun aborts a streamed body that outgrows maxRequestBodySize mid-read.
+    if (err.message.includes("maxRequestBodySize")) {
+      return errorResponse(c, 413, "payload_too_large", "Request body too large");
+    }
+    console.error("hermes-remote: unhandled error", err);
+    return errorResponse(c, 500, "internal_error", "Internal server error");
+  });
 
   const routes = app.routes
     .filter((r) => r.method !== "ALL")
     .map((r) => ({ method: r.method, path: r.path }));
   return {
-    fetch: (request, clientIp) => app.fetch(request, { clientIp }),
+    fetch: (request, socketIp) =>
+      app.fetch(request, {
+        clientIp: clientIp(
+          request.headers.get("x-forwarded-for"),
+          socketIp,
+          options.trustProxy ?? [],
+        ),
+      }),
     routes,
   };
 }

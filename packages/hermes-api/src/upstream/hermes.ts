@@ -48,15 +48,7 @@ export class HermesUpstream implements Upstream {
     body?: unknown,
     signal?: AbortSignal,
   ): Promise<Response> {
-    const res = await this.fetchImpl(`${this.baseUrl}${path}`, {
-      method,
-      headers: {
-        authorization: `Bearer ${this.apiKey}`,
-        ...(body === undefined ? {} : { "content-type": "application/json" }),
-      },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-      ...(signal === undefined ? {} : { signal }),
-    });
+    const res = await this.send(method, path, body, signal);
     if (!res.ok) {
       const payload = (await res.json().catch(() => null)) as {
         error?: { message?: string };
@@ -111,15 +103,32 @@ export class HermesUpstream implements Upstream {
     body?: unknown,
     signal?: AbortSignal,
   ): Promise<Response> {
-    return this.fetchImpl(`${this.baseUrl}${path}`, {
-      method,
-      headers: {
-        authorization: `Bearer ${this.apiKey}`,
-        ...(body === undefined ? {} : { "content-type": "application/json" }),
-      },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-      ...(signal === undefined ? {} : { signal }),
-    });
+    return this.send(method, path, body, signal);
+  }
+
+  /** One authenticated call; network failures become a 502 upstream error. */
+  private async send(
+    method: string,
+    path: string,
+    body: unknown,
+    signal: AbortSignal | undefined,
+  ): Promise<Response> {
+    try {
+      return await this.fetchImpl(`${this.baseUrl}${path}`, {
+        method,
+        headers: {
+          authorization: `Bearer ${this.apiKey}`,
+          ...(body === undefined ? {} : { "content-type": "application/json" }),
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        ...(signal === undefined ? {} : { signal }),
+      });
+    } catch (cause) {
+      if (signal?.aborted === true) {
+        throw cause;
+      }
+      throw new HermesUpstreamError(502, "Hermes upstream is unreachable");
+    }
   }
 
   readonly sessions: UpstreamSessions = {

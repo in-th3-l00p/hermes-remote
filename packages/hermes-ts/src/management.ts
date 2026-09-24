@@ -109,16 +109,8 @@ export class ProvidersResource {
     return this.http.request("GET", "/v1/providers/fallbacks");
   }
 
-  setFallbacks(chain: string): Promise<CliResult> {
-    return this.http.request("PUT", "/v1/providers/fallbacks", { chain });
-  }
-
   moa(): Promise<CliResult> {
     return this.http.request("GET", "/v1/providers/moa");
-  }
-
-  setMoa(slots: string): Promise<CliResult> {
-    return this.http.request("PUT", "/v1/providers/moa", { slots });
   }
 
   auth(): Promise<CliResult> {
@@ -228,10 +220,6 @@ export class MemoryResource {
   providers(): Promise<CliResult> {
     return this.http.request("GET", "/v1/memory/providers");
   }
-
-  setProvider(provider: string): Promise<CliResult> {
-    return this.http.request("PUT", "/v1/memory/providers", { provider });
-  }
 }
 
 /** SOUL.md personality and skins. */
@@ -292,18 +280,6 @@ export class SkillsResource {
     return this.http.request("PUT", `/v1/skills/${name}/files/${path}`, {
       content,
     });
-  }
-
-  pending(): Promise<CliResult> {
-    return this.http.request("GET", "/v1/skills/pending");
-  }
-
-  approve(id: string): Promise<CliResult> {
-    return this.http.request("POST", `/v1/skills/pending/${id}/approve`);
-  }
-
-  reject(id: string): Promise<CliResult> {
-    return this.http.request("POST", `/v1/skills/pending/${id}/reject`);
   }
 
   hubSearch(q: string, source?: string): Promise<CliResult> {
@@ -395,12 +371,9 @@ export class CheckpointsResource {
 export class ApprovalsResource {
   constructor(private readonly http: HttpClient) {}
 
+  /** Runs `hermes approvals`: approval history mined into allowlist proposals. */
   history(): Promise<CliResult> {
     return this.http.request("GET", "/v1/approvals");
-  }
-
-  propose(): Promise<CliResult> {
-    return this.http.request("POST", "/v1/approvals/proposals");
   }
 }
 
@@ -431,12 +404,16 @@ export class WebhooksResource {
     return this.http.request("GET", "/v1/webhooks/subscriptions");
   }
 
-  add(url: string): Promise<CliResult> {
-    return this.http.request("POST", "/v1/webhooks/subscriptions", { url });
+  /** Creates an inbound webhook route (`hermes webhook subscribe`). */
+  subscribe(
+    name: string,
+    options: { prompt?: string; events?: string; description?: string } = {},
+  ): Promise<CliResult> {
+    return this.http.request("POST", "/v1/webhooks/subscriptions", { name, ...options });
   }
 
-  remove(id: string): Promise<CliResult> {
-    return this.http.request("DELETE", `/v1/webhooks/subscriptions/${id}`);
+  remove(name: string): Promise<CliResult> {
+    return this.http.request("DELETE", `/v1/webhooks/subscriptions/${name}`);
   }
 }
 
@@ -478,14 +455,9 @@ export class GatewayResource {
 export class MessagingResource {
   constructor(private readonly http: HttpClient) {}
 
-  send(
-    message: string,
-    options: { platform?: string; target?: string } = {},
-  ): Promise<CliResult> {
-    return this.http.request("POST", "/v1/messages/send", {
-      message,
-      ...options,
-    });
+  /** `target` is `platform`, `platform:chat_id` or `platform:#channel`. */
+  send(target: string, message: string): Promise<CliResult> {
+    return this.http.request("POST", "/v1/messages/send", { target, message });
   }
 }
 
@@ -496,12 +468,17 @@ export class PairingResource {
     return this.http.request("GET", "/v1/pairing/codes");
   }
 
-  create(): Promise<CliResult> {
-    return this.http.request("POST", "/v1/pairing/codes");
+  /** Approves a pairing code a user received on a platform. */
+  approve(platform: string, code: string): Promise<CliResult> {
+    return this.http.request("POST", "/v1/pairing/codes", { platform, code });
   }
 
-  revoke(code: string): Promise<CliResult> {
-    return this.http.request("DELETE", `/v1/pairing/codes/${code}`);
+  revoke(platform: string, userId: string): Promise<CliResult> {
+    return this.http.request("DELETE", `/v1/pairing/users/${platform}/${userId}`);
+  }
+
+  clearPending(): Promise<CliResult> {
+    return this.http.request("POST", "/v1/pairing/pending/clear");
   }
 }
 
@@ -512,18 +489,27 @@ export class KanbanResource {
     return this.http.request("GET", "/v1/kanban/tasks");
   }
 
-  add(title: string, options: { description?: string } = {}): Promise<CliResult> {
+  create(title: string, options: { body?: string; assignee?: string } = {}): Promise<CliResult> {
     return this.http.request("POST", "/v1/kanban/tasks", { title, ...options });
   }
 
-  update(
-    id: string,
-    options: { status?: string; title?: string; assign?: string } = {},
-  ): Promise<CliResult> {
-    return this.http.request("PATCH", `/v1/kanban/tasks/${id}`, options);
+  assign(id: string, profile: string): Promise<CliResult> {
+    return this.http.request("POST", `/v1/kanban/tasks/${id}/assign`, { profile });
   }
 
-  remove(id: string): Promise<CliResult> {
+  complete(id: string, options: { summary?: string } = {}): Promise<CliResult> {
+    return this.http.request("POST", `/v1/kanban/tasks/${id}/complete`, options);
+  }
+
+  block(id: string, reason: string): Promise<CliResult> {
+    return this.http.request("POST", `/v1/kanban/tasks/${id}/block`, { reason });
+  }
+
+  unblock(id: string): Promise<CliResult> {
+    return this.http.request("POST", `/v1/kanban/tasks/${id}/unblock`);
+  }
+
+  archive(id: string): Promise<CliResult> {
     return this.http.request("DELETE", `/v1/kanban/tasks/${id}`);
   }
 
@@ -539,15 +525,15 @@ export class ProjectsResource {
     return this.http.request("GET", "/v1/projects");
   }
 
-  add(name: string): Promise<CliResult> {
+  create(name: string): Promise<CliResult> {
     return this.http.request("POST", "/v1/projects", { name });
   }
 
-  update(name: string, options: { path?: string } = {}): Promise<CliResult> {
-    return this.http.request("PATCH", `/v1/projects/${name}`, options);
+  addFolder(name: string, path: string): Promise<CliResult> {
+    return this.http.request("PATCH", `/v1/projects/${name}`, { path });
   }
 
-  remove(name: string): Promise<CliResult> {
+  archive(name: string): Promise<CliResult> {
     return this.http.request("DELETE", `/v1/projects/${name}`);
   }
 }

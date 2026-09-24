@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createHmac } from "node:crypto";
-import { createApp, ChatStore, JwtAuthProvider, type KeyVerifier } from "../index.ts";
+import { VERSION, createApp, ChatStore, JwtAuthProvider, type KeyVerifier } from "../index.ts";
 import type { ApiKeyRecord } from "../auth/index.ts";
 import type { AgentBackend } from "../chat/index.ts";
 
@@ -55,7 +55,7 @@ describe("createApp", () => {
     const app = createApp();
     expect(await (await app.fetch(get("/v1/status"))).json()).toEqual({
       ok: true,
-      version: "1.0.0",
+      version: VERSION,
     });
     expect((await app.fetch(get("/nope"))).status).toBe(401);
     const open = createApp({ anonymous: true });
@@ -271,14 +271,46 @@ describe("createApp", () => {
       const enc = (o: unknown) =>
         Buffer.from(JSON.stringify(o)).toString("base64url");
       const head = enc({ alg: "HS256", typ: "JWT" });
-      const body = enc({ sub: "guest-7", exp: Date.now() / 1000 + 600 });
+      const body = enc({ sub: "guest-7", is_anonymous: true, exp: Date.now() / 1000 + 600 });
       const sig = createHmac("sha256", SECRET)
         .update(`${head}.${body}`)
         .digest("base64url");
       return `${head}.${body}.${sig}`;
     })();
     await send(userApp, anonToken);
-    expect(seen[3]).toContain("anonymous guest (stable user id: guest-7)");
+    expect(seen[3]).toContain("a guest signed in anonymously (stable user id: guest-7)");
+  });
+
+  test("the auth scheme is case-insensitive and only Bearer is accepted", async () => {
+    const app = createApp({ store, anonymous: true });
+    const withHeader = (value: string) =>
+      new Request("http://x/v1/auth/whoami", { headers: { authorization: value } });
+    expect((await app.fetch(withHeader("bearer hk_good"))).status).toBe(200);
+    expect((await app.fetch(withHeader("BEARER hk_good"))).status).toBe(200);
+    // Even in anonymous mode a malformed or foreign scheme is refused.
+    for (const value of ["Basic dXNlcjpwYXNz", "Bearer", "Token hk_good"]) {
+      const res = await app.fetch(withHeader(value));
+      expect(res.status).toBe(401);
+    }
+    expect((await app.fetch(new Request("http://x/v1/auth/whoami"))).status).toBe(200);
+  });
+
+  test("CIDR pins see the real client behind a trusted proxy", async () => {
+    const pinned: KeyVerifier = {
+      verifyToken: async () => ({ ...record, cidrs: ["10.0.0.0/8"] }),
+    };
+    const viaProxy = (xff: string) =>
+      new Request("http://x/v1/auth/whoami", {
+        headers: { authorization: "Bearer hk_good", "x-forwarded-for": xff },
+      });
+    const proxied = createApp({ store: pinned, trustProxy: ["127.0.0.1"] });
+    expect((await proxied.fetch(viaProxy("10.1.2.3"), "::ffff:127.0.0.1")).status).toBe(200);
+    expect((await proxied.fetch(viaProxy("10.1.2.3, 8.8.8.8"), "127.0.0.1")).status).toBe(401);
+    // Without trustProxy the header is ignored and the socket peer counts.
+    const direct = createApp({ store: pinned });
+    expect((await direct.fetch(viaProxy("10.1.2.3"), "127.0.0.1")).status).toBe(401);
+    // IPv4 clients reported as IPv4-mapped IPv6 still match IPv4 pins.
+    expect((await direct.fetch(get("/v1/auth/whoami", "hk_good"), "::ffff:10.9.9.9")).status).toBe(200);
   });
 
   test("CIDR-restricted keys only work from allowed addresses", async () => {
@@ -416,6 +448,19 @@ describe("createApp", () => {
     ]);
   });
 
+  test("audits sensitive reads and every refusal, with the client address", async () => {
+    const entries: { path: string; status: number; ip?: string }[] = [];
+    const chat = { store: new ChatStore(), agent: echoAgent };
+    const app = createApp({ store, chat, audit: (e) => entries.push(e) });
+    await app.fetch(get("/v1/sessions", "hk_good"), "10.0.0.7");
+    await app.fetch(get("/v1/memory", "hk_good"), "10.0.0.7");
+    await app.fetch(get("/v1/sessions/ffff/messages", "hk_good"), "10.0.0.7");
+    expect(entries.map((e) => [e.path, e.status, e.ip])).toEqual([
+      ["/v1/memory", 404, "10.0.0.7"],
+      ["/v1/sessions/ffff/messages", 404, "10.0.0.7"],
+    ]);
+  });
+
   test("multi-origin CORS echoes the matching origin", async () => {
     const app = createApp({
       corsOrigins: ["http://a.test", "http://b.test"],
@@ -428,7 +473,7 @@ describe("createApp", () => {
     const unknown = await app.fetch(
       new Request("http://x/v1/status", { headers: { origin: "http://evil.test" } }),
     );
-    expect(unknown.headers.get("access-control-allow-origin")).toBe("http://a.test");
+    expect(unknown.headers.get("access-control-allow-origin")).toBeNull();
     const preflight = await app.fetch(
       new Request("http://x/v1/sessions", {
         method: "OPTIONS",
@@ -440,17 +485,32 @@ describe("createApp", () => {
 
   test("CORS preflight and response headers", async () => {
     const app = createApp({ corsOrigins: ["http://localhost:5173"] });
+    const origin = { origin: "http://localhost:5173" };
     const preflight = await app.fetch(
-      new Request("http://x/v1/status", { method: "OPTIONS" }),
+      new Request("http://x/v1/config/model", {
+        method: "OPTIONS",
+        headers: {
+          ...origin,
+          "access-control-request-method": "PUT",
+          "access-control-request-headers": "authorization,content-type,x-hermes-profile",
+        },
+      }),
     );
     expect(preflight.status).toBe(204);
     expect(preflight.headers.get("access-control-allow-origin")).toBe(
       "http://localhost:5173",
     );
-    const res = await app.fetch(get("/v1/status"));
+    expect(preflight.headers.get("access-control-allow-methods")).toContain("PUT");
+    expect(preflight.headers.get("access-control-allow-headers")).toContain(
+      "x-hermes-profile",
+    );
+    const res = await app.fetch(
+      new Request("http://x/v1/status", { headers: origin }),
+    );
     expect(res.headers.get("access-control-allow-origin")).toBe(
       "http://localhost:5173",
     );
+    expect(res.headers.get("access-control-expose-headers")).toContain("retry-after");
     const noCors = createApp();
     const plain = await noCors.fetch(get("/v1/status"));
     expect(plain.headers.get("access-control-allow-origin")).toBeNull();

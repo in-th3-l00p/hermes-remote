@@ -60,31 +60,32 @@ describe("DemoUpstream runs", () => {
       status: string;
       input: unknown;
     };
-    expect(created.id).toBe("run_1");
+    expect(created.id).toMatch(/^run_[0-9a-f]{16}$/);
+    const runId = created.id;
     expect(created.status).toBe("completed");
     expect(created.input).toBe("do a thing");
-    expect(((await upstream.runs.create({ input: "x" })) as { id: string }).id).toBe(
-      "run_2",
+    expect(((await upstream.runs.create({ input: "x" })) as { id: string }).id).not.toBe(
+      runId,
     );
-    expect(await upstream.runs.get("run_1")).toMatchObject({ id: "run_1" });
-    expect(await upstream.runs.steer("run_1", { text: "left" })).toMatchObject({
-      id: "run_1",
+    expect(await upstream.runs.get(runId)).toMatchObject({ id: runId });
+    expect(await upstream.runs.steer(runId, { text: "left" })).toMatchObject({
+      id: runId,
       steered: true,
     });
-    expect(await upstream.runs.approve("run_1", { approved: true })).toMatchObject({
-      id: "run_1",
+    expect(await upstream.runs.approve(runId, { approved: true })).toMatchObject({
+      id: runId,
       approved: true,
     });
-    expect(await upstream.runs.stop("run_1")).toMatchObject({
-      id: "run_1",
+    expect(await upstream.runs.stop(runId)).toMatchObject({
+      id: runId,
       status: "stopped",
     });
   });
 
   test("streams a deterministic event sequence", async () => {
     const upstream = new DemoUpstream();
-    await upstream.runs.create({ input: "x" });
-    const text = await readAll(await upstream.runs.events("run_1"));
+    const { id: runId } = (await upstream.runs.create({ input: "x" })) as { id: string };
+    const text = await readAll(await upstream.runs.events(runId));
     expect(text).toContain("event: run.started");
     expect(text).toContain("event: run.output");
     expect(text).toContain("event: run.completed");

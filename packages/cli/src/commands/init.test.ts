@@ -10,6 +10,7 @@ describe("init and config file", () => {
     const result = await runCli(
       [
         "init", "--port", "9999", "--host", "0.0.0.0", "--cors", "http://a.test,http://b.test",
+        "--trust-proxy", "127.0.0.1",
         "--anonymous", "--upstream", "http://up", "--upstream-key", "uk",
         "--model", "m", "--supabase-url", "https://sb",
         "--supabase-jwt-secret", "sec", "--rate-limit", "30", "--rate-window", "10",
@@ -22,6 +23,7 @@ describe("init and config file", () => {
     expect(serveCalls[0]).toMatchObject({
       port: 9999,
       host: "0.0.0.0",
+      trustProxy: ["127.0.0.1"],
       anonymous: true,
       corsOrigins: ["http://a.test", "http://b.test"],
       auth: {

@@ -1,5 +1,23 @@
 # Changelog
 
+## 3.3.0 (unreleased)
+
+Hardening release. Includes security fixes; details will be published as GitHub security advisories once the release is out.
+
+* **CLI output is redacted.** Secret-named settings and recognizable credentials are masked in `raw` output and error messages.
+* **Outbound fetch protection.** `/v1/web/extract` refuses URLs whose host is, or resolves to, a non-public address; chat attachments must be inline base64 PNG/JPEG/GIF/WebP.
+* **Identity and relay.** Identity claims are reduced to safe shapes and always injected into user runs (caller `system`/`developer` turns are dropped); the command relay rejects multi-line commands and needs `chat:invoke` in addition to the command's scope.
+* **Reverse proxies.** New `trustProxy` / `--trust-proxy`: X-Forwarded-For is honoured only from trusted peers. CIDR pins accept IPv6 and IPv4-mapped addresses, and are validated at key creation.
+* **CORS.** Preflights allow `PUT` and `x-hermes-profile`; unlisted origins get no allow-origin header.
+* **Errors.** Every failure uses the JSON error envelope; an unstartable `hermes` binary is 503 `cli_unavailable`, an unreachable agent 502 `upstream_error`.
+* **Streaming.** SSE streams send keepalive comments during quiet periods and the server sets an explicit idle timeout (60 s).
+* **Chat consistency.** 409 `turn_in_flight` no longer changes history, deleting a session stops its turn, and messages left `streaming` by a crash become `error` on startup.
+* **Runs.** Demo run ids are random and run ownership can never be reassigned.
+* **CLI bridge aligned with the published hermes CLI.** `backup` streams the zip written with `-o`, imports pass `-f`, and routes map to documented verbs (see the management API docs). Operations the CLI only offers interactively answer 501 with an explanation. **Breaking:** `POST /v1/webhooks/subscriptions` takes `{name, ...}`, `POST /v1/messages/send` takes `{target, message}`, pairing and kanban/project routes changed shape.
+* **Hygiene.** Stricter JWT parsing (`nbf`, canonical base64url, rate-limited JWKS refetch with timeout), non-Bearer schemes refused, wider audit coverage with client IPs and CLI key actions, owner-only files, input caps on runs/tools/reactions, and key CLI checks (`auth:users` needs `--dangerous`, no zero expiry, expired keys listed as expired).
+* `/v1/status` reports the installed version.
+* **Client 1.3.0.** Management namespaces follow the corrected routes (`webhooks.subscribe`, `messaging.send(target, message)`, `pairing.approve/revoke/clearPending`, `kanban.create/assign/complete/block/unblock/archive`, `projects.create/addFolder/archive`); methods for 501-only routes are removed.
+
 ## 3.2.1 (unreleased)
 
 Security release; upgrading is strongly recommended. Details will be published as GitHub security advisories once the release is out.

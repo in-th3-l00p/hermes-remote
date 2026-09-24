@@ -1,4 +1,5 @@
 export { createApp } from "./http/index.ts";
+export { VERSION } from "./version.ts";
 export type {
   App,
   AppOptions,
@@ -6,7 +7,7 @@ export type {
   RouteInfo,
 } from "./http/index.ts";
 export type { KeyVerifier, Principal } from "./auth/index.ts";
-export { DEFAULT_LIMITS, ipInCidr } from "./limits/index.ts";
+export { DEFAULT_LIMITS, clientIp, ipInCidr, isValidCidr, normalizeIp } from "./limits/index.ts";
 export type { Limits, RateLimitOptions } from "./limits/index.ts";
 export {
   ClerkAuthProvider,

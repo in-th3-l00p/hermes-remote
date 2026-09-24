@@ -45,13 +45,13 @@ Mutations map to the agent's `/goal` and `/subgoal` slash commands, delivered ov
 | `POST .../goal/subgoals` body `{text}` | `/subgoal add <text>` |
 | `DELETE .../goal/subgoals/:n` and `DELETE .../goal/subgoals` | subgoal remove and clear |
 
-All writes need `goals:write` and return `{ ok, events }`, where `events` are the SSE frames the upstream produced for the relayed turn.
+All writes need `goals:write` plus `chat:invoke` (a relayed command is a model turn upstream) and return `{ ok, events }`, where `events` are the SSE frames the upstream produced for the relayed turn.
 
 **The relay is disabled by default.** Verified against a live agent: the upstream API server does not intercept slash commands, so a relayed command is processed as a normal model turn. That is usually not what you want, so write routes return 501 `not_supported` until you opt in with `"commandRelay": true` in [config.json](/server/config). Goal reads work regardless.
 
 ## The command allowlist
 
-`GET /v1/commands` lists the relayable commands, whether the relay is on, and the scope each command requires. `POST /v1/agent/sessions/:id/commands` runs one:
+`GET /v1/commands` lists the relayable commands, whether the relay is on, and the scope each command requires. Relaying any command also needs `chat:invoke`. Commands must be a single line (400 `invalid_command` otherwise), and `/status`, `/context`, `/journey`, `/sessions` and `/hatch` take no arguments. `POST /v1/agent/sessions/:id/commands` runs one:
 
 ```bash
 curl -s -X POST "$BASE/v1/agent/sessions/$SESSION/commands" \

@@ -8,6 +8,8 @@ export interface ChatOptions {
   agent: AgentBackend;
   /** In-flight turn abort controllers, keyed by session id. */
   turns?: Map<string, AbortController>;
+  /** Quiet interval before a keepalive comment on turn streams (default 15 s). */
+  keepAliveMs?: number;
 }
 
 /** Hono environment shared by every authenticated route. */

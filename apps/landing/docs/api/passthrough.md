@@ -16,7 +16,7 @@ Convenience routes over the agent's media and web tools, plus verbatim access to
 | ----- | ---- | ------- |
 | `POST /v1/media/images` | `{prompt, model?}` | Image generation |
 | `POST /v1/web/search` | `{query}` | Web search |
-| `POST /v1/web/extract` | `{url}` | Extract a page's content |
+| `POST /v1/web/extract` | `{url}` | Extract a page's content. The URL must be public http(s): hosts that are, or resolve to, loopback, private, link-local (including cloud metadata) or other non-public addresses are refused with 400 `url_not_allowed` |
 | `POST /v1/browser/tasks` | `{task}` | Start a browser-automation run; returns `{ runId }` immediately, follow it via `/v1/runs/:id` |
 
 ```bash

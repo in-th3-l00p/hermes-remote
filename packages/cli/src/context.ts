@@ -13,6 +13,7 @@ export interface ServeRequest {
   auditPath: string;
   anonymous: boolean;
   corsOrigins: string[];
+  trustProxy: string[];
   auth: AuthProviderConfig | null;
   hermesBinary: string;
   profileHomes: Record<string, string>;
@@ -38,7 +39,8 @@ Commands:
   init [--port ...] [--cors ...] [--upstream ...]   write ~/.hermes-remote/config.json
   serve [--port 8643] [--host 127.0.0.1] [--anonymous]
                                                     run the API server
-       [--cors <origin,...>] [--upstream <url>] [--upstream-key <key>]
+       [--cors <origin,...>] [--trust-proxy <cidr,...>]
+       [--upstream <url>] [--upstream-key <key>]
        [--model <m>] [--supabase-url <url>] [--supabase-jwt-secret <s>]
        [--rate-limit <n>] [--rate-window <seconds>]
        user auth providers (supabase, clerk, jwt, custom) are configured

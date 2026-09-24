@@ -3,13 +3,16 @@ import {
   isDangerousScope,
   isKnownScope,
   isUserGrantableScope,
+  isValidCidr,
   type ApiKeyRecord,
   type KeyStore,
 } from "@intheloop-studio/hermes-remote";
 import { USAGE, fail, ok, type CliResult } from "../context.ts";
 
-function describeKey(record: ApiKeyRecord): string {
-  const state = record.revoked ? "revoked" : "active";
+function describeKey(record: ApiKeyRecord, now: Date): string {
+  const expired =
+    record.expiresAt !== null && Date.parse(record.expiresAt) <= now.getTime();
+  const state = record.revoked ? "revoked" : expired ? "expired" : "active";
   const scopes = record.scopes.join(",") || "(none)";
   return `${record.id}  ${record.name}  ${state}  scopes=${scopes}`;
 }
@@ -26,6 +29,9 @@ export async function keysCommand(
     const name = flag(parsed, "name");
     if (name === undefined) {
       return fail("keys create requires --name");
+    }
+    if (name.length > 64 || /[\u0000-\u001f\u007f]/.test(name)) {
+      return fail("--name must be a single line of at most 64 characters");
     }
     const scopes = flagAll(parsed, "scope");
     if (scopes.length === 0) {
@@ -55,12 +61,16 @@ export async function keysCommand(
     let expiresAt: Date | undefined;
     if (expires !== undefined) {
       const ms = parseDuration(expires);
-      if (ms === null) {
+      if (ms === null || ms === 0) {
         return fail(`invalid --expires value: ${expires} (use e.g. 30m, 12h, 90d)`);
       }
       expiresAt = new Date(now.getTime() + ms);
     }
     const cidrs = flagAll(parsed, "cidr");
+    const badCidr = cidrs.find((cidr) => !isValidCidr(cidr));
+    if (badCidr !== undefined) {
+      return fail(`invalid --cidr value: ${badCidr} (use e.g. 10.0.0.0/8 or 2001:db8::/32)`);
+    }
     const profile = flag(parsed, "profile");
     const { record, token } = await store.create({
       name,
@@ -81,7 +91,7 @@ export async function keysCommand(
     if (keys.length === 0) {
       return ok("no API keys");
     }
-    return ok(keys.map(describeKey).join("\n"));
+    return ok(keys.map((k) => describeKey(k, now)).join("\n"));
   }
 
   const id = parsed.positionals[1];
@@ -133,12 +143,12 @@ export async function keysCommand(
       const record = await store.grantScopes(id, scopes);
       return record === null
         ? fail(`no such key: ${id}`)
-        : ok(describeKey(record));
+        : ok(describeKey(record, now));
     }
     const record = await store.ungrantScopes(id, scopes);
     return record === null
       ? fail(`no such key: ${id}`)
-      : ok(describeKey(record));
+      : ok(describeKey(record, now));
   }
 
   return fail(`unknown keys action: ${action ?? "(none)"}\n\n${USAGE}`);

@@ -12,7 +12,7 @@ Unauthenticated requests get 401 on every route, known or not, so the route map 
 
 ## API keys
 
-Keys look like `hk_<id>.<secret>`. The server stores only an argon2 hash of the secret. Keys are created, granted, revoked, and rotated exclusively through [`hermes-remote keys`](/server/cli#keys) on the host; a leaked key can never mint another. Optional attributes per key: an expiry, an IPv4 CIDR allowlist checked against the socket address, and a profile pin (requests targeting a different Hermes profile get 403).
+Keys look like `hk_<id>.<secret>`. The server stores only an argon2 hash of the secret. Keys are created, granted, revoked, and rotated exclusively through [`hermes-remote keys`](/server/cli#keys) on the host; a leaked key can never mint another. Optional attributes per key: an expiry, an IPv4/IPv6 CIDR allowlist checked against the client address (the socket peer, or the forwarded client when the peer is a trusted proxy), and a profile pin (requests targeting a different Hermes profile get 403).
 
 ## The scope catalog
 

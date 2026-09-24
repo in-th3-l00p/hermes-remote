@@ -15,6 +15,11 @@ export interface CliRouteSpec {
   argv: string[];
   params?: RouteParam[];
   timeoutMs?: number;
+  /**
+   * Set when the hermes CLI has no non-interactive command for this
+   * operation; the route answers 501 with this explanation.
+   */
+  unsupported?: string;
 }
 
 const param = (name: string, required = true): RouteParam => ({
@@ -49,10 +54,10 @@ export const MGMT_ROUTES: CliRouteSpec[] = [
   { method: "get", path: "/v1/providers/model", scope: "status:read", argv: ["config", "get", "model"] },
   { method: "put", path: "/v1/providers/model", scope: "providers:manage", argv: ["model", "{model}"], params: [body("model", true)] },
   { method: "get", path: "/v1/providers/fallbacks", scope: "status:read", argv: ["fallback", "list"] },
-  { method: "put", path: "/v1/providers/fallbacks", scope: "providers:manage", argv: ["fallback", "set", "{chain}"], params: [body("chain", true)] },
-  { method: "get", path: "/v1/providers/moa", scope: "status:read", argv: ["moa", "show"] },
-  { method: "put", path: "/v1/providers/moa", scope: "providers:manage", argv: ["moa", "set", "{slots}"], params: [body("slots", true)] },
-  { method: "get", path: "/v1/providers/auth", scope: "providers:manage", argv: ["auth", "status"] },
+  { method: "put", path: "/v1/providers/fallbacks", scope: "providers:manage", argv: [], unsupported: "Fallback chains are edited interactively (hermes fallback add/remove/clear); read them with GET" },
+  { method: "get", path: "/v1/providers/moa", scope: "status:read", argv: ["moa", "list"] },
+  { method: "put", path: "/v1/providers/moa", scope: "providers:manage", argv: [], unsupported: "Mixture-of-Agents presets are configured interactively (hermes moa configure); read them with GET" },
+  { method: "get", path: "/v1/providers/auth", scope: "providers:manage", argv: ["auth", "list"] },
 
   { method: "get", path: "/v1/agent/status", scope: "status:read", argv: ["status"] },
   { method: "get", path: "/v1/agent/doctor", scope: "status:read", argv: ["doctor"] },
@@ -65,13 +70,14 @@ export const MGMT_ROUTES: CliRouteSpec[] = [
 
   { method: "get", path: "/v1/memory/journey", scope: "memory:read", argv: ["journey"] },
   { method: "get", path: "/v1/memory/providers", scope: "memory:providers", argv: ["memory", "status"] },
-  { method: "put", path: "/v1/memory/providers", scope: "memory:providers", argv: ["memory", "set", "{provider}"], params: [body("provider", true)] },
+  { method: "put", path: "/v1/memory/providers", scope: "memory:providers", argv: [], unsupported: "Memory providers are set up interactively (hermes memory setup); read the current one with GET" },
   { method: "get", path: "/v1/soul/skins", scope: "soul:read", argv: ["skin", "list"] },
-  { method: "put", path: "/v1/soul/skin", scope: "soul:write", argv: ["skin", "use", "{name}"], params: [body("name", true)] },
+  { method: "put", path: "/v1/soul/skin", scope: "soul:write", argv: ["skin", "switch", "{name}"], params: [body("name", true)] },
 
-  { method: "get", path: "/v1/skills/pending", scope: "skills:write", argv: ["skills", "pending"] },
-  { method: "post", path: "/v1/skills/pending/:id/approve", scope: "skills:write", argv: ["skills", "approve", "{id}"], params: [param("id")] },
-  { method: "post", path: "/v1/skills/pending/:id/reject", scope: "skills:write", argv: ["skills", "reject", "{id}"], params: [param("id")] },
+  ...["get /v1/skills/pending", "post /v1/skills/pending/:id/approve", "post /v1/skills/pending/:id/reject"].map((route): CliRouteSpec => {
+    const [method, path] = route.split(" ") as ["get" | "post", string];
+    return { method, path, scope: "skills:write", argv: [], unsupported: "Skill write approvals are chat commands (/skills pending|approve|reject) with no CLI equivalent" };
+  }),
   { method: "get", path: "/v1/skills/hub/search", scope: "skills:read", argv: ["skills", "search", "{q}"], params: [{ name: "q", from: "query", required: true }, queryFlag("source", "--source")] },
   { method: "get", path: "/v1/skills/hub/taps", scope: "skills:install", argv: ["skills", "tap", "list"] },
   { method: "post", path: "/v1/skills/hub/taps", scope: "skills:install", argv: ["skills", "tap", "add", "{url}"], params: [body("url", true)] },
@@ -87,15 +93,15 @@ export const MGMT_ROUTES: CliRouteSpec[] = [
   { method: "get", path: "/v1/jobs/:id{[A-Za-z0-9_-]+}/runs", scope: "crons:read", argv: ["cron", "runs", "{id}"], params: [param("id")] },
   { method: "get", path: "/v1/checkpoints", scope: "checkpoints:rollback", argv: ["checkpoints", "list"] },
   { method: "post", path: "/v1/checkpoints/prune", scope: "checkpoints:rollback", argv: ["checkpoints", "prune"] },
-  { method: "get", path: "/v1/approvals", scope: "config:read", argv: ["approvals", "history"] },
-  { method: "post", path: "/v1/approvals/proposals", scope: "config:write", argv: ["approvals", "propose"] },
+  { method: "get", path: "/v1/approvals", scope: "config:read", argv: ["approvals"] },
+  { method: "post", path: "/v1/approvals/proposals", scope: "config:write", argv: [], unsupported: "hermes approvals produces allowlist proposals itself; read them with GET /v1/approvals" },
 
   { method: "get", path: "/v1/hooks", scope: "hooks:read", argv: ["hooks", "list"] },
   { method: "get", path: "/v1/hooks/doctor", scope: "hooks:read", argv: ["hooks", "doctor"] },
   { method: "post", path: "/v1/hooks/consent/revoke", scope: "hooks:manage", argv: ["hooks", "revoke", "{command}"], params: [body("command", true)] },
   { method: "post", path: "/v1/hooks/:event/test", scope: "hooks:manage", argv: ["hooks", "test", "{event}"], params: [param("event")] },
   { method: "get", path: "/v1/webhooks/subscriptions", scope: "webhooks:manage", argv: ["webhook", "list"] },
-  { method: "post", path: "/v1/webhooks/subscriptions", scope: "webhooks:manage", argv: ["webhook", "add", "{url}"], params: [body("url", true)] },
+  { method: "post", path: "/v1/webhooks/subscriptions", scope: "webhooks:manage", argv: ["webhook", "subscribe", "{name}"], params: [body("name", true), bodyFlag("prompt", "--prompt"), bodyFlag("events", "--events"), bodyFlag("description", "--description")] },
   { method: "delete", path: "/v1/webhooks/subscriptions/:id", scope: "webhooks:manage", argv: ["webhook", "remove", "{id}"], params: [param("id")] },
 
   { method: "get", path: "/v1/gateway", scope: "status:read", argv: ["gateway", "status"] },
@@ -106,21 +112,26 @@ export const MGMT_ROUTES: CliRouteSpec[] = [
   { method: "post", path: "/v1/gateway/enroll", scope: "ops:control", argv: ["gateway", "enroll"] },
   { method: "put", path: "/v1/gateway/platforms/:name", scope: "config:write", argv: ["config", "set", "gateway.{name}.{key}", "{value}"], params: [param("name"), body("key", true), body("value", true)] },
 
-  { method: "post", path: "/v1/messages/send", scope: "messaging:send", argv: ["send", "{message}"], params: [body("message", true), bodyFlag("platform", "--platform"), bodyFlag("target", "--to")] },
+  { method: "post", path: "/v1/messages/send", scope: "messaging:send", argv: ["send", "--to", "{target}", "{message}"], params: [body("target", true), body("message", true)] },
   { method: "get", path: "/v1/pairing/codes", scope: "pairing:manage", argv: ["pairing", "list"] },
-  { method: "post", path: "/v1/pairing/codes", scope: "pairing:manage", argv: ["pairing", "create"] },
-  { method: "delete", path: "/v1/pairing/codes/:code", scope: "pairing:manage", argv: ["pairing", "revoke", "{code}"], params: [param("code")] },
+  { method: "post", path: "/v1/pairing/codes", scope: "pairing:manage", argv: ["pairing", "approve", "{platform}", "{code}"], params: [body("platform", true), body("code", true)] },
+  { method: "delete", path: "/v1/pairing/users/:platform/:user", scope: "pairing:manage", argv: ["pairing", "revoke", "{platform}", "{user}"], params: [param("platform"), param("user")] },
+  { method: "post", path: "/v1/pairing/pending/clear", scope: "pairing:manage", argv: ["pairing", "clear-pending"] },
 
   { method: "get", path: "/v1/kanban/tasks", scope: "kanban:read", argv: ["kanban", "list"] },
-  { method: "post", path: "/v1/kanban/tasks", scope: "kanban:write", argv: ["kanban", "add", "{title}"], params: [body("title", true), bodyFlag("description", "--description")] },
-  { method: "patch", path: "/v1/kanban/tasks/:id", scope: "kanban:write", argv: ["kanban", "update", "{id}"], params: [param("id"), bodyFlag("status", "--status"), bodyFlag("title", "--title"), bodyFlag("assign", "--assign")] },
-  { method: "delete", path: "/v1/kanban/tasks/:id", scope: "kanban:write", argv: ["kanban", "remove", "{id}"], params: [param("id")] },
+  { method: "post", path: "/v1/kanban/tasks", scope: "kanban:write", argv: ["kanban", "create", "{title}"], params: [body("title", true), bodyFlag("body", "--body"), bodyFlag("assignee", "--assignee")] },
+  { method: "patch", path: "/v1/kanban/tasks/:id", scope: "kanban:write", argv: [], unsupported: "Kanban tasks change through workflow verbs (assign, complete, block, ...), not a generic update" },
+  { method: "post", path: "/v1/kanban/tasks/:id/assign", scope: "kanban:write", argv: ["kanban", "assign", "{id}", "{profile}"], params: [param("id"), body("profile", true)] },
+  { method: "post", path: "/v1/kanban/tasks/:id/complete", scope: "kanban:write", argv: ["kanban", "complete", "{id}"], params: [param("id"), bodyFlag("summary", "--summary")] },
+  { method: "post", path: "/v1/kanban/tasks/:id/block", scope: "kanban:write", argv: ["kanban", "block", "{id}", "{reason}"], params: [param("id"), body("reason", true)] },
+  { method: "post", path: "/v1/kanban/tasks/:id/unblock", scope: "kanban:write", argv: ["kanban", "unblock", "{id}"], params: [param("id")] },
+  { method: "delete", path: "/v1/kanban/tasks/:id", scope: "kanban:write", argv: ["kanban", "archive", "{id}"], params: [param("id")] },
   { method: "post", path: "/v1/kanban/tasks/:id/comments", scope: "kanban:write", argv: ["kanban", "comment", "{id}", "{text}"], params: [param("id"), body("text", true)] },
 
   { method: "get", path: "/v1/projects", scope: "projects:manage", argv: ["project", "list"] },
-  { method: "post", path: "/v1/projects", scope: "projects:manage", argv: ["project", "add", "{name}"], params: [body("name", true)] },
-  { method: "patch", path: "/v1/projects/:name", scope: "projects:manage", argv: ["project", "update", "{name}"], params: [param("name"), bodyFlag("path", "--path")] },
-  { method: "delete", path: "/v1/projects/:name", scope: "projects:manage", argv: ["project", "remove", "{name}"], params: [param("name")] },
+  { method: "post", path: "/v1/projects", scope: "projects:manage", argv: ["project", "create", "{name}"], params: [body("name", true)] },
+  { method: "patch", path: "/v1/projects/:name", scope: "projects:manage", argv: ["project", "add-folder", "{name}", "{path}"], params: [param("name"), body("path", true)] },
+  { method: "delete", path: "/v1/projects/:name", scope: "projects:manage", argv: ["project", "archive", "{name}"], params: [param("name")] },
 
   { method: "get", path: "/v1/mcp", scope: "mcp:manage", argv: ["mcp", "list"] },
   { method: "post", path: "/v1/mcp", scope: "mcp:manage", argv: ["mcp", "add", "{name}", "{url}"], params: [body("name", true), body("url", true)] },

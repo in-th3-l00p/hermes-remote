@@ -21,6 +21,8 @@ export class ChatStore {
     private readonly now: () => Date = () => new Date(),
   ) {
     this.db = openDatabase(path);
+    // Turns cut short by a crash or restart can never finish.
+    this.db.run("UPDATE messages SET status = 'error' WHERE status = 'streaming'");
   }
 
   createSession(

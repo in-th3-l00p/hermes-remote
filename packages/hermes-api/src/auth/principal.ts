@@ -8,7 +8,7 @@ export interface KeyVerifier {
 
 export type Principal =
   | { type: "api_key"; record: ApiKeyRecord }
-  | { type: "user"; userId: string; email?: string }
+  | { type: "user"; userId: string; email?: string; guest?: true }
   | { type: "anonymous"; ip?: string };
 
 export interface AuthDenial {
@@ -43,7 +43,11 @@ export async function authenticate(
   options: AuthenticateOptions,
 ): Promise<Principal | AuthDenial> {
   const header = request.headers.get("authorization");
-  const token = header?.startsWith("Bearer ") ? header.slice(7) : null;
+  // Auth schemes are case-insensitive (RFC 7235); only Bearer is accepted.
+  const token = header === null ? null : (/^bearer +(.+)$/i.exec(header)?.[1] ?? null);
+  if (header !== null && token === null) {
+    return denial(401, "unauthorized", "Only Bearer authorization is supported");
+  }
   if (token === null) {
     return options.anonymous === true
       ? { type: "anonymous", ...(clientIp === undefined ? {} : { ip: clientIp }) }
@@ -73,6 +77,7 @@ export async function authenticate(
         type: "user",
         userId: user.sub,
         ...(user.email === undefined ? {} : { email: user.email }),
+        ...(user.isAnonymous === true ? { guest: true as const } : {}),
       };
     }
   }

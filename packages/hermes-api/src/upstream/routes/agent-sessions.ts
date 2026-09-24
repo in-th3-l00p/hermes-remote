@@ -1,3 +1,4 @@
+import { keepAlive } from "../../http/keepalive.ts";
 import type { Context, Hono } from "hono";
 import { requireScope, type ChatEnv } from "../../chat/routes/shared.ts";
 import { requireKeyScope } from "../../mgmt/shared.ts";
@@ -101,7 +102,7 @@ export function registerAgentSessionRoutes(
         c.req.raw.signal,
       );
       options.events?.publish("agent_session.turn", { id: c.req.param("id") });
-      return new Response(stream, {
+      return new Response(keepAlive(stream), {
         headers: { "content-type": "text/event-stream" },
       });
     } catch (cause) {

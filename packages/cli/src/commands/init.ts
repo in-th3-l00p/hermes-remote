@@ -21,6 +21,10 @@ export async function initCommand(
   if (cors.length > 0) {
     config.cors = cors;
   }
+  const trustProxy = flagAll(parsed, "trust-proxy");
+  if (trustProxy.length > 0) {
+    config.trustProxy = trustProxy;
+  }
   if (flag(parsed, "anonymous") === "true") {
     config.anonymous = true;
   }

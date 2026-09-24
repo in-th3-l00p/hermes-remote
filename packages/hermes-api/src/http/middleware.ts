@@ -12,7 +12,7 @@ import type { ChatEnv } from "../chat/index.ts";
 import type { ManagementOptions } from "../mgmt/shared.ts";
 import type { AuditEntry } from "./app.ts";
 
-type ErrorStatus = 401 | 403 | 404 | 413 | 429 | 503;
+type ErrorStatus = 400 | 401 | 403 | 404 | 413 | 429 | 500 | 503;
 
 export function errorResponse(
   c: Context<ChatEnv>,
@@ -23,11 +23,17 @@ export function errorResponse(
   return c.json({ error: { code, message } }, status);
 }
 
+/** Methods and headers every client call uses, so no preflight is refused. */
+export const CORS_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"];
+export const CORS_HEADERS = ["authorization", "content-type", "x-hermes-profile"];
+
 export function corsMiddleware(origins: string[]): MiddlewareHandler<ChatEnv> {
   return cors({
-    origin: (origin) => (origins.includes(origin) ? origin : origins[0]),
-    allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allowHeaders: ["authorization", "content-type"],
+    // Unlisted origins get no allow-origin header at all.
+    origin: (origin) => (origins.includes(origin) ? origin : null),
+    allowMethods: CORS_METHODS,
+    allowHeaders: CORS_HEADERS,
+    exposeHeaders: ["retry-after", "ratelimit-limit", "ratelimit-remaining", "ratelimit-reset"],
   });
 }
 
@@ -115,22 +121,32 @@ export function principalRateLimiter(
   });
 }
 
+/**
+ * Successful reads that are routine end-user traffic and would drown the
+ * log. Every other read (config, logs, memory, files, ...) is audited.
+ */
+const ROUTINE_READS =
+  /^\/v1\/(status|health|capabilities|auth\/whoami|models(\/options)?|skills|toolsets|commands|events|sessions(\/.*)?|runs(\/.*)?)$/;
+
 export function auditMiddleware(
   audit: (entry: AuditEntry) => void,
   now: () => Date,
 ): MiddlewareHandler<ChatEnv> {
   return async (c, next) => {
     await next();
-    if (c.req.method === "GET" && c.res.status !== 401) {
+    const path = new URL(c.req.url).pathname;
+    if (c.req.method === "GET" && c.res.status < 400 && ROUTINE_READS.test(path)) {
       return;
     }
     const principal = c.get("principal") as Principal | undefined;
+    const ip = c.env.clientIp;
     audit({
       at: now().toISOString(),
       method: c.req.method,
-      path: new URL(c.req.url).pathname,
+      path,
       status: c.res.status,
       principal: principal === undefined ? "unauthenticated" : principalKey(principal),
+      ...(ip === undefined ? {} : { ip }),
     });
   };
 }

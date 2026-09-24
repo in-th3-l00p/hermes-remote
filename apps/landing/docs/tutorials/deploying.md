@@ -38,6 +38,12 @@ Put TLS in front; never expose the raw HTTP port directly. By default the server
 * A Cloudflare Tunnel from the agent machine, which avoids opening inbound ports at all.
 * A VPN or tailnet if the audience is private.
 
+Tell hermes-remote which proxies to trust so per-IP limits and `--cidr` key pins see real clients: `--trust-proxy 127.0.0.1` for a proxy on the same machine, or the proxy's network. Without it every request appears to come from the proxy, so one client's failed logins would lock everyone out and CIDR pins could never match. Make sure the proxy sets `X-Forwarded-For`.
+
+Streaming responses must not be buffered: with nginx set `proxy_buffering off;` (and a `proxy_read_timeout` above 60 s) for the hermes-remote location. Caddy streams by default.
+
+For health checks, point the proxy or load balancer at `GET /v1/status`: it needs no token and returns `{ ok, version }`.
+
 ## 4. Lock it down
 
 * Do not run `--anonymous` on anything public. Every caller should be an authenticated user or an API key.

@@ -1,7 +1,8 @@
+import { checkPublicUrl } from "../net-guard.ts";
 import type { Context, Hono } from "hono";
 import { principalKey } from "../../auth/index.ts";
 import { error, json, requireScope, type ChatEnv } from "../../chat/routes/shared.ts";
-import { injectRunIdentity } from "../identity.ts";
+import { identityPrefixed } from "../identity.ts";
 import { upstreamFailure, type UpstreamRouteOptions } from "./shared.ts";
 
 const sleep = (ms: number): Promise<void> =>
@@ -16,6 +17,13 @@ function toolInput(tool: string, instruction: string): string {
 
 async function audioApiEnabled(options: UpstreamRouteOptions): Promise<unknown> {
   return options.upstream.discovery.capabilities().catch(() => null);
+}
+
+/** Tool inputs share the chat message cap: they are prompts to a paid model. */
+const MAX_TOOL_INPUT = 8_000;
+
+function toolText(value: unknown): value is string {
+  return typeof value === "string" && value.trim() !== "" && value.length <= MAX_TOOL_INPUT;
 }
 
 export function registerMediaRoutes(
@@ -35,7 +43,7 @@ export function registerMediaRoutes(
       const payload =
         principal.type === "api_key"
           ? { input: toolInput(tool, instruction) }
-          : injectRunIdentity({ input: toolInput(tool, instruction) }, principal);
+          : { input: identityPrefixed(toolInput(tool, instruction), principal) };
       const created = (await options.upstream.runs.create(payload)) as {
         id?: string;
         run_id?: string;
@@ -120,8 +128,8 @@ export function registerMediaRoutes(
       prompt?: unknown;
       model?: unknown;
     } | null;
-    if (typeof body?.prompt !== "string" || body.prompt.trim() === "") {
-      return error(400, "invalid_request", "prompt (string) is required");
+    if (!toolText(body?.prompt)) {
+      return error(400, "invalid_request", `prompt (string, up to ${MAX_TOOL_INPUT} characters) is required`);
     }
     const model =
       typeof body.model === "string" ? ` Use the ${body.model} model.` : "";
@@ -140,8 +148,8 @@ export function registerMediaRoutes(
     const body = (await c.req.json().catch(() => null)) as {
       query?: unknown;
     } | null;
-    if (typeof body?.query !== "string" || body.query.trim() === "") {
-      return error(400, "invalid_request", "query (string) is required");
+    if (!toolText(body?.query)) {
+      return error(400, "invalid_request", `query (string, up to ${MAX_TOOL_INPUT} characters) is required`);
     }
     return toolRun(c, "web_search", `Search the web for: ${body.query}.`);
   });
@@ -154,10 +162,16 @@ export function registerMediaRoutes(
     const body = (await c.req.json().catch(() => null)) as {
       url?: unknown;
     } | null;
-    if (typeof body?.url !== "string" || !/^https?:\/\//.test(body.url)) {
+    if (typeof body?.url !== "string") {
       return error(400, "invalid_request", "url (http/https string) is required");
     }
-    return toolRun(c, "web_extract", `Extract the content of ${body.url}.`);
+    // The agent fetches this URL from the host, so it must not reach the
+    // host's own network; only the normalized href goes into the prompt.
+    const checked = await checkPublicUrl(body.url);
+    if ("reason" in checked) {
+      return error(400, "url_not_allowed", `url refused: ${checked.reason}`);
+    }
+    return toolRun(c, "web_extract", `Extract the content of ${checked.url.href}.`);
   });
 
   app.post("/v1/browser/tasks", async (c) => {
@@ -169,15 +183,15 @@ export function registerMediaRoutes(
     const body = (await c.req.json().catch(() => null)) as {
       task?: unknown;
     } | null;
-    if (typeof body?.task !== "string" || body.task.trim() === "") {
-      return error(400, "invalid_request", "task (string) is required");
+    if (!toolText(body?.task)) {
+      return error(400, "invalid_request", `task (string, up to ${MAX_TOOL_INPUT} characters) is required`);
     }
     try {
       const input = `Using the browser automation toolset, complete this task and report the outcome: ${body.task}`;
       const payload =
         principal.type === "api_key"
           ? { input }
-          : injectRunIdentity({ input }, principal);
+          : { input: identityPrefixed(input, principal) };
       const created = (await options.upstream.runs.create(payload)) as {
         id?: string;
         run_id?: string;

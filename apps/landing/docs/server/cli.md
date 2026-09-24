@@ -22,7 +22,7 @@ hermes-remote init \
   --rate-limit 120 --rate-window 60
 ```
 
-Accepted flags: `--port`, `--host`, `--cors` (repeatable), `--anonymous`, `--upstream`, `--upstream-key`, `--model`, `--supabase-url`, `--supabase-jwt-secret`, `--rate-limit`, `--rate-window`. Running `init` again merges into the existing file. Keys that have no flag (`auth`, `hermesBinary`, `profileHomes`, `commandRelay`) are edited in the file directly; see [Configuration](/server/config).
+Accepted flags: `--port`, `--host`, `--cors`, `--trust-proxy` (repeatable), `--anonymous`, `--upstream`, `--upstream-key`, `--model`, `--supabase-url`, `--supabase-jwt-secret`, `--rate-limit`, `--rate-window`. Running `init` again merges into the existing file. Keys that have no flag (`auth`, `hermesBinary`, `profileHomes`, `commandRelay`) are edited in the file directly; see [Configuration](/server/config).
 
 ## serve
 
@@ -33,6 +33,7 @@ Runs the server. Every setting resolves with the same precedence: flag, then env
 | `--port` | | `port` | HTTP port, default 8643 |
 | `--host` | | `host` | Interface to listen on, default `127.0.0.1` (loopback only). Use `0.0.0.0` only when a firewall or reverse proxy guards the port. |
 | `--cors a,b` | | `cors` | Allowed browser origins |
+| `--trust-proxy a,b` | | `trustProxy` | Reverse-proxy CIDRs whose `X-Forwarded-For` is trusted |
 | `--upstream` | `HERMES_UPSTREAM_URL` | `upstreamUrl` | Hermes agent API server URL |
 | `--upstream-key` | `HERMES_UPSTREAM_KEY` | `upstreamKey` | The agent's `API_SERVER_KEY` |
 | `--model` | `HERMES_UPSTREAM_MODEL` | `upstreamModel` | Upstream model name |
@@ -67,7 +68,8 @@ hermes-remote keys ungrant <id> --scope <s>
 * `create` and `rotate` print the token once. It cannot be recovered later; only an argon2 hash is stored.
 * Tier 3 scopes require `--dangerous`; unknown scopes are rejected. See [API keys and scopes](/server/scopes).
 * `--profile <name>` pins the key to one Hermes profile; requests targeting another profile get 403.
-* `--expires` takes durations like `30m`, `12h`, `90d`. `--cidr` restricts the key to source networks (IPv4 CIDR list).
+* `--name` is a single line of at most 64 characters. `--dangerous` is required for tier 3 scopes and for `auth:users`. `keys list` shows each key as `active`, `expired` or `revoked`.
+* `--expires` takes durations like `30m`, `12h`, `90d` (zero is refused). `--cidr` restricts the key to source networks (IPv4 or IPv6 CIDR list, validated at creation). Behind a reverse proxy, set `--trust-proxy` on `serve` so pins match the real client.
 * `--user-grantable` accepts tier 1 scopes only. It is reserved for the token-exchange pattern.
 
 ## service

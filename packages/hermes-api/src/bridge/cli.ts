@@ -3,6 +3,10 @@ export interface CliResultData {
   exitCode: number;
   stdout: string;
   stderr: string;
+  /** Raw stdout, for binary output such as archives. */
+  stdoutBytes?: Uint8Array;
+  /** Set when the binary could not be started at all (missing, not executable). */
+  unavailable?: true;
 }
 
 export interface CliBridge {
@@ -12,32 +16,41 @@ export interface CliBridge {
 export type SpawnLike = (
   argv: string[],
   timeoutMs: number,
-) => Promise<{ exitCode: number; stdout: string; stderr: string }>;
+) => Promise<{
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  stdoutBytes?: Uint8Array;
+}>;
 
 async function defaultSpawn(
   argv: string[],
   timeoutMs: number,
-): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+): Promise<{ exitCode: number; stdout: string; stderr: string; stdoutBytes: Uint8Array }> {
   const proc = Bun.spawn({ cmd: argv, stdout: "pipe", stderr: "pipe" });
   let timedOut = false;
   const timer = setTimeout(() => {
     timedOut = true;
     proc.kill();
   }, timeoutMs);
-  const [exitCode, stdout, stderr] = await Promise.all([
+  // Bun's own readers, not `new Response(...)`: the global Response can be
+  // replaced (e.g. by a DOM shim) and must not affect process I/O.
+  const [exitCode, stdoutBytes, stderr] = await Promise.all([
     proc.exited,
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
+    Bun.readableStreamToBytes(proc.stdout),
+    Bun.readableStreamToText(proc.stderr),
   ]);
+  const stdout = new TextDecoder().decode(stdoutBytes);
   clearTimeout(timer);
   if (timedOut) {
     return {
       exitCode: exitCode === 0 ? 124 : exitCode,
       stdout,
       stderr: `${stderr}command timed out after ${timeoutMs}ms`,
+      stdoutBytes,
     };
   }
-  return { exitCode, stdout, stderr };
+  return { exitCode, stdout, stderr, stdoutBytes };
 }
 
 /** Executes the hermes binary; callers supply allowlisted argv templates. */
@@ -75,6 +88,14 @@ export class HermesCliBridge implements CliBridge {
         options.timeoutMs ?? this.timeoutMs,
       );
       return { ok: result.exitCode === 0, ...result };
+    } catch (cause) {
+      return {
+        ok: false,
+        exitCode: 127,
+        stdout: "",
+        stderr: `could not start ${this.binary}: ${(cause as Error).message}`,
+        unavailable: true,
+      };
     } finally {
       this.active -= 1;
       this.waiting.shift()?.();

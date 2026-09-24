@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import { mkdirSync } from "node:fs";
+import { chmodSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import type { Attachment, ChatMessage, ChatSessionMeta } from "./types.ts";
 
@@ -58,6 +58,10 @@ export function openDatabase(path: string): Database {
     mkdirSync(dirname(path), { recursive: true });
   }
   const db = new Database(path);
+  if (path !== ":memory:") {
+    // Chat history is private user data: owner-only on disk.
+    chmodSync(path, 0o600);
+  }
   db.run(`
     CREATE TABLE IF NOT EXISTS sessions (
       id TEXT PRIMARY KEY,

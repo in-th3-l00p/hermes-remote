@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { FakeCliBridge } from "../bridge/index.ts";
+import { FakeCliBridge, HermesCliBridge } from "../bridge/index.ts";
 import { createApp, ProfileRegistry, type KeyVerifier } from "../index.ts";
 import type { ApiKeyRecord } from "../auth/index.ts";
 import { MGMT_ROUTES, buildArgv, type CliRouteSpec } from "./index.ts";
@@ -86,7 +86,7 @@ function sampleRequest(
 
 describe("management catalog", () => {
   test("every route: scope denial, argv wiring, cli failure", async () => {
-    for (const spec of MGMT_ROUTES) {
+    for (const spec of MGMT_ROUTES.filter((r) => r.unsupported === undefined)) {
       const values = sampleValues(spec);
       const expected = buildArgv(spec, values);
       const good = new FakeCliBridge({ "profile list": { stdout: PROFILE_TABLE } });
@@ -118,7 +118,7 @@ describe("management catalog", () => {
     const fake = new FakeCliBridge({
       "profile list": { stdout: PROFILE_TABLE },
       "config set model.name gpt": { stdout: "set" },
-      "send hello --platform telegram --to ops": { stdout: "sent" },
+      "send --to telegram:ops hello": { stdout: "sent" },
       "insights --days 7": { stdout: "usage" },
     });
     const app = makeApp(
@@ -143,11 +143,7 @@ describe("management catalog", () => {
           authorization: "Bearer hk_good",
           "content-type": "application/json",
         },
-        body: JSON.stringify({
-          message: "hello",
-          platform: "telegram",
-          target: "ops",
-        }),
+        body: JSON.stringify({ message: "hello", target: "telegram:ops" }),
       }),
     );
     expect(send.status).toBe(200);
@@ -157,6 +153,40 @@ describe("management catalog", () => {
       }),
     );
     expect(insights.status).toBe(200);
+  });
+
+  test("operations the CLI only offers interactively answer 501 after the scope check", async () => {
+    const fake = new FakeCliBridge({ "profile list": { stdout: PROFILE_TABLE } });
+    const unsupported = MGMT_ROUTES.filter((r) => r.unsupported !== undefined);
+    expect(unsupported.length).toBeGreaterThan(0);
+    for (const spec of unsupported) {
+      const values = sampleValues(spec);
+      const allowed = makeApp(fake, keyStore([spec.scope]));
+      const res = await allowed.fetch(sampleRequest(spec, values, "hk_good"));
+      expect(`${spec.path} ${res.status}`).toBe(`${spec.path} 501`);
+      expect(((await res.json()) as { error: { message: string } }).error.message).toBe(
+        spec.unsupported as string,
+      );
+      const denied = makeApp(fake, keyStore(["sessions:search"]));
+      expect((await denied.fetch(sampleRequest(spec, values, "hk_good"))).status).toBe(403);
+    }
+    expect(fake.calls.filter((argv) => argv[0] !== "profile")).toEqual([]);
+  });
+
+  test("structured body values are refused instead of stringified", async () => {
+    const fake = new FakeCliBridge({ "profile list": { stdout: PROFILE_TABLE } });
+    const app = makeApp(fake, keyStore(["config:write"]));
+    for (const value of [{ nested: true }, ["a", "b"]]) {
+      const res = await app.fetch(
+        new Request("http://x/v1/config/model.name", {
+          method: "PUT",
+          headers: { authorization: "Bearer hk_good", "content-type": "application/json" },
+          body: JSON.stringify({ value }),
+        }),
+      );
+      expect(res.status).toBe(400);
+    }
+    expect(fake.calls.filter((argv) => argv[0] === "config")).toEqual([]);
   });
 
   test("missing required params and dash injection are rejected", async () => {
@@ -180,7 +210,7 @@ describe("management catalog", () => {
           authorization: "Bearer hk_good",
           "content-type": "application/json",
         },
-        body: JSON.stringify({ message: "--yolo" }),
+        body: JSON.stringify({ target: "telegram:ops", message: "--yolo" }),
       }),
     );
     expect(dash.status).toBe(400);
@@ -272,6 +302,27 @@ describe("management catalog", () => {
     expect(invalid.status).toBe(400);
   });
 
+  test("cli output is redacted on success and failure", async () => {
+    const fake = new FakeCliBridge({
+      "profile list": { stdout: PROFILE_TABLE },
+      "config show": { stdout: "model: opus\nOPENAI_API_KEY=sk-live-abcdef123456\n" },
+      doctor: { exitCode: 1, stderr: "auth failed for token ghp_0123456789abcdefghijABCD" },
+    });
+    const app = makeApp(fake, keyStore(["config:read", "status:read"]));
+    const shown = (await (
+      await app.fetch(
+        new Request("http://x/v1/config", { headers: { authorization: "Bearer hk_good" } }),
+      )
+    ).json()) as { raw: string };
+    expect(shown.raw).toBe("model: opus\nOPENAI_API_KEY=[redacted]\n");
+    const failed = (await (
+      await app.fetch(
+        new Request("http://x/v1/agent/doctor", { headers: { authorization: "Bearer hk_good" } }),
+      )
+    ).json()) as { error: { message: string } };
+    expect(failed.error.message).not.toContain("ghp_0123");
+  });
+
   test("backup import takes an uploaded archive, never a server path", async () => {
     const fake = new FakeCliBridge({
       "profile list": { stdout: PROFILE_TABLE },
@@ -293,6 +344,7 @@ describe("management catalog", () => {
     const argv = fake.calls.at(-1) ?? [];
     expect(argv[0]).toBe("import");
     expect(argv[1]).not.toBe("/etc/passwd");
+    expect(argv[2]).toBe("-f");
     const denied = makeApp(fake, keyStore(["status:read"]));
     expect(
       (
@@ -307,20 +359,53 @@ describe("management catalog", () => {
     ).toBe(403);
   });
 
+  test("backups run `hermes backup -o <temp>` and stream the zip byte for byte", async () => {
+    const bytes = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0xff, 0x00, 0xde]);
+    let tempPath = "";
+    const cli = new HermesCliBridge({
+      binary: "hermes",
+      spawn: async (argv) => {
+        if (argv[1] === "backup") {
+          tempPath = argv[3] ?? "";
+          expect(argv[2]).toBe("-o");
+          await Bun.write(tempPath, bytes);
+        }
+        return { exitCode: 0, stdout: "", stderr: "" };
+      },
+    });
+    const app = createApp({
+      store: keyStore(["backups:manage"]),
+      management: {
+        cli,
+        profiles: new ProfileRegistry({ cli, homeFor: () => "/tmp" }),
+        homeFor: () => "/tmp",
+      },
+    });
+    const res = await app.fetch(
+      new Request("http://x/v1/backups", {
+        method: "POST",
+        headers: { authorization: "Bearer hk_good" },
+      }),
+    );
+    expect(res.headers.get("content-type")).toBe("application/zip");
+    expect(new Uint8Array(await res.arrayBuffer())).toEqual(bytes);
+    expect(await Bun.file(tempPath).exists()).toBe(false);
+  });
+
   test("backups stream the archive or map failures", async () => {
     const fake = new FakeCliBridge({
       "profile list": { stdout: PROFILE_TABLE },
-      backup: { stdout: "ZIPBYTES" },
+      backup: { stdout: "written elsewhere" },
     });
     const app = makeApp(fake, keyStore(["backups:manage"]));
+    // The CLI "succeeded" but wrote no file: that is a CLI error, not an empty archive.
     const backup = await app.fetch(
       new Request("http://x/v1/backups", {
         method: "POST",
         headers: { authorization: "Bearer hk_good" },
       }),
     );
-    expect(backup.headers.get("content-type")).toBe("application/octet-stream");
-    expect(await backup.text()).toBe("ZIPBYTES");
+    expect(backup.status).toBe(502);
     const failing = new FakeCliBridge({
       "profile list": { stdout: PROFILE_TABLE },
       backup: { exitCode: 1, stderr: "disk full" },

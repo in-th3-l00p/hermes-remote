@@ -1,5 +1,5 @@
 import { describe, expect, spyOn, test } from "bun:test";
-import { mkdir, mkdtemp } from "node:fs/promises";
+import { mkdir, mkdtemp, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ChatStore, DemoAgent, startServer } from "../index.ts";
@@ -21,10 +21,41 @@ describe("startServer", () => {
     expect(res.status).toBe(200);
     server.stop();
     const log = await Bun.file(logPath).text();
+    expect((await stat(logPath)).mode & 0o777).toBe(0o600);
     expect(log).toContain("2026-08-23T00:00:00.000Z server started on 127.0.0.1:");
     expect(log).toContain("GET /v1/status 200");
     expect(log).toContain("server stopped");
   });
+
+  test("a turn survives an upstream that is silent longer than the idle timeout", async () => {
+    const slowAgent = {
+      async *stream() {
+        await new Promise((r) => setTimeout(r, 1_600));
+        yield "finally";
+      },
+    };
+    const server = await startServer({
+      port: 0,
+      logPath: await tempLogPath(),
+      idleTimeoutSeconds: 1,
+      anonymous: true,
+      chat: { store: new ChatStore(), agent: slowAgent, turns: new Map(), keepAliveMs: 300 },
+    });
+    const base = `http://127.0.0.1:${server.port}`;
+    const session = (await (await fetch(`${base}/v1/sessions`, { method: "POST" })).json()) as {
+      id: string;
+    };
+    const res = await fetch(`${base}/v1/sessions/${session.id}/messages`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content: "hi" }),
+    });
+    const text = await res.text();
+    server.stop();
+    expect(text).toContain(": keepalive");
+    expect(text).toContain('"text":"finally"');
+    expect(text).toContain("event: done");
+  }, 10_000);
 
   test("uses the real clock by default", async () => {
     const logPath = await tempLogPath();

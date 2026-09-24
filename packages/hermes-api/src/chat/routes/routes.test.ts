@@ -73,7 +73,7 @@ describe("chat routes", () => {
     const res = await app.fetch(
       post(`/v1/sessions/${session.id}/messages`, {
         content: "hello",
-        attachments: [{ name: "a.png", type: "image/png", dataUrl: "data:x" }],
+        attachments: [{ name: "a.png", type: "image/png", dataUrl: "data:image/png;base64,iVBORw0KGgo=" }],
       }),
     );
     expect(res.headers.get("content-type")).toBe("text/event-stream");
@@ -115,10 +115,22 @@ describe("chat routes", () => {
     const emptyWithAttachment = await app.fetch(
       post(`/v1/sessions/${session.id}/messages`, {
         content: "",
-        attachments: [{ name: "a.png", type: "image/png", dataUrl: "d" }],
+        attachments: [{ name: "a.png", type: "image/png", dataUrl: "data:image/png;base64,iVBORw0KGgo=" }],
       }),
     );
     expect(emptyWithAttachment.status).toBe(200);
+    await emptyWithAttachment.text();
+    for (const attachment of [
+      { name: "a.png", type: "image/png", dataUrl: "http://169.254.169.254/latest" },
+      { name: "a.svg", type: "image/svg+xml", dataUrl: "data:image/svg+xml;base64,PHN2Zy8+" },
+      { name: "a.png", type: "image/jpeg", dataUrl: "data:image/png;base64,iVBORw0KGgo=" },
+      { name: "x".repeat(256), type: "image/png", dataUrl: "data:image/png;base64,iVBORw0KGgo=" },
+    ]) {
+      const refused = await app.fetch(
+        post(`/v1/sessions/${session.id}/messages`, { content: "hi", attachments: [attachment] }),
+      );
+      expect(refused.status).toBe(400);
+    }
   });
 
   test("streams an error event when the agent fails", async () => {
@@ -314,6 +326,17 @@ describe("chat routes", () => {
     expect(
       ((await busy.json()) as { error: { code: string } }).error.code,
     ).toBe("turn_in_flight");
+    const firstId = store.getSession(session.id)?.messages[0]?.id ?? "";
+    const busyEdit = await app.fetch(
+      post(`/v1/sessions/${session.id}/messages/${firstId}`, { content: "edited" }, "PATCH"),
+    );
+    expect(busyEdit.status).toBe(409);
+    // Rejected requests leave history exactly as it was.
+    const during = store.getSession(session.id)?.messages ?? [];
+    expect(during.map((m) => [m.role, m.content])).toEqual([
+      ["user", "go"],
+      ["assistant", "partial "],
+    ]);
     (release as unknown as () => void)();
     await pending;
     const after = await app.fetch(
@@ -321,6 +344,30 @@ describe("chat routes", () => {
     );
     expect(after.status).toBe(200);
     await after.text();
+  });
+
+  test("deleting a session stops its running turn", async () => {
+    let seenSignal: AbortSignal | undefined;
+    const waitingAgent: AgentBackend = {
+      async *stream(_messages, signal) {
+        seenSignal = signal;
+        yield "partial ";
+        await new Promise((r) => setTimeout(r, 200));
+      },
+    };
+    const { app, store } = makeApp(waitingAgent);
+    const session = store.createSession();
+    const pending = Promise.resolve(
+      app.fetch(post(`/v1/sessions/${session.id}/messages`, { content: "go" })),
+    ).then((res) => res.text());
+    await new Promise((r) => setTimeout(r, 20));
+    const deleted = await app.fetch(
+      new Request(`http://x/v1/sessions/${session.id}`, { method: "DELETE" }),
+    );
+    expect(deleted.status).toBe(200);
+    expect(seenSignal?.aborted).toBe(true);
+    await pending;
+    expect(store.getSession(session.id)).toBeNull();
   });
 
   test("client disconnect aborts the turn and keeps the partial reply", async () => {
@@ -457,6 +504,22 @@ describe("chat routes", () => {
         )
       ).status,
     ).toBe(400);
+  });
+
+  test("reactions are short tokens with a per-message cap", async () => {
+    const { app, store } = makeApp();
+    const session = store.createSession();
+    const message = store.addMessage(session.id, { role: "user", content: "hi" });
+    const react = (emoji: string) =>
+      app.fetch(post(`/v1/sessions/${session.id}/messages/${message?.id}/reactions`, { emoji }));
+    expect((await react("x".repeat(17))).status).toBe(400);
+    expect((await react("two words")).status).toBe(400);
+    for (let i = 0; i < 20; i += 1) {
+      expect((await react(`r${i}`)).status).toBe(200);
+    }
+    expect((await react("r20")).status).toBe(400);
+    // Toggling an existing reaction off still works at the cap.
+    expect((await react("r0")).status).toBe(200);
   });
 
   test("unmatched chat-shaped routes fall through to 404", async () => {

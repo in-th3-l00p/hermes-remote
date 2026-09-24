@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
 import { describe, expect, test } from "bun:test";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ChatStore } from "./index.ts";
@@ -41,6 +41,7 @@ describe("ChatStore", () => {
     const first = new ChatStore(path, now);
     const session = first.createSession({ userId: "user-1" });
     first.addMessage(session.id, { role: "user", content: "persisted" });
+    expect((await stat(path)).mode & 0o777).toBe(0o600);
     const second = new ChatStore(path, now);
     const loaded = second.getSession(session.id);
     expect(loaded?.userId).toBe("user-1");
@@ -62,6 +63,22 @@ describe("ChatStore", () => {
     expect(store.getSession("aa")?.keyId).toBeNull();
     const owned = store.createSession({ keyId: "k1" });
     expect(store.listSessions({ keyId: "k1" }).map((s) => s.id)).toEqual([owned.id]);
+  });
+
+  test("messages left streaming by a crash are marked as errors on startup", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "hermes-chat-db-"));
+    const path = join(dir, "chat.db");
+    const crashed = new ChatStore(path, now);
+    const session = crashed.createSession();
+    const reply = crashed.addMessage(session.id, {
+      role: "assistant",
+      content: "half",
+      status: "streaming",
+    });
+    const restarted = new ChatStore(path, now);
+    const message = restarted.getSession(session.id)?.messages.find((m) => m.id === reply?.id);
+    expect(message?.status).toBe("error");
+    expect(message?.content).toBe("half");
   });
 
   test("titles sessions from the first user message", () => {

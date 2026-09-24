@@ -4,7 +4,7 @@ Everything the clients do is plain HTTP plus server-sent events, so any language
 
 ## Authentication
 
-Every route except `GET /v1/status` requires `Authorization: Bearer <token>`. The token is either an `hk_` API key or a user JWT verified by the configured [auth provider](/auth/). Unauthenticated requests get 401 on every path, even unknown ones.
+Every route except `GET /v1/status` requires `Authorization: Bearer <token>`. `GET /v1/status` returns `{ ok, version }` with the installed server version and is the endpoint to use for load-balancer and uptime probes; `GET /v1/health` (authenticated) also reports upstream readiness. The token is either an `hk_` API key or a user JWT verified by the configured [auth provider](/auth/). The scheme name is case-insensitive; any other scheme (for example `Basic`) is refused with 401, even in anonymous mode. JWTs must be canonical base64url, and `exp` and `nbf` (with 30 seconds of clock-skew allowance) are enforced. Unauthenticated requests get 401 on every path, even unknown ones.
 
 ```bash
 curl -s http://localhost:8643/v1/auth/whoami -H "Authorization: Bearer $TOKEN"
@@ -24,7 +24,7 @@ Failures are JSON with stable codes:
 { "error": { "code": "missing_scope", "message": "This route requires the chat:invoke scope" } }
 ```
 
-Common codes: `unauthorized` (401), `missing_scope` and `api_key_required` and `profile_forbidden` (403), `not_found`, `session_not_found`, `profile_not_found` (404), `payload_too_large` (413), `rate_limited` (429, with `retry-after`), `invalid_request` and `invalid_message` (400), `upstream_error` and `cli_error` (502), `not_supported` (501).
+Common codes: `unauthorized` (401), `missing_scope` and `api_key_required` and `profile_forbidden` (403), `not_found`, `session_not_found`, `profile_not_found` (404), `payload_too_large` (413), `rate_limited` (429, with `retry-after`), `invalid_request` and `invalid_message` (400), `upstream_error` (502, including an unreachable agent) and `cli_error` (502), `not_supported` (501), `cli_unavailable` (503, the `hermes` binary could not be started), `internal_error` (500). Every error, including unexpected ones, uses this envelope; stack traces never reach the client.
 
 ## Profiles
 

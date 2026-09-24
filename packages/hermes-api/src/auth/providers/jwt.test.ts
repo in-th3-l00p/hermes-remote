@@ -35,6 +35,20 @@ function hs256Provider(
 }
 
 describe("JwtAuthProvider hs256", () => {
+  test("rejects non-canonical encodings", async () => {
+    const token = sign(valid);
+    expect(await hs256Provider().verify(`${token}==`)).toBeNull();
+    const [h, b, sig] = token.split(".") as [string, string, string];
+    expect(await hs256Provider().verify(`${h}.${b}.${sig.replaceAll("-", "+")}x`)).toBeNull();
+  });
+
+  test("honours nbf with a small clock-skew allowance", async () => {
+    const at = NOW.getTime() / 1000;
+    expect(await hs256Provider().verify(sign({ ...valid, nbf: at + 3600 }))).toBeNull();
+    expect(await hs256Provider().verify(sign({ ...valid, nbf: at + 10 }))).not.toBeNull();
+    expect(await hs256Provider().verify(sign({ ...valid, nbf: "soon" }))).toBeNull();
+  });
+
   test("accepts a valid token", async () => {
     expect(await hs256Provider().verify(sign(valid))).toEqual({
       sub: "user-1",
@@ -225,6 +239,26 @@ describe("JwtAuthProvider jwks", () => {
         await signToken({ ...payload, exp: NOW.getTime() / 1000 - 1 }),
       ),
     ).toBeNull();
+  });
+
+  test("unknown key ids refetch the JWKS at most every 30 seconds", async () => {
+    const { jwk, signToken } = await makeKeys();
+    const counter = { fetches: 0 };
+    let clock = NOW.getTime();
+    const signals: (AbortSignal | undefined)[] = [];
+    const fetchImpl = (async (url: string | URL | Request, init?: RequestInit) => {
+      signals.push(init?.signal ?? undefined);
+      return jwksFetch([{ ...jwk, kid: "k1" }], counter)(url);
+    }) as unknown as typeof fetch;
+    const provider = jwksProvider(fetchImpl, { now: () => new Date(clock) });
+    for (const kid of ["a", "b", "c"]) {
+      expect(await provider.verify(await signToken(payload, { alg: "ES256", kid }))).toBeNull();
+    }
+    expect(counter.fetches).toBe(1);
+    clock += 31_000;
+    await provider.verify(await signToken(payload, { alg: "ES256", kid: "d" }));
+    expect(counter.fetches).toBe(2);
+    expect(signals.every((signal) => signal instanceof AbortSignal)).toBe(true);
   });
 
   test("handles JWKS endpoint failures", async () => {

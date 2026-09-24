@@ -187,4 +187,63 @@ describe("keys rotate and cidr", () => {
     expect(rotated.output).toContain("previous secret no longer works");
     expect((await runCli(["keys", "rotate", "ffffff"], ctx)).exitCode).toBe(1);
   });
+
+  test("invalid CIDRs are refused at creation; IPv6 blocks are accepted", async () => {
+    const { ctx } = await makeCtx();
+    const bad = await runCli(
+      ["keys", "create", "--name", "x", "--scope", "chat:invoke", "--cidr", "10.0.0.0/33"],
+      ctx,
+    );
+    expect(bad.exitCode).toBe(1);
+    expect(bad.output).toContain("invalid --cidr value: 10.0.0.0/33");
+    const id = await createKey(ctx, ["--cidr", "2001:db8::/32"]);
+    expect((await runCli(["keys", "show", id], ctx)).output).toContain("2001:db8::/32");
+  });
+});
+
+describe("keys hygiene", () => {
+  test("names must be one short line, expiry must be non-zero", async () => {
+    const { ctx } = await makeCtx();
+    const create = (...extra: string[]) =>
+      runCli(["keys", "create", "--scope", "chat:invoke", ...extra], ctx);
+    expect((await create("--name", "a\nfake-row active")).exitCode).toBe(1);
+    expect((await create("--name", "x".repeat(65))).exitCode).toBe(1);
+    expect((await create("--name", "ok", "--expires", "0m")).exitCode).toBe(1);
+  });
+
+  test("auth:users needs --dangerous", async () => {
+    const { ctx } = await makeCtx();
+    const plain = await runCli(["keys", "create", "--name", "a", "--scope", "auth:users"], ctx);
+    expect(plain.exitCode).toBe(1);
+    expect(plain.output).toContain("--dangerous");
+    const acknowledged = await runCli(
+      ["keys", "create", "--name", "a", "--scope", "auth:users", "--dangerous"],
+      ctx,
+    );
+    expect(acknowledged.exitCode).toBe(0);
+  });
+
+  test("list marks expired keys as expired", async () => {
+    const { ctx } = await makeCtx();
+    await createKey(ctx, ["--expires", "30m"]);
+    const later = { ...ctx, now: () => new Date(ctx.now().getTime() + 3_600_000) };
+    expect((await runCli(["keys", "list"], ctx)).output).toContain("active");
+    expect((await runCli(["keys", "list"], later)).output).toContain("expired");
+  });
+});
+
+describe("keys audit", () => {
+  test("key changes on the host are appended to the audit log", async () => {
+    const { ctx } = await makeCtx();
+    const id = await createKey(ctx);
+    await runCli(["keys", "revoke", id], ctx);
+    await runCli(["keys", "list"], ctx);
+    await runCli(["keys", "revoke", "ffffff"], ctx);
+    const lines = (await Bun.file(`${ctx.homeDir}/audit.log`).text())
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line) as { method: string; path: string; principal: string });
+    expect(lines.map((l) => l.path)).toEqual(["keys create", `keys revoke ${id}`]);
+    expect(lines.every((l) => l.method === "CLI" && l.principal === "host")).toBe(true);
+  });
 });

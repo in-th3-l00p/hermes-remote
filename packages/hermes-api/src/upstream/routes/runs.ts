@@ -1,3 +1,4 @@
+import { keepAlive } from "../../http/keepalive.ts";
 import type { Hono } from "hono";
 import { principalKey } from "../../auth/index.ts";
 import { error, json, requireScope, type ChatEnv } from "../../chat/routes/shared.ts";
@@ -20,6 +21,9 @@ function createdRunId(created: unknown): string | null {
   return null;
 }
 
+/** Serialized size cap for a run's input; runs go to a paid upstream model. */
+const MAX_RUN_INPUT = 100_000;
+
 export function registerRunRoutes(
   app: Hono<ChatEnv>,
   options: UpstreamRouteOptions,
@@ -37,10 +41,16 @@ export function registerRunRoutes(
     if (body === null || typeof body !== "object" || Array.isArray(body)) {
       return error(400, "invalid_run", "A JSON object body is required");
     }
+    if (JSON.stringify((body as Record<string, unknown>)["input"] ?? "").length > MAX_RUN_INPUT) {
+      return error(400, "invalid_run", `input is limited to ${MAX_RUN_INPUT} characters`);
+    }
     const payload =
       principal.type === "api_key"
         ? (body as Record<string, unknown>)
         : injectRunIdentity(body as Record<string, unknown>, principal);
+    if (payload === null) {
+      return error(400, "invalid_run", "input must be a string or an array of messages");
+    }
     try {
       const created = await runs.create(payload);
       const id = createdRunId(created);
@@ -81,7 +91,7 @@ export function registerRunRoutes(
     }
     try {
       const stream = await runs.events(c.req.param("id"), c.req.raw.signal);
-      return new Response(stream, {
+      return new Response(keepAlive(stream), {
         headers: { "content-type": "text/event-stream" },
       });
     } catch (cause) {

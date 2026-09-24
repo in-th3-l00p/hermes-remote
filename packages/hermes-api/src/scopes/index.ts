@@ -81,7 +81,8 @@ export const END_USER_SCOPES = [
   "toolsets:read",
 ] as const;
 
-const DANGEROUS = new Set<string>(TIER3_SCOPES);
+// auth:users lets a key act for any user, so it needs the same acknowledgment.
+const DANGEROUS = new Set<string>([...TIER3_SCOPES, ...AUTH_SCOPES]);
 const END_USER = new Set<string>(END_USER_SCOPES);
 const USER_GRANTABLE = new Set<string>(TIER1_SCOPES);
 
