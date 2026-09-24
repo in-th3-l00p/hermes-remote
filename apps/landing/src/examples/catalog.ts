@@ -2,50 +2,50 @@ export interface ExampleCard {
   slug: string;
   title: string;
   blurb: string;
+  /** Hooks and client methods the example is about. */
   tags: string[];
+  /** Has a runnable app at /examples/<slug>/app/. */
+  live?: boolean;
 }
 
+/** The showcase comes first; the rest are written recipes. */
 export const EXAMPLES: ExampleCard[] = [
   {
     slug: "chat",
-    title: "Chat",
+    title: "The reference chat app",
     blurb:
-      "Streaming conversations: edit, react, regenerate, and stop mid-stream.",
-    tags: ["useChat", "useSessions", "SSE"],
+      "Streaming replies, image attachments, reactions, editing, stop, and a chat list you can search, rename and archive. Works on phones and with screen readers.",
+    tags: ["useChat", "searchSessions", "tokenProvider"],
+    live: true,
   },
   {
     slug: "auth",
-    title: "Auth",
-    blurb:
-      "Sign in with Supabase, inspect your principal, and watch scopes allow and deny in real time.",
-    tags: ["tokenProvider", "auth providers", "scopes"],
-  },
-  {
-    slug: "configuration",
-    title: "Configuration",
-    blurb:
-      "Edit the agent's config, memory files, and SOUL.md through the CLI and filesystem bridges.",
-    tags: ["useConfig", "useMemory", "useSoul"],
+    title: "Signing users in",
+    blurb: "Hand the client a token provider, check who the server thinks you are, and see which routes a user may reach.",
+    tags: ["tokenProvider", "whoami", "scopes"],
   },
   {
     slug: "runs",
-    title: "Runs",
-    blurb:
-      "Submit long-running agent tasks, stream their event feeds, and stop them, with per-visitor ownership.",
+    title: "Long-running tasks",
+    blurb: "Start agent runs, follow their event streams, and stop them, with each visitor seeing only their own.",
     tags: ["useRuns", "useRunEvents"],
   },
   {
+    slug: "configuration",
+    title: "Agent settings from a dashboard",
+    blurb: "Read and change the agent's config, memory and SOUL.md with an API key that holds exactly those scopes.",
+    tags: ["useConfig", "useMemory", "useSoul"],
+  },
+  {
     slug: "profiles",
-    title: "Profiles",
-    blurb:
-      "Switch between isolated agent profiles and watch every panel retarget through one header.",
+    title: "Several agents in one app",
+    blurb: "Point every call at a different Hermes profile with one header, and pin keys to a profile.",
     tags: ["useProfiles", "withProfile"],
   },
   {
     slug: "command-center",
-    title: "Command center",
-    blurb:
-      "The full agentic integration: chat, runs, memory, soul, config, health, and a live event ticker on one screen.",
-    tags: ["everything", "useEvents", "useAgentInfo"],
+    title: "An operator console",
+    blurb: "Chat, runs, memory, config, health and the live event stream together, for the person running the agent.",
+    tags: ["useEvents", "useAgentInfo", "useAgentStatus"],
   },
 ];

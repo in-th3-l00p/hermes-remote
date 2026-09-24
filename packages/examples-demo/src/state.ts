@@ -69,6 +69,7 @@ export class DemoState {
       userId,
       keyId: null,
       title: null,
+      archived: false,
       createdAt: at,
       updatedAt: at,
       messages: [],
@@ -78,8 +79,23 @@ export class DemoState {
     return session;
   }
 
-  listSessions(): DemoSessionMeta[] {
+  /** Active sessions, or archived ones with `archived: true`. */
+  listSessions(archived = false): DemoSessionMeta[] {
     return [...this.sessions.values()]
+      .filter((s) => s.archived === archived)
+      .map(({ messages: _messages, ...meta }) => meta)
+      .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+  }
+
+  /** Case-insensitive match on titles and message text, like the server. */
+  searchSessions(query: string): DemoSessionMeta[] {
+    const q = query.toLowerCase();
+    return [...this.sessions.values()]
+      .filter(
+        (s) =>
+          (s.title ?? "").toLowerCase().includes(q) ||
+          s.messages.some((m) => m.content.toLowerCase().includes(q)),
+      )
       .map(({ messages: _messages, ...meta }) => meta)
       .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
   }

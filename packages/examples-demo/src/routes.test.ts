@@ -732,7 +732,10 @@ describe("event firehose", () => {
     const gate = makeGate();
     const fetchImpl = demo(gate.delay);
     const controller = new AbortController();
-    const res = await fetchImpl(`${BASE}/v1/events`, { signal: controller.signal });
+    const res = await fetchImpl(`${BASE}/v1/events`, {
+      signal: controller.signal,
+      headers: { authorization: `Bearer ${KEY}` },
+    });
     const reader = (res.body as ReadableStream<Uint8Array>).getReader();
     controller.abort();
     gate.open();
@@ -746,5 +749,46 @@ describe("event firehose", () => {
     const { frames: backlog, reader } = await readSome(res, 6);
     expect(backlog.length).toBe(6);
     await reader.cancel();
+  });
+});
+
+describe("session tools", () => {
+  test("rename, archive, list archived and search, like the server", async () => {
+    const fetchImpl = demo();
+    const created = (await (await fetchImpl(`${BASE}/v1/sessions`, { method: "POST" })).json()) as { id: string };
+    const patch = (body: unknown) =>
+      fetchImpl(`${BASE}/v1/sessions/${created.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    expect(((await (await patch({ title: "  Trip plans  " })).json()) as { title: string }).title).toBe("Trip plans");
+    expect((await patch({})).status).toBe(400);
+    expect(
+      (await fetchImpl(`${BASE}/v1/sessions/${created.id}`, { method: "PATCH", body: "{" })).status,
+    ).toBe(400);
+    expect((await patch({ title: "" })).status).toBe(400);
+    const archived = (await (await patch({ archived: true })).json()) as { archived: boolean };
+    expect(archived.archived).toBe(true);
+    const active = (await (await get(fetchImpl, "/v1/sessions")).json()) as { sessions: { id: string }[] };
+    expect(active.sessions.map((s) => s.id)).not.toContain(created.id);
+    const onlyArchived = (await (await get(fetchImpl, "/v1/sessions?archived=true")).json()) as {
+      sessions: { id: string }[];
+    };
+    expect(onlyArchived.sessions.map((s) => s.id)).toEqual([created.id]);
+    const found = (await (await get(fetchImpl, "/v1/sessions/search?q=TRIP")).json()) as { sessions: { id: string }[] };
+    expect(found.sessions.map((s) => s.id)).toContain(created.id);
+    const byMessage = (await (await get(fetchImpl, "/v1/sessions/search?q=zzz-nothing")).json()) as { sessions: unknown[] };
+    expect(byMessage.sessions).toEqual([]);
+    expect((await get(fetchImpl, "/v1/sessions/search?q=")).status).toBe(400);
+    expect(
+      (await fetchImpl(`${BASE}/v1/sessions/ffff`, { method: "PATCH", body: "{}" })).status,
+    ).toBe(404);
+  });
+
+  test("users and guests hold only the end-user scopes", async () => {
+    const fetchImpl = demo();
+    expect((await get(fetchImpl, "/v1/events")).status).toBe(403);
+    expect((await get(fetchImpl, "/v1/sessions/search?q=a")).status).toBe(200);
   });
 });

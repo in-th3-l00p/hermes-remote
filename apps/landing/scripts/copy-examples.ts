@@ -1,25 +1,11 @@
+// Copies the reference chat app's build into the site at /examples/chat/app/.
 import { cpSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
-const EXAMPLES = [
-  "chat",
-  "auth",
-  "configuration",
-  "runs",
-  "profiles",
-  "command-center",
-];
-
-const root = join(import.meta.dir, "..", "..", "..");
-let copied = 0;
-for (const name of EXAMPLES) {
-  const source = join(root, "apps", "examples", name, "dist");
-  if (!existsSync(source)) {
-    console.error(`missing build for example: ${name} (${source})`);
-    process.exit(1);
-  }
-  const target = join(import.meta.dir, "..", "dist", "examples", name, "app");
-  cpSync(source, target, { recursive: true });
-  copied += 1;
+const source = join(import.meta.dir, "..", "..", "chat", "dist");
+if (!existsSync(source)) {
+  console.error(`missing build of the chat app: ${source} (run build:examples first)`);
+  process.exit(1);
 }
-console.log(`copied ${copied} example apps into dist/examples/*/app`);
+cpSync(source, join(import.meta.dir, "..", "dist", "examples", "chat", "app"), { recursive: true });
+console.log("copied the chat app into dist/examples/chat/app");

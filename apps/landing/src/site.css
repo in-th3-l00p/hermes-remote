@@ -568,3 +568,107 @@ h2.display {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Examples index and articles */
+.page-intro {
+  padding-block: clamp(2rem, 6vw, 4rem) 1rem;
+}
+
+.showcase {
+  padding-block: 2rem clamp(3rem, 8vw, 5rem);
+}
+
+.showcase h2.display {
+  margin-bottom: 1rem;
+}
+
+.showcase .prose {
+  margin: 0 0 0.75rem;
+}
+
+.tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-left: 0.25rem;
+}
+
+.tags code {
+  font-size: 0.78rem;
+  color: var(--ink);
+  background: var(--tint);
+  padding: 0.05rem 0.4rem;
+  border-radius: 3px;
+}
+
+.article {
+  max-width: 46rem;
+  padding-block: clamp(2rem, 5vw, 3.5rem) clamp(3rem, 8vw, 5rem);
+}
+
+.article .crumbs {
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+}
+
+.article .actions {
+  margin: 0 0 1.5rem;
+}
+
+.article h1 {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(2.6rem, 7vw, 4rem);
+  line-height: 0.95;
+  margin: 0 0 1.25rem;
+}
+
+.article h2 {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 2rem;
+  line-height: 1.05;
+  margin: 2.5rem 0 0.75rem;
+}
+
+.article h3 {
+  font-size: 1.15rem;
+  margin: 1.75rem 0 0.5rem;
+}
+
+.article p,
+.article li {
+  max-width: 40rem;
+}
+
+.article :not(pre) > code {
+  font-size: 0.85em;
+  background: var(--tint);
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+}
+
+.article pre {
+  background: var(--code-bg);
+  color: var(--code-ink);
+  padding: 1rem 1.15rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  line-height: 1.6;
+}
+
+.article table {
+  border-collapse: collapse;
+  width: 100%;
+  display: block;
+  overflow-x: auto;
+  font-size: 0.93rem;
+}
+
+.article th,
+.article td {
+  text-align: left;
+  padding: 0.45rem 0.75rem 0.45rem 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
