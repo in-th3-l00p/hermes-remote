@@ -1,3 +1,5 @@
+import { GateAdd, GoalSet, GoalWait, Text } from "../openapi/schemas.ts";
+import { readBody } from "../openapi/validate.ts";
 import { Database } from "bun:sqlite";
 import type { Context, Hono } from "hono";
 import { error, json, type ChatEnv } from "../chat/routes/shared.ts";
@@ -138,12 +140,9 @@ export function registerGoalRoutes(
     if (denied !== null) {
       return denied;
     }
-    const body = (await c.req.json().catch(() => null)) as {
-      text?: unknown;
-      draft?: unknown;
-    } | null;
-    if (typeof body?.text !== "string" || body.text.trim() === "") {
-      return error(400, "invalid_request", "text (string) is required");
+    const body = await readBody(c, GoalSet);
+    if (body instanceof Response) {
+      return body;
     }
     return relay(
       c,
@@ -166,14 +165,11 @@ export function registerGoalRoutes(
     if (denied !== null) {
       return denied;
     }
-    const body = (await c.req.json().catch(() => null)) as {
-      pid?: unknown;
-      reason?: unknown;
-    } | null;
-    if (typeof body?.pid !== "number") {
-      return error(400, "invalid_request", "pid (number) is required");
+    const body = await readBody(c, GoalWait);
+    if (body instanceof Response) {
+      return body;
     }
-    const reason = typeof body.reason === "string" ? ` ${body.reason}` : "";
+    const reason = body.reason === undefined ? "" : ` ${body.reason}`;
     return relay(c, `/goal wait ${body.pid}${reason}`);
   });
   app.post(`/v1/agent/sessions/${SESSION}/goal/unwait`, (c) => {
@@ -193,11 +189,9 @@ export function registerGoalRoutes(
     if (denied !== null) {
       return denied;
     }
-    const body = (await c.req.json().catch(() => null)) as {
-      command?: unknown;
-    } | null;
-    if (typeof body?.command !== "string" || body.command.trim() === "") {
-      return error(400, "invalid_request", "command (string) is required");
+    const body = await readBody(c, GateAdd);
+    if (body instanceof Response) {
+      return body;
     }
     return relay(c, `/goal gate add ${body.command}`);
   });
@@ -221,11 +215,9 @@ export function registerGoalRoutes(
     if (denied !== null) {
       return denied;
     }
-    const body = (await c.req.json().catch(() => null)) as {
-      text?: unknown;
-    } | null;
-    if (typeof body?.text !== "string" || body.text.trim() === "") {
-      return error(400, "invalid_request", "text (string) is required");
+    const body = await readBody(c, Text);
+    if (body instanceof Response) {
+      return body;
     }
     return relay(c, `/subgoal ${body.text}`);
   });

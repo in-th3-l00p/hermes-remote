@@ -1,3 +1,4 @@
+import { CommandRun } from "../openapi/schemas.ts";
 import type { Context, Hono } from "hono";
 import { error, json, type ChatEnv } from "../chat/routes/shared.ts";
 import type { Scope } from "../scopes/index.ts";
@@ -140,13 +141,11 @@ export function registerCommandRoutes(
   });
 
   app.post("/v1/agent/sessions/:id{[A-Za-z0-9_-]+}/commands", async (c) => {
-    const body = (await c.req.json().catch(() => null)) as {
-      command?: unknown;
-    } | null;
-    const command = body?.command;
-    if (typeof command !== "string" || !command.startsWith("/")) {
+    const parsed = CommandRun.safeParse(await c.req.json().catch(() => undefined));
+    if (!parsed.success) {
       return error(400, "invalid_request", "command (starting with /) is required");
     }
+    const { command } = parsed.data;
     const scope = commandScope(command);
     if (scope === null) {
       return error(400, "unknown_command", "Command is not in the allowlist");

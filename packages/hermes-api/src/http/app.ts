@@ -24,6 +24,7 @@ import {
   profileMiddleware,
 } from "./middleware.ts";
 import { whoamiBody } from "./whoami.ts";
+import { buildOpenApi } from "../openapi/index.ts";
 import { registerUserRoutes, type UserStore, type UserTokenIssuer } from "../users/index.ts";
 
 export interface AuditEntry {
@@ -105,6 +106,7 @@ export function createApp(options: AppOptions = {}): App {
   const now = options.now ?? (() => new Date());
   const events = options.events ?? new EventBus(now);
   const app = new Hono<ChatEnv>();
+  let routes: RouteInfo[] = [];
 
   const origins = options.corsOrigins ?? [];
   if (origins.length > 0) {
@@ -142,6 +144,12 @@ export function createApp(options: AppOptions = {}): App {
   }
 
   app.get("/v1/auth/whoami", (c) => c.json(whoamiBody(c.get("principal"))));
+  // Built on first request, when every route is registered.
+  let openapi: Record<string, unknown> | null = null;
+  app.get("/v1/openapi.json", (c) => {
+    openapi ??= buildOpenApi(routes, version);
+    return c.json(openapi);
+  });
   if (options.users !== undefined) {
     registerUserRoutes(app, {
       ...options.users,
@@ -220,7 +228,7 @@ export function createApp(options: AppOptions = {}): App {
     return errorResponse(c, 500, "internal_error", "Internal server error");
   });
 
-  const routes = app.routes
+  routes = app.routes
     .filter((r) => r.method !== "ALL")
     .map((r) => ({ method: r.method, path: r.path }));
   return {

@@ -1,8 +1,10 @@
-export interface Attachment {
-  name: string;
-  type: string;
-  dataUrl: string;
-}
+import type { components } from "./openapi.ts";
+
+/** An inline image attachment; the server accepts PNG, JPEG, GIF and WebP. */
+export type Attachment = components["schemas"]["Attachment"];
+
+/** The attachment types the server accepts. */
+export type AttachmentType = Attachment["type"];
 
 export interface ChatMessage {
   id: string;

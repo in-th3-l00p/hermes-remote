@@ -49,10 +49,12 @@
   },
   "dependencies": {
     "hono": "^4.13.5",
-    "hono-rate-limiter": "^0.5.3"
+    "hono-rate-limiter": "^0.5.3",
+    "zod": "^4"
   },
   "devDependencies": {
     "@clerk/backend": "^3.16.13",
-    "@supabase/supabase-js": "^2.112.4"
+    "@supabase/supabase-js": "^2.112.4",
+    "openapi-typescript": "^7"
   }
 }

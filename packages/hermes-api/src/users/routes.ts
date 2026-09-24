@@ -3,7 +3,9 @@ import { error, json, type ChatEnv } from "../chat/routes/shared.ts";
 import type { ChatStore } from "../chat/store/index.ts";
 import { requireKeyScope } from "../mgmt/shared.ts";
 import { isEndUserScope } from "../scopes/index.ts";
-import { VISIBILITIES, type AgentVisibility, type User, type UserStore } from "./store.ts";
+import { Identity, TokenExchange, UserChanges } from "../openapi/schemas.ts";
+import { readBody } from "../openapi/validate.ts";
+import type { User, UserStore } from "./store.ts";
 import type { UserTokenIssuer } from "./tokens.ts";
 
 export interface UserRouteOptions {
@@ -15,51 +17,10 @@ export interface UserRouteOptions {
 }
 
 const USER_ID = ":id{usr_[0-9a-f]{20}}";
-const DEFAULT_TTL = 900;
-const MAX_TTL = 86_400;
-const MAX_JSON = 8_192;
 
 function publicUser(user: User): Omit<User, "generation"> {
   const { generation: _generation, ...rest } = user;
   return rest;
-}
-
-function plainString(value: unknown, max = 200): value is string {
-  return typeof value === "string" && value.trim() !== "" && value.length <= max;
-}
-
-function plainObject(value: unknown): value is Record<string, unknown> {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    !Array.isArray(value) &&
-    JSON.stringify(value).length <= MAX_JSON
-  );
-}
-
-function visibility(value: unknown): value is AgentVisibility {
-  return typeof value === "string" && (VISIBILITIES as readonly string[]).includes(value);
-}
-
-/** Validated profile/metadata/visibility changes, or an error message. */
-function parseChanges(body: Record<string, unknown>):
-  | { profile?: Record<string, unknown>; metadata?: Record<string, unknown>; agentVisibility?: AgentVisibility }
-  | string {
-  const { profile, metadata, agent_visibility: vis } = body;
-  if (profile !== undefined && !plainObject(profile)) {
-    return `profile must be an object of at most ${MAX_JSON} bytes`;
-  }
-  if (metadata !== undefined && !plainObject(metadata)) {
-    return `metadata must be an object of at most ${MAX_JSON} bytes`;
-  }
-  if (vis !== undefined && !visibility(vis)) {
-    return `agent_visibility must be one of ${VISIBILITIES.join(", ")}`;
-  }
-  return {
-    ...(profile === undefined ? {} : { profile }),
-    ...(metadata === undefined ? {} : { metadata }),
-    ...(vis === undefined ? {} : { agentVisibility: vis }),
-  };
 }
 
 const guard = (c: Context<ChatEnv>) => requireKeyScope(c.get("principal"), "auth:users");
@@ -75,40 +36,32 @@ export function registerUserRoutes(app: Hono<ChatEnv>, options: UserRouteOptions
     }
     const principal = c.get("principal");
     const grantable = principal.type === "api_key" ? principal.record.userGrantable : [];
-    const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
-    const user = body?.["user"] as Record<string, unknown> | undefined;
-    if (user === undefined || !plainString(user["provider"]) || !plainString(user["subject"])) {
-      return error(400, "invalid_request", "user.provider and user.subject are required");
-    }
-    const changes = parseChanges(user);
-    if (typeof changes === "string") {
-      return error(400, "invalid_request", changes);
-    }
-    const scopes = body?.["scopes"];
-    if (!Array.isArray(scopes) || scopes.length === 0 || !scopes.every((s) => typeof s === "string")) {
-      return error(400, "invalid_request", "scopes (non-empty string array) is required");
+    const body = await readBody(c, TokenExchange);
+    if (body instanceof Response) {
+      return body;
     }
     // Only scopes this key was created to hand out, and only end-user ones.
-    const refused = (scopes as string[]).filter((s) => !grantable.includes(s) || !isEndUserScope(s));
+    const refused = body.scopes.filter((s) => !grantable.includes(s) || !isEndUserScope(s));
     if (refused.length > 0) {
       return error(403, "scope_not_grantable", `This key cannot grant: ${refused.join(", ")}`);
     }
-    const ttl = body?.["ttl"] ?? DEFAULT_TTL;
-    if (typeof ttl !== "number" || !Number.isInteger(ttl) || ttl < 60 || ttl > MAX_TTL) {
-      return error(400, "invalid_request", `ttl must be an integer between 60 and ${MAX_TTL} seconds`);
-    }
+    const { provider, subject, profile, metadata, agent_visibility } = body.user;
     const record = store.upsert(
-      { provider: user["provider"] as string, subject: user["subject"] as string },
-      changes,
+      { provider, subject },
+      {
+        ...(profile === undefined ? {} : { profile }),
+        ...(metadata === undefined ? {} : { metadata }),
+        ...(agent_visibility === undefined ? {} : { agentVisibility: agent_visibility }),
+      },
     );
     if (record.disabled) {
       return error(403, "user_disabled", "This user is disabled");
     }
     const minted = issuer.mint({
       userId: record.id,
-      scopes: [...new Set(scopes as string[])],
+      scopes: [...new Set(body.scopes)],
       generation: record.generation,
-      ttlSeconds: ttl,
+      ttlSeconds: body.ttl,
       now: now(),
     });
     return json(201, { token: minted.token, expires_at: minted.expiresAt, user: publicUser(record) });
@@ -141,12 +94,17 @@ export function registerUserRoutes(app: Hono<ChatEnv>, options: UserRouteOptions
   app.patch(
     `/v1/users/${USER_ID}`,
     withUser(async (c, user) => {
-      const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
-      const changes = body === null ? "a JSON body is required" : parseChanges(body);
-      if (typeof changes === "string") {
-        return error(400, "invalid_request", changes);
+      const body = await readBody(c, UserChanges);
+      if (body instanceof Response) {
+        return body;
       }
-      return json(200, publicUser(store.update(user.id, changes) as User));
+      const { profile, metadata, agent_visibility } = body;
+      const updated = store.update(user.id, {
+        ...(profile === undefined ? {} : { profile }),
+        ...(metadata === undefined ? {} : { metadata }),
+        ...(agent_visibility === undefined ? {} : { agentVisibility: agent_visibility }),
+      });
+      return json(200, publicUser(updated as User));
     }),
   );
 
@@ -177,14 +135,11 @@ export function registerUserRoutes(app: Hono<ChatEnv>, options: UserRouteOptions
   app.post(
     `/v1/users/${USER_ID}/identities`,
     withUser(async (c, user) => {
-      const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
-      if (!plainString(body?.["provider"]) || !plainString(body?.["subject"])) {
-        return error(400, "invalid_request", "provider and subject are required");
+      const body = await readBody(c, Identity);
+      if (body instanceof Response) {
+        return body;
       }
-      const linked = store.link(user.id, {
-        provider: body?.["provider"] as string,
-        subject: body?.["subject"] as string,
-      });
+      const linked = store.link(user.id, body);
       return linked
         ? json(200, publicUser(store.get(user.id) as User))
         : error(409, "identity_taken", "That identity belongs to another user");

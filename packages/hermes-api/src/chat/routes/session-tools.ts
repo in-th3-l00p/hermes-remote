@@ -2,9 +2,10 @@ import type { Hono } from "hono";
 import type { Principal } from "../../auth/index.ts";
 import type { ChatSession } from "../store/index.ts";
 import { canAccess, error, json, requireScope, type ChatEnv, type ChatOptions } from "./shared.ts";
+import { ForkSession, SessionPatch } from "../../openapi/schemas.ts";
+import { readBody } from "../../openapi/validate.ts";
 
 const ID = ":id{[0-9a-f]+}";
-const MAX_TITLE = 120;
 
 function ownerOf(principal: Principal): { userId: string } | { keyId: string } | null {
   if (principal.type === "user") {
@@ -53,28 +54,15 @@ export function registerSessionTools(app: Hono<ChatEnv>, options: ChatOptions): 
     if (session === null || !canAccess(session, principal, "write")) {
       return error(404, "session_not_found", "Unknown session");
     }
-    const body = (await c.req.json().catch(() => null)) as {
-      title?: unknown;
-      archived?: unknown;
-    } | null;
-    const title = body?.title;
-    const archived = body?.archived;
-    const validTitle =
-      title === undefined ||
-      (typeof title === "string" && title.trim() !== "" && title.length <= MAX_TITLE);
-    const validArchived = archived === undefined || typeof archived === "boolean";
-    if (!validTitle || !validArchived || (title === undefined && archived === undefined)) {
-      return error(
-        400,
-        "invalid_request",
-        `Send title (1 to ${MAX_TITLE} characters) and/or archived (boolean)`,
-      );
+    const body = await readBody(c, SessionPatch);
+    if (body instanceof Response) {
+      return body;
     }
     return json(
       200,
       store.updateSession(session.id, {
-        ...(typeof title === "string" ? { title: title.trim() } : {}),
-        ...(typeof archived === "boolean" ? { archived } : {}),
+        ...(body.title === undefined ? {} : { title: body.title }),
+        ...(body.archived === undefined ? {} : { archived: body.archived }),
       }),
     );
   });
@@ -89,13 +77,13 @@ export function registerSessionTools(app: Hono<ChatEnv>, options: ChatOptions): 
     if (session === null || !canAccess(session, principal, "read")) {
       return error(404, "session_not_found", "Unknown session");
     }
-    const body = (await c.req.json().catch(() => ({}))) as { messageId?: unknown } | null;
-    const messageId = body?.messageId;
-    if (messageId !== undefined && typeof messageId !== "string") {
-      return error(400, "invalid_request", "messageId must be a string");
+    // An empty body forks the whole session.
+    const body = await readBody(c, ForkSession.optional());
+    if (body instanceof Response) {
+      return body;
     }
     const owner = ownerOf(principal) ?? {};
-    const fork = store.forkSession(session.id, owner, messageId);
+    const fork = store.forkSession(session.id, owner, body?.messageId);
     if (fork === null) {
       return error(404, "message_not_found", "Unknown message");
     }

@@ -1,3 +1,4 @@
+import { ToolsetToggle } from "../openapi/schemas.ts";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -102,18 +103,11 @@ export function registerMgmtRoutes(
     if (denied !== null) {
       return denied;
     }
-    const body = (await c.req.json().catch(() => null)) as {
-      name?: unknown;
-      enabled?: unknown;
-    } | null;
-    if (
-      typeof body?.name !== "string" ||
-      body.name === "" ||
-      invalidParam(body.name) ||
-      typeof body.enabled !== "boolean"
-    ) {
+    const parsed = ToolsetToggle.safeParse(await c.req.json().catch(() => undefined));
+    if (!parsed.success) {
       return error(400, "invalid_request", "name (string) and enabled (boolean) are required");
     }
+    const body = parsed.data;
     return cliResponse(
       await options.cli.run([
         ...profileArgs(currentProfile(c)),

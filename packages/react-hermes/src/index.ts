@@ -58,8 +58,11 @@ export type { ChatClientLike, UseChat, UseChatOptions } from "./use-chat.ts";
 export { HermesApiError, HermesClient } from "@intheloop-studio/hermes-remote-client";
 export type {
   Attachment,
+  AttachmentType,
   ChatEvent,
   ChatMessage,
   ChatSession,
+  ChatSessionMeta,
+  WhoAmI,
 } from "@intheloop-studio/hermes-remote-client";
 export type { HermesClientOptions, TokenProvider } from "@intheloop-studio/hermes-remote-client";

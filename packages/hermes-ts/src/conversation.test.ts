@@ -140,7 +140,7 @@ describe("conversation handle", () => {
       seen.push([id, input]);
     }) as typeof client.sendMessage;
     const conversation = client.conversation("s3");
-    const attachment = { name: "a.png", type: "image/png", dataUrl: "data:image/png;base64,AA==" };
+    const attachment = { name: "a.png", type: "image/png" as const, dataUrl: "data:image/png;base64,AA==" };
     for await (const event of conversation.send({ content: "look", attachments: [attachment] })) {
       void event;
     }

@@ -2,6 +2,8 @@
 
 `@intheloop-studio/hermes-remote-client` is a zero-dependency, isomorphic client. It runs in browsers, Node 18+, and Bun, and ships full type declarations.
 
+The package also exports `paths`, `operations` and `components`: types generated from the server's OpenAPI document, for calling routes through `client.request()` with typed bodies and responses.
+
 ## Construction and auth
 
 ```ts

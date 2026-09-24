@@ -41,3 +41,7 @@ bun run --cwd packages/react-hermes build
 | `apps/chat` | Reference chat app |
 | `apps/landing` | Site plus VitePress docs |
 | `integration/` | Live stack tests |
+
+## API changes
+
+After adding or changing a route or its request/response schema, run `bun scripts/openapi.ts` to refresh `packages/hermes-api/openapi.json` and the client's generated types. New routes need an entry in `src/openapi/routes.ts` (or the management catalog) and in the authorization-matrix test; both suites fail until they have one.

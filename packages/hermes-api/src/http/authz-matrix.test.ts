@@ -130,6 +130,7 @@ const ALL_SCOPES = [...TIER1_SCOPES, ...TIER2_SCOPES, ...TIER3_SCOPES, ...AUTH_S
 const EXPECTED: Record<string, string> = {
   "GET /v1/status": "public",
   "GET /v1/auth/whoami": "authenticated",
+  "GET /v1/openapi.json": "authenticated",
   "POST /v1/auth/token": "key:auth:users",
   "GET /v1/users": "key:auth:users",
   "GET /v1/users/:id{usr_[0-9a-f]{20}}": "key:auth:users",

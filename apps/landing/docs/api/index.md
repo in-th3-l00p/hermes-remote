@@ -16,6 +16,10 @@ curl -s http://localhost:8643/v1/auth/whoami -H "Authorization: Bearer $TOKEN"
 
 For a user token the body is `{ "type": "user", "id": "...", "email": "..." }`; for anonymous mode it is `{ "type": "anonymous" }`.
 
+## OpenAPI
+
+`GET /v1/openapi.json` (any authenticated caller) returns an OpenAPI 3.1 document for every route this server exposes: its scope, who may call it, request schemas, and response shapes. The same document is committed as [`packages/hermes-api/openapi.json`](https://github.com/in-th3-l00p/hermes-remote/blob/main/packages/hermes-api/openapi.json); request bodies are validated with the schemas it publishes. Point any OpenAPI tool at it to generate a client in another language.
+
 ## Errors
 
 Failures are JSON with stable codes:
