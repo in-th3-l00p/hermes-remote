@@ -39,6 +39,7 @@ const ctx: CliContext = {
       request.profileHomes[name] ?? join(hermesHome, "profiles", name);
     return startServer({
       port: request.port,
+      hostname: request.host,
       store: request.store,
       logPath: request.logPath,
       auditPath: request.auditPath,

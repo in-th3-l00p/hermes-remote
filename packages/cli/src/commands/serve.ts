@@ -75,6 +75,7 @@ export async function serveCommand(
   if (!Number.isInteger(port) || port < 0 || port > 65535) {
     return fail(`invalid --port: ${portText}`);
   }
+  const host = flag(parsed, "host") ?? config.host ?? "127.0.0.1";
   const upstreamUrl =
     flag(parsed, "upstream") ??
     ctx.env["HERMES_UPSTREAM_URL"] ??
@@ -106,6 +107,7 @@ export async function serveCommand(
   try {
     running = await ctx.serve({
       port,
+      host,
       store: paths.store,
       logPath: paths.logPath,
       auditPath: paths.auditPath,
@@ -132,7 +134,7 @@ export async function serveCommand(
     throw error;
   }
   return ok(
-    `hermes-remote listening on port ${running.port}\n` +
+    `hermes-remote listening on ${host}:${running.port}\n` +
       `agent: ${upstream === null ? "demo (no upstream configured)" : upstream.baseUrl}\n` +
       `logs: ${paths.logPath}`,
   );

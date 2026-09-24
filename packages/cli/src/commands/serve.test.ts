@@ -7,8 +7,18 @@ describe("serve", () => {
     const { ctx, serveCalls } = await makeCtx();
     const result = await runCli(["serve", "--port", "0"], ctx);
     expect(result.exitCode).toBe(0);
-    expect(result.output).toContain("listening on port 12345");
+    expect(result.output).toContain("listening on 127.0.0.1:12345");
     expect(serveCalls[0]?.logPath).toContain("server.log");
+    expect(serveCalls[0]?.host).toBe("127.0.0.1");
+  });
+
+  test("binds the interface from --host or config.json", async () => {
+    const { ctx, serveCalls } = await makeCtx();
+    await runCli(["serve", "--port", "0", "--host", "0.0.0.0"], ctx);
+    expect(serveCalls[0]?.host).toBe("0.0.0.0");
+    await Bun.write(`${ctx.homeDir}/config.json`, JSON.stringify({ host: "10.0.0.5" }));
+    await runCli(["serve", "--port", "0"], ctx);
+    expect(serveCalls[1]?.host).toBe("10.0.0.5");
   });
 
   test("passes anonymous, cors, and upstream flags", async () => {

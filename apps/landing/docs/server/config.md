@@ -29,6 +29,7 @@ A complete example:
 | Key | Default | Meaning |
 | --- | ------- | ------- |
 | `port` | `8643` | HTTP port |
+| `host` | `127.0.0.1` | Interface to listen on. Loopback by default; set `0.0.0.0` only behind a firewall or reverse proxy. |
 | `cors` | `[]` | Origins allowed for browser calls. Empty disables CORS handling. |
 | `anonymous` | `false` | Allow unauthenticated chat. Demos only. |
 | `upstreamUrl` | none | The Hermes agent's API server. Without it, the demo agent answers. |

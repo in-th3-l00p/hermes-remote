@@ -3,6 +3,8 @@ import type { AuthProviderConfig } from "@intheloop-studio/hermes-remote";
 
 export interface ConfigFile {
   port?: number;
+  /** Interface to listen on (default 127.0.0.1). */
+  host?: string;
   cors?: string[];
   anonymous?: boolean;
   upstreamUrl?: string;

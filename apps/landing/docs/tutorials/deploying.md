@@ -32,7 +32,7 @@ hermes-remote service install
 
 ## 3. Expose it
 
-Put TLS in front; never expose the raw HTTP port directly. Any of these work:
+Put TLS in front; never expose the raw HTTP port directly. By default the server listens on `127.0.0.1` only, so a reverse proxy or tunnel on the same machine is the way in. If the proxy runs elsewhere, set `--host` to a private interface and firewall the port. Any of these work:
 
 * A reverse proxy (Caddy, nginx) terminating TLS for `agent.example.com` and forwarding to `127.0.0.1:8643`.
 * A Cloudflare Tunnel from the agent machine, which avoids opening inbound ports at all.
