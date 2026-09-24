@@ -240,7 +240,9 @@ export function registerFsRoutes(
         return denied;
       }
       const path = skillFilePath(c);
-      const content = await fs.read(`skills/${c.req.param("name")}/${path}`);
+      const content = await fs
+        .scoped(`skills/${c.req.param("name")}`)
+        .read(path);
       if (content === null) {
         return error(404, "file_not_found", "Unknown skill file");
       }
@@ -260,7 +262,7 @@ export function registerFsRoutes(
         return error(400, "invalid_request", "content (string) is required");
       }
       const path = skillFilePath(c);
-      await fs.write(`skills/${c.req.param("name")}/${path}`, content);
+      await fs.scoped(`skills/${c.req.param("name")}`).write(path, content);
       return json(200, { path, content });
     }),
   );
