@@ -608,4 +608,9 @@ export class SubagentsResource {
   list(): Promise<{ transcripts: string[] }> {
     return this.http.request("GET", "/v1/subagents");
   }
+
+  /** A live delegation transcript, one parsed event per line. */
+  transcript(id: string): Promise<{ id: string; events: unknown[] }> {
+    return this.http.request("GET", `/v1/subagents/${id}`);
+  }
 }

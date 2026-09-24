@@ -337,4 +337,26 @@ describe("bundles, cron output, subagents", () => {
       transcripts: ["child-1.jsonl"],
     });
   });
+
+  test("subagent transcripts parse line by line; steer and stop explain themselves", async () => {
+    const { app, home } = await makeApp(["subagents:read", "subagents:control"]);
+    await mkdir(join(home, "cache/delegation/live"), { recursive: true });
+    await writeFile(
+      join(home, "cache/delegation/live/child-2.jsonl"),
+      '{"type":"start","goal":"triage"}\nnot json\n\n{"type":"end"}\n',
+    );
+    for (const id of ["child-2", "child-2.jsonl"]) {
+      expect(await (await app.fetch(req(`/v1/subagents/${id}`))).json()).toEqual({
+        id: "child-2",
+        events: [{ type: "start", goal: "triage" }, { text: "not json" }, { type: "end" }],
+      });
+    }
+    expect((await app.fetch(req("/v1/subagents/ghost"))).status).toBe(404);
+    expect((await app.fetch(req("/v1/subagents/..%2F..%2Fconfig"))).status).toBe(404);
+    for (const action of ["steer", "stop"]) {
+      const res = await app.fetch(req(`/v1/subagents/child-2/${action}`, "POST", {}));
+      expect(res.status).toBe(501);
+      expect(((await res.json()) as { error: { message: string } }).error.message).toContain("/agents");
+    }
+  });
 });

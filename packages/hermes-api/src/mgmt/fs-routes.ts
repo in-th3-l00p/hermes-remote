@@ -381,4 +381,45 @@ export function registerFsRoutes(
       });
     }),
   );
+
+  app.get(
+    `/v1/subagents/:id{[A-Za-z0-9_.-]+}`,
+    withBridge(options, async (c, fs) => {
+      const denied = guard(c, "subagents:read");
+      if (denied !== null) {
+        return denied;
+      }
+      const id = (c.req.param("id") ?? "").replace(/\.jsonl$/, "");
+      const text = await fs.scoped("cache/delegation/live").read(`${id}.jsonl`);
+      if (text === null) {
+        return error(404, "subagent_not_found", "Unknown subagent transcript");
+      }
+      // One JSON event per line; lines that don't parse are kept as text.
+      const events = text
+        .split("\n")
+        .filter((line) => line.trim() !== "")
+        .map((line) => {
+          try {
+            return JSON.parse(line) as unknown;
+          } catch {
+            return { text: line };
+          }
+        });
+      return json(200, { id, events });
+    }),
+  );
+
+  for (const action of ["steer", "stop"]) {
+    app.post(`/v1/subagents/:id{[A-Za-z0-9_.-]+}/${action}`, (c) => {
+      const denied = guard(c, "subagents:control");
+      if (denied !== null) {
+        return denied;
+      }
+      return error(
+        501,
+        "not_supported",
+        `Subagents are ${action === "stop" ? "stopped" : "steered"} from their parent session (/agents); the hermes CLI has no command for it`,
+      );
+    });
+  }
 }

@@ -153,6 +153,7 @@ const TABLE: Call[] = [
   [(c) => c.plugins.validate("p"), "POST", "/v1/plugins/p/validate"],
   [(c) => c.backups.importArchive(ARCHIVE), "POST", "/v1/backups/import", ARCHIVE],
   [(c) => c.subagents.list(), "GET", "/v1/subagents"],
+  [(c) => c.subagents.transcript("child-1"), "GET", "/v1/subagents/child-1"],
   [(c) => c.agentSessions.list(), "GET", "/v1/agent/sessions"],
   [(c) => c.agentSessions.create({ title: "t" }), "POST", "/v1/agent/sessions", { title: "t" }],
   [(c) => c.agentSessions.get("s1"), "GET", "/v1/agent/sessions/s1"],
