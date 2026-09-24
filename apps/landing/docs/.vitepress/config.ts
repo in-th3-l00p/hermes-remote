@@ -27,6 +27,7 @@ export default defineConfig({
           { text: "What Hermes Remote is", link: "/" },
           { text: "Installation", link: "/guide/installation" },
           { text: "Quick start", link: "/guide/quick-start" },
+          { text: "Compatibility", link: "/guide/compatibility" },
         ],
       },
       {
@@ -46,7 +47,7 @@ export default defineConfig({
           { text: "TypeScript client", link: "/clients/typescript" },
           { text: "React hooks", link: "/clients/react" },
           { text: "A chat app in React", link: "/tutorials/react-chat" },
-          { text: "Using the HTTP API directly", link: "/tutorials/raw-api" },
+          { text: "From any language (HTTP API)", link: "/tutorials/raw-api" },
         ],
       },
       {
@@ -56,6 +57,8 @@ export default defineConfig({
           { text: "Configuration", link: "/server/config" },
           { text: "CLI reference", link: "/server/cli" },
           { text: "Limits, audit log and metrics", link: "/server/operations" },
+          { text: "Hardening checklist", link: "/server/hardening" },
+          { text: "Troubleshooting", link: "/guide/troubleshooting" },
         ],
       },
       {

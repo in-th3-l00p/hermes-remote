@@ -41,4 +41,6 @@ The client is zero dependency and isomorphic: browsers, Node 18+, and Bun. The R
 
 Tarballs for all four packages are attached to every [GitHub release](https://github.com/in-th3-l00p/hermes-remote/releases). `npm i ./hermes-remote-cli-x.y.z.tgz` works without any registry configuration.
 
+Not using TypeScript? Everything is plain HTTP; see [using the API from any language](/tutorials/raw-api#from-any-language). Which agent versions work is on [compatibility](/guide/compatibility).
+
 Next: the [quick start](/guide/quick-start).

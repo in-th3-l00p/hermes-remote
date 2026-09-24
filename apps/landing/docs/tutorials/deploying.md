@@ -68,6 +68,8 @@ The Supabase and Clerk SDKs are not bundled into the image. To use those auth pr
 * Rotate keys with `hermes-remote keys rotate <id>` on any suspicion; the id and scopes survive, the old secret dies instantly.
 * Tier 3 scopes (config, hooks, installs, profiles) are host-level access. Grant them only to keys that stay inside your infrastructure.
 
+Before going live, go through the [hardening checklist](/server/hardening). If something does not answer, see [troubleshooting](/guide/troubleshooting).
+
 ## What never to expose
 
 The agent's own `API_SERVER_KEY`, the port 8642 listener, and unrestricted tier 3 scopes. Hermes Remote exists precisely so none of these ever face the internet.

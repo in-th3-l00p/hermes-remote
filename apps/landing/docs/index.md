@@ -36,7 +36,7 @@ Every request is authorized, every session is owned by its user, and every agent
 * New here: [Installation](/guide/installation), then the [quick start](/guide/quick-start).
 * Running a server: [CLI reference](/server/cli), [configuration](/server/config), [API keys and scopes](/server/scopes).
 * Signing users in: [Authentication](/auth/).
-* Calling the API directly: [HTTP API conventions](/api/) and the endpoint pages that follow it.
+* Calling the API directly, from any language: [the HTTP API tour](/tutorials/raw-api), [HTTP API conventions](/api/) and the endpoint pages that follow it.
 * Building a UI: the [TypeScript client](/clients/typescript) and the [React hooks](/clients/react).
 
 The [live examples](https://hermes-remote.tiscacatalin.com/examples/) show the client and hooks in action. They are static demos running on built-in demo data, not a live agent.

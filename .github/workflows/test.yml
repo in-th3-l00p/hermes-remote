@@ -25,6 +25,7 @@ jobs:
       - run: bun test scripts
       - run: bun run test:integration:local
       - run: bun scripts/check-snippets.ts
+      - run: bun scripts/check-doc-links.ts
       - run: bun scripts/openapi.ts --check
       - run: bun scripts/check-versions.ts
       # Builds the website, the VitePress docs and the chat app it embeds.
