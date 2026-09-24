@@ -168,16 +168,65 @@ export class HermesClient {
     return this.request("POST", "/v1/sessions", {});
   }
 
-  async listSessions(ids?: string[]): Promise<ChatSessionMeta[]> {
-    const query =
-      ids === undefined || ids.length === 0
-        ? ""
-        : `?ids=${ids.map(encodeURIComponent).join(",")}`;
+  /**
+   * The caller's sessions (anonymous callers pass `ids`). With
+   * `{ archived: true }`, archived sessions instead of active ones.
+   */
+  async listSessions(
+    ids?: string[],
+    options: { archived?: boolean } = {},
+  ): Promise<ChatSessionMeta[]> {
+    const params = new URLSearchParams();
+    if (ids !== undefined && ids.length > 0) {
+      params.set("ids", ids.join(","));
+    }
+    if (options.archived === true) {
+      params.set("archived", "true");
+    }
+    const query = params.size === 0 ? "" : `?${params.toString()}`;
     const res = await this.request<{ sessions: ChatSessionMeta[] }>(
       "GET",
       `/v1/sessions${query}`,
     );
     return res.sessions;
+  }
+
+  renameSession(sessionId: string, title: string): Promise<ChatSessionMeta> {
+    return this.request("PATCH", `/v1/sessions/${sessionId}`, { title });
+  }
+
+  archiveSession(sessionId: string, archived = true): Promise<ChatSessionMeta> {
+    return this.request("PATCH", `/v1/sessions/${sessionId}`, { archived });
+  }
+
+  /** Copies history (up to `messageId` when given) into a new session. */
+  forkSession(sessionId: string, messageId?: string): Promise<ChatSession> {
+    return this.request(
+      "POST",
+      `/v1/sessions/${sessionId}/fork`,
+      messageId === undefined ? {} : { messageId },
+    );
+  }
+
+  /** Case-insensitive search over the caller's session titles and messages. */
+  async searchSessions(query: string, limit?: number): Promise<ChatSessionMeta[]> {
+    const params = new URLSearchParams({ q: query });
+    if (limit !== undefined) {
+      params.set("limit", String(limit));
+    }
+    const res = await this.request<{ sessions: ChatSessionMeta[] }>(
+      "GET",
+      `/v1/sessions/search?${params.toString()}`,
+    );
+    return res.sessions;
+  }
+
+  /** The whole session as JSON, or a Markdown transcript. */
+  exportSession(sessionId: string, format: "json" | "markdown" = "json"): Promise<Response> {
+    return this.http.raw(
+      "GET",
+      `/v1/sessions/${sessionId}/export${format === "markdown" ? "?format=markdown" : ""}`,
+    );
   }
 
   async deleteSession(sessionId: string): Promise<void> {

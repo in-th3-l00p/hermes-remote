@@ -34,10 +34,11 @@ export function registerSessionRoutes(
     }
     const url = new URL(c.req.url);
     const { limit, offset } = pageParams(url, 50);
+    const archived = url.searchParams.get("archived") === "true";
     if (principal.type === "user") {
       return json(200, {
         sessions: store
-          .listSessions({ userId: principal.userId })
+          .listSessions({ userId: principal.userId, archived })
           .slice(offset, offset + limit),
       });
     }
@@ -46,7 +47,7 @@ export function registerSessionRoutes(
       .filter((id) => /^[0-9a-f]+$/.test(id));
     const candidates =
       principal.type === "api_key" && ids.length === 0
-        ? store.listSessions({ keyId: principal.record.id })
+        ? store.listSessions({ keyId: principal.record.id, archived })
         : store.listSessions({ ids });
     const sessions = candidates
       .filter((s) => canAccess(s, principal, "read"))

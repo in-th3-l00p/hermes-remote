@@ -21,6 +21,8 @@ export interface ChatSessionMeta {
   /** Id of the API key that created the session (servers from 3.2.1). */
   keyId?: string | null;
   title: string | null;
+  /** Hidden from the default listing (servers from 3.4). */
+  archived?: boolean;
   createdAt: string;
   updatedAt: string;
 }

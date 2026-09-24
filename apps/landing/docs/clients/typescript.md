@@ -28,7 +28,11 @@ With a `tokenProvider`, a 401 makes the client fetch a fresh token and retry onc
 | ------ | ------- |
 | `status()` | `{ ok, version }` |
 | `createSession()` | `ChatSession` |
-| `listSessions(ids?)` | `ChatSessionMeta[]` (pass ids for anonymous principals) |
+| `listSessions(ids?, { archived? })` | `ChatSessionMeta[]` (pass ids for anonymous principals) |
+| `renameSession(id, title)` / `archiveSession(id, archived?)` | `ChatSessionMeta` |
+| `forkSession(id, messageId?)` | `ChatSession` (the new copy) |
+| `searchSessions(query, limit?)` | `ChatSessionMeta[]` |
+| `exportSession(id, "json" \| "markdown")` | raw `Response` (a download) |
 | `deleteSession(id)` | void |
 | `listMessages(sessionId)` | `ChatMessage[]` |
 | `sendMessage(sessionId, { content, attachments? }, { signal? })` | `AsyncIterable<ChatEvent>` |
