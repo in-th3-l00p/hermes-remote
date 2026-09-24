@@ -1,6 +1,6 @@
 # Events
 
-`GET /v1/events` is a server-wide SSE stream of the lifecycle events hermes-remote observes. It is the push channel for dashboards. Scope: `events:subscribe` (tier 1, so user tokens can hold it).
+`GET /v1/events` is a server-wide SSE stream of the lifecycle events hermes-remote observes. It is the push channel for dashboards. Scope: `events:subscribe`, API keys only (the stream is server-wide, so user tokens are refused).
 
 ```bash
 curl -N "$BASE/v1/events" -H "Authorization: Bearer $TOKEN"

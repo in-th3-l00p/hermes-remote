@@ -58,6 +58,14 @@ export function profileMiddleware(
     const requested = c.req.header("x-hermes-profile") ?? null;
     const keyProfile =
       principal.type === "api_key" ? (principal.record.profile ?? null) : null;
+    if (requested !== null && principal.type !== "api_key") {
+      return errorResponse(
+        c,
+        403,
+        "profile_forbidden",
+        "Only API keys may select a profile",
+      );
+    }
     if (requested !== null && !(await options.profiles.exists(requested))) {
       return errorResponse(c, 404, "profile_not_found", "Unknown profile");
     }

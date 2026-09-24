@@ -1,5 +1,5 @@
 import type { Hono } from "hono";
-import { error, json, requireScope, type ChatEnv } from "../chat/routes/shared.ts";
+import { error, json, type ChatEnv } from "../chat/routes/shared.ts";
 import { profileArgs } from "./registry.ts";
 import {
   cliResponse,
@@ -19,7 +19,7 @@ export function registerProfileRoutes(
   const { cli, profiles } = options;
 
   app.get("/v1/profiles", async (c) => {
-    const denied = requireScope(c.get("principal"), "status:read");
+    const denied = requireKeyScope(c.get("principal"), "status:read");
     if (denied !== null) {
       return denied;
     }
@@ -27,7 +27,7 @@ export function registerProfileRoutes(
   });
 
   app.get(`/v1/profiles/${NAME}`, (c) => {
-    const denied = requireScope(c.get("principal"), "status:read");
+    const denied = requireKeyScope(c.get("principal"), "status:read");
     return denied ?? runCli(c, cli, ["profile", "show", c.req.param("name")]);
   });
 

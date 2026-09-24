@@ -1,6 +1,5 @@
 import type { Context, Hono } from "hono";
-import { error, requireScope, type ChatEnv } from "../chat/routes/shared.ts";
-import { isUserGrantableScope } from "../scopes/index.ts";
+import { error, type ChatEnv } from "../chat/routes/shared.ts";
 import { profileArgs } from "../profiles/registry.ts";
 import { MGMT_ROUTES, type CliRouteSpec } from "./catalog.ts";
 import {
@@ -63,10 +62,7 @@ export function buildArgv(
 
 function cliHandler(spec: CliRouteSpec, options: ManagementOptions) {
   return async (c: Context<ChatEnv>): Promise<Response> => {
-    const guard = isUserGrantableScope(spec.scope)
-      ? requireScope
-      : requireKeyScope;
-    const denied = guard(c.get("principal"), spec.scope);
+    const denied = requireKeyScope(c.get("principal"), spec.scope);
     if (denied !== null) {
       return denied;
     }

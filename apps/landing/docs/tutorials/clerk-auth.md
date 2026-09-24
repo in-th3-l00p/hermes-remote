@@ -123,5 +123,5 @@ Then ask the agent "who am I?" in the chat. It answers with the Clerk user id (a
 
 ## Notes
 
-* User tokens are tier 1: they can chat and manage their own sessions, never administer the server. Administration stays with `hk_` API keys minted by the CLI.
+* User tokens hold only the end-user scopes: they can chat and manage their own sessions, never administer the server. Administration stays with `hk_` API keys minted by the CLI.
 * Quick start without a config file: `CLERK_SECRET_KEY=sk_test_... hermes-remote serve` enables the provider from the environment alone.

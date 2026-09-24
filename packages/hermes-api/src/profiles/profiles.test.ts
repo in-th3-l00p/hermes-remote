@@ -114,11 +114,11 @@ describe("profile middleware", () => {
       "profile list": { stdout: PROFILE_TABLE },
       "-p indra profile show indra": { stdout: "shown" },
     });
-    const app = managedApp({ fake });
+    const app = managedApp({ fake, store: keyStore(["status:read"]) });
     expect(
-      (await app.fetch(get("/v1/profiles/indra", undefined, "ghost"))).status,
+      (await app.fetch(get("/v1/profiles/indra", "hk_good", "ghost"))).status,
     ).toBe(404);
-    const res = await app.fetch(get("/v1/profiles/indra", undefined, "indra"));
+    const res = await app.fetch(get("/v1/profiles/indra", "hk_good", "indra"));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true, raw: "shown" });
   });
@@ -153,8 +153,8 @@ describe("profile routes", () => {
       "profile list": { stdout: PROFILE_TABLE },
       "profile show default": { stdout: "details" },
     });
-    const app = managedApp({ fake });
-    const list = await app.fetch(get("/v1/profiles"));
+    const app = managedApp({ fake, store: keyStore(["status:read"]) });
+    const list = await app.fetch(get("/v1/profiles", "hk_good"));
     expect(list.status).toBe(200);
     const body = (await list.json()) as { profiles: { name: string }[] };
     expect(body.profiles.map((p) => p.name)).toEqual([
@@ -163,8 +163,19 @@ describe("profile routes", () => {
       "indra",
     ]);
     expect(
-      await (await app.fetch(get("/v1/profiles/default"))).json(),
+      await (await app.fetch(get("/v1/profiles/default", "hk_good"))).json(),
     ).toEqual({ ok: true, raw: "details" });
+  });
+
+  test("user and anonymous principals cannot list profiles or select one", async () => {
+    const fake = new FakeCliBridge({ "profile list": { stdout: PROFILE_TABLE } });
+    const app = managedApp({ fake });
+    expect((await app.fetch(get("/v1/profiles"))).status).toBe(403);
+    const pinned = await app.fetch(get("/v1/sessions", undefined, "indra"));
+    expect(pinned.status).toBe(403);
+    expect(
+      ((await pinned.json()) as { error: { code: string } }).error.code,
+    ).toBe("profile_forbidden");
   });
 
   test("mutations require an api key with profiles:manage", async () => {
@@ -343,8 +354,8 @@ describe("profile routes", () => {
       "profile list": { stdout: PROFILE_TABLE },
       "profile show default": { exitCode: 1, stderr: "broken" },
     });
-    const app = managedApp({ fake });
-    const res = await app.fetch(get("/v1/profiles/default"));
+    const app = managedApp({ fake, store: keyStore(["status:read"]) });
+    const res = await app.fetch(get("/v1/profiles/default", "hk_good"));
     expect(res.status).toBe(502);
     expect(await res.json()).toEqual({
       error: { code: "cli_error", message: "broken", exitCode: 1 },

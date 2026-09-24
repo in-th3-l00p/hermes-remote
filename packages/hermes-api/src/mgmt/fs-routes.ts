@@ -1,7 +1,6 @@
 import type { Context, Hono } from "hono";
 import { BridgeDenied, FsBridge } from "../bridge/index.ts";
-import { error, json, requireScope, type ChatEnv } from "../chat/routes/shared.ts";
-import { isUserGrantableScope } from "../scopes/index.ts";
+import { error, json, type ChatEnv } from "../chat/routes/shared.ts";
 import { currentProfile, requireKeyScope, type ManagementOptions } from "./shared.ts";
 
 const MEMORY_LIMIT = 2200;
@@ -9,8 +8,7 @@ const USER_LIMIT = 1375;
 const SKILL_NAME = ":name{[A-Za-z0-9_-]+}";
 
 function guard(c: Context<ChatEnv>, scope: string): Response | null {
-  const check = isUserGrantableScope(scope) ? requireScope : requireKeyScope;
-  return check(c.get("principal"), scope);
+  return requireKeyScope(c.get("principal"), scope);
 }
 
 function withBridge(

@@ -1,5 +1,6 @@
 import type { Hono } from "hono";
-import { requireScope, type ChatEnv } from "../chat/routes/shared.ts";
+import type { ChatEnv } from "../chat/routes/shared.ts";
+import { requireKeyScope } from "../mgmt/shared.ts";
 import type { EventBus, HermesEvent } from "./bus.ts";
 
 export function registerEventRoutes(
@@ -8,7 +9,7 @@ export function registerEventRoutes(
   heartbeatMs = 15_000,
 ): void {
   app.get("/v1/events", (c) => {
-    const denied = requireScope(c.get("principal"), "events:subscribe");
+    const denied = requireKeyScope(c.get("principal"), "events:subscribe");
     if (denied !== null) {
       return denied;
     }

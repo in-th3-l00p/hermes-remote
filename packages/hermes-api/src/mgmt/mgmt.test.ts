@@ -202,7 +202,7 @@ describe("management catalog", () => {
     expect((await app.fetch(badJson("/v1/toolsets/cli"))).status).toBe(400);
   });
 
-  test("tier-two surfaces reject user and anonymous principals", async () => {
+  test("management surfaces reject user and anonymous principals", async () => {
     const fake = new FakeCliBridge({
       "profile list": { stdout: PROFILE_TABLE },
       status: { stdout: "fine" },
@@ -213,8 +213,15 @@ describe("management catalog", () => {
     expect(((await kanban.json()) as { error: { code: string } }).error.code).toBe(
       "api_key_required",
     );
-    const status = await app.fetch(new Request("http://x/v1/agent/status"));
-    expect(status.status).toBe(200);
+    for (const path of ["/v1/agent/status", "/v1/agent/security-audit"]) {
+      const res = await app.fetch(new Request(`http://x${path}`));
+      expect(res.status).toBe(403);
+    }
+    const prune = await app.fetch(
+      new Request("http://x/v1/checkpoints/prune", { method: "POST" }),
+    );
+    expect(prune.status).toBe(403);
+    expect(fake.calls).toEqual([]);
   });
 
   test("toolsets switch between enable and disable", async () => {

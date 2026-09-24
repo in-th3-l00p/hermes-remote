@@ -8,7 +8,7 @@ API keys are `hk_<id>.<secret>`; the server stores only an argon2 hash of the se
 
 ## Scopes
 
-Four tiers, enforced per route. User tokens are hard limited to tier 1 and their own resources; tier 3 (host-level configuration surfaces) requires an explicit `--dangerous` acknowledgment at grant time. The scope catalog is a closed set: unknown scopes are rejected at key creation, and a generated matrix test asserts every route's allow and deny behavior for every principal type.
+Four tiers, enforced per route. User tokens and anonymous principals hold only the end-user scopes (chat, their own sessions, read-only discovery) and never reach management routes; tier 3 (host-level configuration surfaces) requires an explicit `--dangerous` acknowledgment at grant time. The scope catalog is a closed set: unknown scopes are rejected at key creation, and a generated matrix test asserts every route's allow and deny behavior for every principal type.
 
 ## User tokens
 
