@@ -1,7 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtemp, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { FakeCliBridge, HermesCliBridge } from "../bridge/index.ts";
 import { createApp, ProfileRegistry, type KeyVerifier } from "../index.ts";
 import type { ApiKeyRecord } from "../auth/index.ts";
@@ -332,20 +329,20 @@ describe("management catalog", () => {
   });
 
   test("backups stream binary archives byte for byte", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "hermes-binary-cli-"));
-    const script = join(dir, "hermes");
-    await writeFile(
-      script,
-      '#!/bin/sh\nif [ "$1" = "backup" ]; then printf "\\037\\213\\377\\000\\336"; fi\n',
-      { mode: 0o755 },
-    );
-    const cli = new HermesCliBridge({ binary: script });
+    const bytes = new Uint8Array([0x1f, 0x8b, 0xff, 0x00, 0xde]);
+    const cli = new HermesCliBridge({
+      binary: "hermes",
+      spawn: async (argv) =>
+        argv.at(-1) === "backup"
+          ? { exitCode: 0, stdout: new TextDecoder().decode(bytes), stderr: "", stdoutBytes: bytes }
+          : { exitCode: 0, stdout: "", stderr: "" },
+    });
     const app = createApp({
       store: keyStore(["backups:manage"]),
       management: {
         cli,
-        profiles: new ProfileRegistry({ cli, homeFor: () => dir }),
-        homeFor: () => dir,
+        profiles: new ProfileRegistry({ cli, homeFor: () => "/tmp" }),
+        homeFor: () => "/tmp",
       },
     });
     const res = await app.fetch(
@@ -354,10 +351,8 @@ describe("management catalog", () => {
         headers: { authorization: "Bearer hk_good" },
       }),
     );
-    expect(new Uint8Array(await res.arrayBuffer())).toEqual(
-      new Uint8Array([0x1f, 0x8b, 0xff, 0x00, 0xde]),
-    );
-  }, 20_000);
+    expect(new Uint8Array(await res.arrayBuffer())).toEqual(bytes);
+  });
 
   test("backups stream the archive or map failures", async () => {
     const fake = new FakeCliBridge({

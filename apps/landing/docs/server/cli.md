@@ -68,7 +68,8 @@ hermes-remote keys ungrant <id> --scope <s>
 * `create` and `rotate` print the token once. It cannot be recovered later; only an argon2 hash is stored.
 * Tier 3 scopes require `--dangerous`; unknown scopes are rejected. See [API keys and scopes](/server/scopes).
 * `--profile <name>` pins the key to one Hermes profile; requests targeting another profile get 403.
-* `--expires` takes durations like `30m`, `12h`, `90d`. `--cidr` restricts the key to source networks (IPv4 or IPv6 CIDR list, validated at creation). Behind a reverse proxy, set `--trust-proxy` on `serve` so pins match the real client.
+* `--name` is a single line of at most 64 characters. `--dangerous` is required for tier 3 scopes and for `auth:users`. `keys list` shows each key as `active`, `expired` or `revoked`.
+* `--expires` takes durations like `30m`, `12h`, `90d` (zero is refused). `--cidr` restricts the key to source networks (IPv4 or IPv6 CIDR list, validated at creation). Behind a reverse proxy, set `--trust-proxy` on `serve` so pins match the real client.
 * `--user-grantable` accepts tier 1 scopes only. It is reserved for the token-exchange pattern.
 
 ## service

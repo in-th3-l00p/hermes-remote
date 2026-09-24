@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
 import { describe, expect, test } from "bun:test";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ChatStore } from "./index.ts";
@@ -41,6 +41,7 @@ describe("ChatStore", () => {
     const first = new ChatStore(path, now);
     const session = first.createSession({ userId: "user-1" });
     first.addMessage(session.id, { role: "user", content: "persisted" });
+    expect((await stat(path)).mode & 0o777).toBe(0o600);
     const second = new ChatStore(path, now);
     const loaded = second.getSession(session.id);
     expect(loaded?.userId).toBe("user-1");

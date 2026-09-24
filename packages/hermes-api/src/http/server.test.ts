@@ -1,5 +1,5 @@
 import { describe, expect, spyOn, test } from "bun:test";
-import { mkdir, mkdtemp } from "node:fs/promises";
+import { mkdir, mkdtemp, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ChatStore, DemoAgent, startServer } from "../index.ts";
@@ -21,6 +21,7 @@ describe("startServer", () => {
     expect(res.status).toBe(200);
     server.stop();
     const log = await Bun.file(logPath).text();
+    expect((await stat(logPath)).mode & 0o777).toBe(0o600);
     expect(log).toContain("2026-08-23T00:00:00.000Z server started on 127.0.0.1:");
     expect(log).toContain("GET /v1/status 200");
     expect(log).toContain("server stopped");

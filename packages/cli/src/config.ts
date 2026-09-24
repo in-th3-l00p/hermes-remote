@@ -1,3 +1,4 @@
+import { chmod, stat } from "node:fs/promises";
 import { join } from "node:path";
 import type { AuthProviderConfig } from "@intheloop-studio/hermes-remote";
 
@@ -34,9 +35,14 @@ export function configPath(homeDir: string): string {
 }
 
 export async function loadConfig(homeDir: string): Promise<ConfigResult> {
-  const file = Bun.file(configPath(homeDir));
+  const path = configPath(homeDir);
+  const file = Bun.file(path);
   if (!(await file.exists())) {
     return { ok: true, config: {} };
+  }
+  // config.json can hold upstream keys and JWT secrets: owner-only.
+  if (((await stat(path)).mode & 0o077) !== 0) {
+    await chmod(path, 0o600);
   }
   try {
     return { ok: true, config: (await file.json()) as ConfigFile };

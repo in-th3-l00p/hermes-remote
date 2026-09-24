@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import { mkdirSync } from "node:fs";
+import { chmodSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { HermesUpstreamError } from "../chat/index.ts";
 
@@ -31,6 +31,9 @@ export class RunStore {
       mkdirSync(dirname(path), { recursive: true });
     }
     this.db = new Database(path);
+    if (path !== ":memory:") {
+      chmodSync(path, 0o600);
+    }
     this.db.run(
       `CREATE TABLE IF NOT EXISTS runs (
         id TEXT PRIMARY KEY,

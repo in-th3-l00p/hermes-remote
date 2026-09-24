@@ -27,7 +27,7 @@ export interface RunningServer {
 // A failed log append must never fail the request it describes.
 function appendSafely(path: string, line: string): void {
   try {
-    appendFileSync(path, line);
+    appendFileSync(path, line, { mode: 0o600 });
   } catch (cause) {
     console.error(`hermes-api: failed to append to ${path}`, cause);
   }

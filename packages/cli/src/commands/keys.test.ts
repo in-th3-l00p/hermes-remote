@@ -200,3 +200,34 @@ describe("keys rotate and cidr", () => {
     expect((await runCli(["keys", "show", id], ctx)).output).toContain("2001:db8::/32");
   });
 });
+
+describe("keys hygiene", () => {
+  test("names must be one short line, expiry must be non-zero", async () => {
+    const { ctx } = await makeCtx();
+    const create = (...extra: string[]) =>
+      runCli(["keys", "create", "--scope", "chat:invoke", ...extra], ctx);
+    expect((await create("--name", "a\nfake-row active")).exitCode).toBe(1);
+    expect((await create("--name", "x".repeat(65))).exitCode).toBe(1);
+    expect((await create("--name", "ok", "--expires", "0m")).exitCode).toBe(1);
+  });
+
+  test("auth:users needs --dangerous", async () => {
+    const { ctx } = await makeCtx();
+    const plain = await runCli(["keys", "create", "--name", "a", "--scope", "auth:users"], ctx);
+    expect(plain.exitCode).toBe(1);
+    expect(plain.output).toContain("--dangerous");
+    const acknowledged = await runCli(
+      ["keys", "create", "--name", "a", "--scope", "auth:users", "--dangerous"],
+      ctx,
+    );
+    expect(acknowledged.exitCode).toBe(0);
+  });
+
+  test("list marks expired keys as expired", async () => {
+    const { ctx } = await makeCtx();
+    await createKey(ctx, ["--expires", "30m"]);
+    const later = { ...ctx, now: () => new Date(ctx.now().getTime() + 3_600_000) };
+    expect((await runCli(["keys", "list"], ctx)).output).toContain("active");
+    expect((await runCli(["keys", "list"], later)).output).toContain("expired");
+  });
+});

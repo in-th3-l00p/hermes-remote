@@ -1,3 +1,4 @@
+import { chmod, stat } from "node:fs/promises";
 import { describe, expect, test } from "bun:test";
 import { runCli } from "../run.ts";
 import { makeCtx } from "./harness.test.ts";
@@ -31,6 +32,15 @@ describe("serve", () => {
     const bad = await runCli(["serve", "--port", "0", "--trust-proxy", "nope"], ctx);
     expect(bad.exitCode).toBe(1);
     expect(bad.output).toContain("invalid trust-proxy value: nope");
+  });
+
+  test("a world-readable config.json is tightened to owner-only", async () => {
+    const { ctx } = await makeCtx();
+    const path = `${ctx.homeDir}/config.json`;
+    await Bun.write(path, JSON.stringify({ upstreamKey: "secret" }));
+    await chmod(path, 0o644);
+    await runCli(["serve", "--port", "0"], ctx);
+    expect((await stat(path)).mode & 0o777).toBe(0o600);
   });
 
   test("passes anonymous, cors, and upstream flags", async () => {
