@@ -1,3 +1,4 @@
+import { checkPublicUrl } from "../net-guard.ts";
 import type { Context, Hono } from "hono";
 import { principalKey } from "../../auth/index.ts";
 import { error, json, requireScope, type ChatEnv } from "../../chat/routes/shared.ts";
@@ -154,10 +155,16 @@ export function registerMediaRoutes(
     const body = (await c.req.json().catch(() => null)) as {
       url?: unknown;
     } | null;
-    if (typeof body?.url !== "string" || !/^https?:\/\//.test(body.url)) {
+    if (typeof body?.url !== "string") {
       return error(400, "invalid_request", "url (http/https string) is required");
     }
-    return toolRun(c, "web_extract", `Extract the content of ${body.url}.`);
+    // The agent fetches this URL from the host, so it must not reach the
+    // host's own network; only the normalized href goes into the prompt.
+    const checked = await checkPublicUrl(body.url);
+    if ("reason" in checked) {
+      return error(400, "url_not_allowed", `url refused: ${checked.reason}`);
+    }
+    return toolRun(c, "web_extract", `Extract the content of ${checked.url.href}.`);
   });
 
   app.post("/v1/browser/tasks", async (c) => {

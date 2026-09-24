@@ -73,7 +73,7 @@ describe("chat routes", () => {
     const res = await app.fetch(
       post(`/v1/sessions/${session.id}/messages`, {
         content: "hello",
-        attachments: [{ name: "a.png", type: "image/png", dataUrl: "data:x" }],
+        attachments: [{ name: "a.png", type: "image/png", dataUrl: "data:image/png;base64,iVBORw0KGgo=" }],
       }),
     );
     expect(res.headers.get("content-type")).toBe("text/event-stream");
@@ -115,10 +115,22 @@ describe("chat routes", () => {
     const emptyWithAttachment = await app.fetch(
       post(`/v1/sessions/${session.id}/messages`, {
         content: "",
-        attachments: [{ name: "a.png", type: "image/png", dataUrl: "d" }],
+        attachments: [{ name: "a.png", type: "image/png", dataUrl: "data:image/png;base64,iVBORw0KGgo=" }],
       }),
     );
     expect(emptyWithAttachment.status).toBe(200);
+    await emptyWithAttachment.text();
+    for (const attachment of [
+      { name: "a.png", type: "image/png", dataUrl: "http://169.254.169.254/latest" },
+      { name: "a.svg", type: "image/svg+xml", dataUrl: "data:image/svg+xml;base64,PHN2Zy8+" },
+      { name: "a.png", type: "image/jpeg", dataUrl: "data:image/png;base64,iVBORw0KGgo=" },
+      { name: "x".repeat(256), type: "image/png", dataUrl: "data:image/png;base64,iVBORw0KGgo=" },
+    ]) {
+      const refused = await app.fetch(
+        post(`/v1/sessions/${session.id}/messages`, { content: "hi", attachments: [attachment] }),
+      );
+      expect(refused.status).toBe(400);
+    }
   });
 
   test("streams an error event when the agent fails", async () => {

@@ -67,7 +67,7 @@ One turn runs per session at a time. A send or edit while a turn is streaming ge
 
 ## Attachments
 
-Attachments are image data URLs, forwarded to the upstream model as vision content parts:
+Attachments are inline base64 image data URLs (`image/png`, `image/jpeg`, `image/gif` or `image/webp`; the `type` must match the data URL, and names are at most 255 characters), forwarded to the upstream model as vision content parts. Remote URLs and SVG are refused with 400:
 
 ```bash
 curl -N -X POST "$BASE/v1/sessions/$SESSION/messages" \

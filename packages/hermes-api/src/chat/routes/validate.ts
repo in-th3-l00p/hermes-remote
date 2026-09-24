@@ -6,6 +6,9 @@ export interface SendBody {
   attachments?: unknown;
 }
 
+/** Inline base64 raster images only: no remote URLs, no SVG. */
+const IMAGE_DATA_URL = /^data:(image\/(?:png|jpeg|gif|webp));base64,[A-Za-z0-9+/]+={0,2}$/;
+
 export function parseAttachments(raw: unknown, limits: Limits): Attachment[] | null {
   if (raw === undefined) {
     return [];
@@ -19,7 +22,9 @@ export function parseAttachments(raw: unknown, limits: Limits): Attachment[] | n
       typeof item?.["name"] !== "string" ||
       typeof item?.["type"] !== "string" ||
       typeof item?.["dataUrl"] !== "string" ||
-      item["dataUrl"].length > limits.maxAttachmentChars
+      item["dataUrl"].length > limits.maxAttachmentChars ||
+      item["name"].length > 255 ||
+      IMAGE_DATA_URL.exec(item["dataUrl"])?.[1] !== item["type"]
     ) {
       return null;
     }
