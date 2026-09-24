@@ -141,7 +141,7 @@ export function registerMgmtRoutes(
     if (!result.ok) {
       return cliResponse(result);
     }
-    return new Response(result.stdout, {
+    return new Response(result.stdoutBytes ?? result.stdout, {
       headers: { "content-type": "application/octet-stream" },
     });
   });

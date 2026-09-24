@@ -3,6 +3,8 @@ export interface CliResultData {
   exitCode: number;
   stdout: string;
   stderr: string;
+  /** Raw stdout, for binary output such as archives. */
+  stdoutBytes?: Uint8Array;
   /** Set when the binary could not be started at all (missing, not executable). */
   unavailable?: true;
 }
@@ -14,32 +16,39 @@ export interface CliBridge {
 export type SpawnLike = (
   argv: string[],
   timeoutMs: number,
-) => Promise<{ exitCode: number; stdout: string; stderr: string }>;
+) => Promise<{
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  stdoutBytes?: Uint8Array;
+}>;
 
 async function defaultSpawn(
   argv: string[],
   timeoutMs: number,
-): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+): Promise<{ exitCode: number; stdout: string; stderr: string; stdoutBytes: Uint8Array }> {
   const proc = Bun.spawn({ cmd: argv, stdout: "pipe", stderr: "pipe" });
   let timedOut = false;
   const timer = setTimeout(() => {
     timedOut = true;
     proc.kill();
   }, timeoutMs);
-  const [exitCode, stdout, stderr] = await Promise.all([
+  const [exitCode, stdoutBytes, stderr] = await Promise.all([
     proc.exited,
-    new Response(proc.stdout).text(),
+    new Response(proc.stdout).bytes(),
     new Response(proc.stderr).text(),
   ]);
+  const stdout = new TextDecoder().decode(stdoutBytes);
   clearTimeout(timer);
   if (timedOut) {
     return {
       exitCode: exitCode === 0 ? 124 : exitCode,
       stdout,
       stderr: `${stderr}command timed out after ${timeoutMs}ms`,
+      stdoutBytes,
     };
   }
-  return { exitCode, stdout, stderr };
+  return { exitCode, stdout, stderr, stdoutBytes };
 }
 
 /** Executes the hermes binary; callers supply allowlisted argv templates. */

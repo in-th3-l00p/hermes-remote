@@ -87,6 +87,12 @@ describe("HermesCliBridge", () => {
     expect(timedOut.ok).toBe(false);
     expect(timedOut.stderr).toContain("timed out");
   });
+
+  test("keeps stdout bytes intact for binary output", async () => {
+    const bridge = new HermesCliBridge({ binary: "printf" });
+    const result = await bridge.run(["\\037\\213\\377\\000\\336"]);
+    expect(result.stdoutBytes).toEqual(new Uint8Array([0x1f, 0x8b, 0xff, 0x00, 0xde]));
+  });
 });
 
 describe("FakeCliBridge", () => {
