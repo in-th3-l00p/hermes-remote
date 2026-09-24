@@ -12,6 +12,7 @@ export function randomId(): string {
 export interface SessionRow {
   id: string;
   user_id: string | null;
+  key_id: string | null;
   title: string | null;
   created_at: string;
   updated_at: string;
@@ -45,6 +46,7 @@ export function toMeta(row: SessionRow): ChatSessionMeta {
   return {
     id: row.id,
     userId: row.user_id,
+    keyId: row.key_id,
     title: row.title,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -60,6 +62,7 @@ export function openDatabase(path: string): Database {
     CREATE TABLE IF NOT EXISTS sessions (
       id TEXT PRIMARY KEY,
       user_id TEXT,
+      key_id TEXT,
       title TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
@@ -79,5 +82,12 @@ export function openDatabase(path: string): Database {
     CREATE INDEX IF NOT EXISTS idx_messages_session
       ON messages (session_id, position);
   `);
+  const columns = db
+    .query<{ name: string }, []>("PRAGMA table_info(sessions)")
+    .all()
+    .map((c) => c.name);
+  if (!columns.includes("key_id")) {
+    db.run("ALTER TABLE sessions ADD COLUMN key_id TEXT");
+  }
   return db;
 }

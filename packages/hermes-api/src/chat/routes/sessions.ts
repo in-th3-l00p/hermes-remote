@@ -16,7 +16,13 @@ export function registerSessionRoutes(
     }
     return json(
       201,
-      store.createSession(principal.type === "user" ? principal.userId : null),
+      store.createSession(
+        principal.type === "user"
+          ? { userId: principal.userId }
+          : principal.type === "api_key"
+            ? { keyId: principal.record.id }
+            : {},
+      ),
     );
   });
 
@@ -38,9 +44,12 @@ export function registerSessionRoutes(
     const ids = (url.searchParams.get("ids") ?? "")
       .split(",")
       .filter((id) => /^[0-9a-f]+$/.test(id));
-    const sessions = store
-      .listSessions({ ids })
-      .filter((s) => s.userId === null || principal.type === "api_key")
+    const candidates =
+      principal.type === "api_key" && ids.length === 0
+        ? store.listSessions({ keyId: principal.record.id })
+        : store.listSessions({ ids });
+    const sessions = candidates
+      .filter((s) => canAccess(s, principal, "read"))
       .slice(offset, offset + limit);
     return json(200, { sessions });
   });
@@ -52,7 +61,7 @@ export function registerSessionRoutes(
       return denied;
     }
     const session = store.getSession(c.req.param("id"));
-    if (session === null || !canAccess(session, principal)) {
+    if (session === null || !canAccess(session, principal, "write")) {
       return error(404, "session_not_found", "Unknown session");
     }
     store.deleteSession(session.id);
@@ -66,7 +75,7 @@ export function registerSessionRoutes(
       return denied;
     }
     const session = store.getSession(c.req.param("id"));
-    if (session === null || !canAccess(session, principal)) {
+    if (session === null || !canAccess(session, principal, "write")) {
       return error(404, "session_not_found", "Unknown session");
     }
     const controller = options.turns?.get(session.id);

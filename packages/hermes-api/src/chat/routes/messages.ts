@@ -19,7 +19,7 @@ export function registerMessageRoutes(
       return denied;
     }
     const session = store.getSession(c.req.param("id"));
-    if (session === null || !canAccess(session, principal)) {
+    if (session === null || !canAccess(session, principal, "read")) {
       return error(404, "session_not_found", "Unknown session");
     }
     const { limit, offset } = pageParams(new URL(c.req.url), 200);
@@ -37,7 +37,7 @@ export function registerMessageRoutes(
     }
     const sessionId = c.req.param("id");
     const session = store.getSession(sessionId);
-    if (session === null || !canAccess(session, principal)) {
+    if (session === null || !canAccess(session, principal, "write")) {
       return error(404, "session_not_found", "Unknown session");
     }
     const body = (await c.req.json().catch(() => null)) as SendBody | null;
@@ -67,7 +67,7 @@ export function registerMessageRoutes(
     }
     const sessionId = c.req.param("id");
     const session = store.getSession(sessionId);
-    if (session === null || !canAccess(session, principal)) {
+    if (session === null || !canAccess(session, principal, "write")) {
       return error(404, "session_not_found", "Unknown session");
     }
     const body = (await c.req.json().catch(() => null)) as SendBody | null;
@@ -96,7 +96,7 @@ export function registerMessageRoutes(
       }
       const sessionId = c.req.param("id");
       const session = store.getSession(sessionId);
-      if (session === null || !canAccess(session, principal)) {
+      if (session === null || !canAccess(session, principal, "write")) {
         return error(404, "session_not_found", "Unknown session");
       }
       const body = (await c.req.json().catch(() => null)) as {

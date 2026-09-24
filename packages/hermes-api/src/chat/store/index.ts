@@ -23,14 +23,26 @@ export class ChatStore {
     this.db = openDatabase(path);
   }
 
-  createSession(userId: string | null = null): ChatSession {
+  createSession(
+    owner: { userId?: string | null; keyId?: string | null } = {},
+  ): ChatSession {
     const id = randomId();
     const at = this.now().toISOString();
+    const userId = owner.userId ?? null;
+    const keyId = owner.keyId ?? null;
     this.db.run(
-      "INSERT INTO sessions (id, user_id, title, created_at, updated_at) VALUES (?, ?, NULL, ?, ?)",
-      [id, userId, at, at],
+      "INSERT INTO sessions (id, user_id, key_id, title, created_at, updated_at) VALUES (?, ?, ?, NULL, ?, ?)",
+      [id, userId, keyId, at, at],
     );
-    return { id, userId, title: null, createdAt: at, updatedAt: at, messages: [] };
+    return {
+      id,
+      userId,
+      keyId,
+      title: null,
+      createdAt: at,
+      updatedAt: at,
+      messages: [],
+    };
   }
 
   getSession(id: string): ChatSession | null {
@@ -49,13 +61,25 @@ export class ChatStore {
     return { ...toMeta(row), messages: sessionMessages };
   }
 
-  listSessions(input: { userId?: string; ids?: string[] }): ChatSessionMeta[] {
+  listSessions(input: {
+    userId?: string;
+    keyId?: string;
+    ids?: string[];
+  }): ChatSessionMeta[] {
     if (input.userId !== undefined) {
       return this.db
         .query<SessionRow, [string]>(
           "SELECT * FROM sessions WHERE user_id = ? ORDER BY updated_at DESC",
         )
         .all(input.userId)
+        .map(toMeta);
+    }
+    if (input.keyId !== undefined) {
+      return this.db
+        .query<SessionRow, [string]>(
+          "SELECT * FROM sessions WHERE key_id = ? ORDER BY updated_at DESC",
+        )
+        .all(input.keyId)
         .map(toMeta);
     }
     const ids = input.ids ?? [];

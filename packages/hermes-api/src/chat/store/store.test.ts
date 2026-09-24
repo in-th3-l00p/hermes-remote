@@ -1,3 +1,4 @@
+import { Database } from "bun:sqlite";
 import { describe, expect, test } from "bun:test";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -38,12 +39,29 @@ describe("ChatStore", () => {
     const dir = await mkdtemp(join(tmpdir(), "hermes-chat-db-"));
     const path = join(dir, "nested", "chat.db");
     const first = new ChatStore(path, now);
-    const session = first.createSession("user-1");
+    const session = first.createSession({ userId: "user-1" });
     first.addMessage(session.id, { role: "user", content: "persisted" });
     const second = new ChatStore(path, now);
     const loaded = second.getSession(session.id);
     expect(loaded?.userId).toBe("user-1");
     expect(loaded?.messages[0]?.content).toBe("persisted");
+  });
+
+  test("adds the key owner column to databases created before it existed", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "hermes-chat-db-"));
+    const path = join(dir, "chat.db");
+    const legacy = new Database(path);
+    legacy.run(
+      "CREATE TABLE sessions (id TEXT PRIMARY KEY, user_id TEXT, title TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)",
+    );
+    legacy.run(
+      "INSERT INTO sessions VALUES ('aa', NULL, NULL, '2026-01-01', '2026-01-01')",
+    );
+    legacy.close();
+    const store = new ChatStore(path, now);
+    expect(store.getSession("aa")?.keyId).toBeNull();
+    const owned = store.createSession({ keyId: "k1" });
+    expect(store.listSessions({ keyId: "k1" }).map((s) => s.id)).toEqual([owned.id]);
   });
 
   test("titles sessions from the first user message", () => {
@@ -63,8 +81,8 @@ describe("ChatStore", () => {
       ":memory:",
       () => new Date(Date.parse("2026-08-24T00:00:00Z") + tick++ * 1000),
     );
-    const mine = store.createSession("u1");
-    const other = store.createSession("u2");
+    const mine = store.createSession({ userId: "u1" });
+    const other = store.createSession({ userId: "u2" });
     const anonymous = store.createSession();
     expect(store.listSessions({ userId: "u1" }).map((s) => s.id)).toEqual([
       mine.id,

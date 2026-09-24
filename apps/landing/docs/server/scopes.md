@@ -53,7 +53,7 @@ API keys only. The server refuses these on user tokens.
 | `soul:read` | SOUL.md and skin reads |
 | `insights:read` | Token and cost analytics |
 | `logs:read` | Agent and gateway logs |
-| `sessions:read-all` / `sessions:write-all` | The agent's own session store, across users |
+| `sessions:read-all` / `sessions:write-all` | The agent's own session store, and hermes-remote chat sessions owned by other users and keys |
 | `subagents:control` | Reserved for steering subagents |
 | `messaging:send` | One-shot delivery to messaging platforms |
 | `projects:manage` | Project registry |

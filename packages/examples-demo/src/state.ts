@@ -67,6 +67,7 @@ export class DemoState {
     const session: DemoSession = {
       id: this.newId(),
       userId,
+      keyId: null,
       title: null,
       createdAt: at,
       updatedAt: at,
