@@ -1,81 +1,92 @@
 import { defineConfig } from "vitepress";
 
 export default defineConfig({
-  title: "hermes remote",
-  description: "Your Hermes agent, anywhere.",
+  title: "Hermes Remote",
+  description: "Put your Hermes agent on the web: an authenticated API server, a typed client and React hooks.",
   base: "/docs/",
   outDir: "../dist/docs",
   head: [["link", { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" }]],
   themeConfig: {
+    logo: "/star.svg",
+    siteTitle: "hermes remote",
+    search: { provider: "local" },
+    editLink: {
+      pattern: "https://github.com/in-th3-l00p/hermes-remote/edit/main/apps/landing/docs/:path",
+      text: "Edit this page on GitHub",
+    },
+    outline: { level: [2, 3] },
     nav: [
-      { text: "Site", link: "https://hermes-remote.tiscacatalin.com" },
+      { text: "Home", link: "https://hermes-remote.tiscacatalin.com" },
       { text: "Examples", link: "https://hermes-remote.tiscacatalin.com/examples/" },
       { text: "GitHub", link: "https://github.com/in-th3-l00p/hermes-remote" },
     ],
     sidebar: [
-      { text: "Overview", link: "/" },
       {
-        text: "Getting started",
+        text: "Start",
         items: [
+          { text: "What Hermes Remote is", link: "/" },
           { text: "Installation", link: "/guide/installation" },
           { text: "Quick start", link: "/guide/quick-start" },
         ],
       },
       {
-        text: "Server",
+        text: "Secure it",
         items: [
-          { text: "CLI reference", link: "/server/cli" },
-          { text: "Configuration", link: "/server/config" },
           { text: "API keys and scopes", link: "/server/scopes" },
-          { text: "Rate limits and audit log", link: "/server/operations" },
-        ],
-      },
-      {
-        text: "Authentication",
-        items: [
-          { text: "Overview", link: "/auth/" },
-          { text: "Supabase provider", link: "/auth/supabase" },
-          { text: "Clerk provider", link: "/auth/clerk" },
-          { text: "Custom providers", link: "/auth/custom" },
+          { text: "Signing users in", link: "/auth/" },
+          { text: "Supabase", link: "/auth/supabase" },
+          { text: "Clerk", link: "/auth/clerk" },
+          { text: "Any JWT issuer", link: "/auth/custom" },
           { text: "Token exchange", link: "/auth/token-exchange" },
         ],
       },
       {
-        text: "HTTP API",
+        text: "Build with it",
         items: [
-          { text: "Conventions", link: "/api/" },
+          { text: "TypeScript client", link: "/clients/typescript" },
+          { text: "React hooks", link: "/clients/react" },
+          { text: "A chat app in React", link: "/tutorials/react-chat" },
+          { text: "Using the HTTP API directly", link: "/tutorials/raw-api" },
+        ],
+      },
+      {
+        text: "Deploy and operate",
+        items: [
+          { text: "Deploying", link: "/tutorials/deploying" },
+          { text: "Configuration", link: "/server/config" },
+          { text: "CLI reference", link: "/server/cli" },
+          { text: "Limits, audit log and metrics", link: "/server/operations" },
+        ],
+      },
+      {
+        text: "API reference",
+        collapsed: false,
+        items: [
+          { text: "Conventions, errors and OpenAPI", link: "/api/" },
           { text: "Chat sessions and SSE", link: "/api/chat" },
           { text: "Discovery", link: "/api/discovery" },
           { text: "Runs", link: "/api/runs" },
-          { text: "Jobs (cron)", link: "/api/jobs" },
+          { text: "Scheduled jobs", link: "/api/jobs" },
           { text: "Profiles", link: "/api/profiles" },
-          { text: "Management (CLI-backed)", link: "/api/management" },
-          { text: "Files: memory, soul, skills", link: "/api/files" },
+          { text: "Agent management", link: "/api/management" },
+          { text: "Memory, soul and skills", link: "/api/files" },
           { text: "Goals and slash commands", link: "/api/goals" },
           { text: "Events", link: "/api/events" },
           { text: "Tools and passthrough", link: "/api/passthrough" },
         ],
       },
       {
-        text: "Clients",
+        text: "Step-by-step guides",
+        collapsed: true,
         items: [
-          { text: "TypeScript client", link: "/clients/typescript" },
-          { text: "React hooks", link: "/clients/react" },
+          { text: "Supabase sign-in", link: "/tutorials/supabase-auth" },
+          { text: "Clerk sign-in", link: "/tutorials/clerk-auth" },
+          { text: "A custom auth provider", link: "/tutorials/custom-auth" },
         ],
       },
       {
-        text: "Tutorials",
-        items: [
-          { text: "A chat app in React", link: "/tutorials/react-chat" },
-          { text: "Authentication with Supabase", link: "/tutorials/supabase-auth" },
-          { text: "Authentication with Clerk", link: "/tutorials/clerk-auth" },
-          { text: "Custom auth providers", link: "/tutorials/custom-auth" },
-          { text: "Deploying", link: "/tutorials/deploying" },
-          { text: "The raw API", link: "/tutorials/raw-api" },
-        ],
-      },
-      {
-        text: "How it was built",
+        text: "How it's built",
+        collapsed: true,
         items: [
           { text: "Architecture", link: "/internals/architecture" },
           { text: "Security model", link: "/internals/security" },
