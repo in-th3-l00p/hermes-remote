@@ -47,7 +47,7 @@ terminal, files, and web access. Be direct, keep answers short, prefer showing
 the command you ran over describing it. When something fails, paste the error
 before theorizing. Never push to main.
 `,
-  memory: `Catalin ships hermes-web from this machine; deploys go out Friday mornings after the smoke suite passes.
+  memory: `The team ships hermes-remote from this machine; deploys go out Friday mornings after the smoke suite passes.
 Staging runs in eu-central-1, production in us-east-1; kubectl contexts are stg and prod.
 Prefers Bun over Node for every new script, TypeScript strict mode always.
 The flaky login spec traces back to a shared Redis fixture; workaround is FLUSHDB in beforeEach.
@@ -55,7 +55,7 @@ Postgres slow queries usually mean the sessions table again; check pg_stat_state
 Alert emails route to ops@ but he only reads the #alerts Slack channel.`,
   user: `Catalin. Backend-leaning full-stack developer, works from Cluj, usually online 09:00-18:00 EET.
 Likes terse answers with commands he can paste. Reviews PRs in the morning.
-Current focus: the hermes-web release and taming the staging cluster.`,
+Current focus: the hermes-remote release and taming the staging cluster.`,
   status: `⚕ Hermes Status
 profile: default
 model: nous/hermes-4-405b (128k context)
@@ -80,7 +80,7 @@ cron: 3 jobs scheduled · last run morning-briefing (ok)
 const WORK_HOME: DemoProfileHome = {
   soul: `# Foreman
 
-You are Foreman, the work profile. You only touch the hermes-web monorepo and
+You are Foreman, the work profile. You only touch the hermes-remote monorepo and
 its infrastructure. Review diffs ruthlessly, insist on tests, and refuse to
 run anything against production without an explicit confirmation in the same
 message.
@@ -318,6 +318,7 @@ export function seedSessions(now: Date): DemoSession[] {
       id: seed.id,
       userId: null,
       keyId: null,
+      archived: false,
       title: seed.title,
       createdAt: created,
       updatedAt: shift(now, seed.minutesAgo),

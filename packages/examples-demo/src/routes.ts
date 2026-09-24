@@ -27,13 +27,15 @@ export const KEY_SCOPES = [
   "events:subscribe",
 ];
 
-/** Scopes user and anonymous principals hold implicitly (tier 1). */
-const USER_GRANTABLE = new Set([
+/** Scopes user and anonymous principals hold implicitly (the end-user scopes). */
+const END_USER = new Set([
   "chat:invoke",
   "sessions:read",
   "sessions:write",
+  "sessions:search",
   "status:read",
-  "events:subscribe",
+  "skills:read",
+  "toolsets:read",
 ]);
 
 export type Principal =
@@ -85,14 +87,14 @@ export function principalFrom(header: string | null): Principal | Response {
   };
 }
 
-/** Tier-1 scopes pass for everyone; anything else needs the API key. */
+/** End-user scopes pass for everyone; anything else needs the API key. */
 export function guard(principal: Principal, scope: string): Response | null {
   if (principal.type === "api_key") {
     return principal.scopes.includes(scope)
       ? null
       : error(403, "missing_scope", `This route requires the ${scope} scope`);
   }
-  return USER_GRANTABLE.has(scope)
+  return END_USER.has(scope)
     ? null
     : error(403, "api_key_required", "This surface requires an API key");
 }
@@ -292,9 +294,44 @@ async function handleSessions(ctx: Ctx, method: string, rest: string): Promise<R
     );
   }
   if (rest === "" && method === "GET") {
-    return guard(principal, "sessions:read") ?? json(200, { sessions: state.listSessions() });
+    const archived = new URL(ctx.request.url).searchParams.get("archived") === "true";
+    return guard(principal, "sessions:read") ?? json(200, { sessions: state.listSessions(archived) });
+  }
+  if (rest === "/search" && method === "GET") {
+    const denied = guard(principal, "sessions:search");
+    if (denied !== null) return denied;
+    const q = (new URL(ctx.request.url).searchParams.get("q") ?? "").trim();
+    if (q === "") {
+      return error(400, "invalid_request", "q: search text is required");
+    }
+    return json(200, { sessions: state.searchSessions(q) });
   }
   let match = rest.match(/^\/([0-9a-f]+)$/);
+  if (match !== null && method === "PATCH") {
+    const denied = guard(principal, "sessions:write");
+    if (denied !== null) return denied;
+    const session = sessionFor(ctx, match[1] as string);
+    if (session instanceof Response) {
+      return session;
+    }
+    const body = (await ctx.request.json().catch(() => null)) as {
+      title?: unknown;
+      archived?: unknown;
+    } | null;
+    const title = typeof body?.title === "string" ? body.title.trim() : undefined;
+    const archived = typeof body?.archived === "boolean" ? body.archived : undefined;
+    if ((title === undefined || title === "") && archived === undefined) {
+      return error(400, "invalid_request", "body: send title and/or archived");
+    }
+    if (title !== undefined && title !== "") {
+      session.title = title.slice(0, 120);
+    }
+    if (archived !== undefined) {
+      session.archived = archived;
+    }
+    const { messages: _messages, ...meta } = session;
+    return json(200, meta);
+  }
   if (match !== null && method === "DELETE") {
     const denied = guard(principal, "sessions:write");
     if (denied !== null) return denied;

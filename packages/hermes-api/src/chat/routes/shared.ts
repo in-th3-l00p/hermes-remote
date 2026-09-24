@@ -2,6 +2,7 @@ import type { AgentBackend } from "../agent.ts";
 import type { ChatSessionMeta, ChatStore } from "../store/index.ts";
 import type { Principal } from "../../auth/index.ts";
 import { isEndUserScope } from "../../scopes/index.ts";
+import type { Metrics } from "../../metrics/index.ts";
 
 export interface ChatOptions {
   store: ChatStore;
@@ -10,6 +11,8 @@ export interface ChatOptions {
   turns?: Map<string, AbortController>;
   /** Quiet interval before a keepalive comment on turn streams (default 15 s). */
   keepAliveMs?: number;
+  /** Counts turn outcomes when set. */
+  metrics?: Metrics;
 }
 
 /** Hono environment shared by every authenticated route. */

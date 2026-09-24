@@ -47,3 +47,35 @@ When no upstream is configured, chat routes answer from a built-in offline demo 
 ## Running as a service
 
 `hermes-remote service install` writes a launchd plist (macOS) or a systemd user unit (Linux) so the server starts on boot with the config file. `hermes-remote logs --tail 100` tails the server log. For TLS, reverse proxies, and hardening, see [Deploying](/tutorials/deploying).
+
+## Metrics
+
+`GET /v1/metrics` serves Prometheus metrics to API keys holding `status:read`:
+
+| Metric | Type | Labels |
+| ------ | ---- | ------ |
+| `hermes_http_requests_total` | counter | `method`, `route` (the route pattern, never a raw id), `status` |
+| `hermes_http_request_duration_seconds` | histogram | `method`, `route`; time to response headers (streams continue after it) |
+| `hermes_chat_turns_total` | counter | `outcome`: `completed`, `stopped`, `failed` |
+| `hermes_chat_turns_in_flight` | gauge | |
+
+A Prometheus scrape job only needs a bearer token:
+
+```yaml
+scrape_configs:
+  - job_name: hermes-remote
+    metrics_path: /v1/metrics
+    authorization: { credentials: hk_... }
+    static_configs: [{ targets: ["127.0.0.1:8643"] }]
+```
+
+Worth alerting on: a rising share of 5xx responses (the agent or the `hermes` CLI is unavailable), `hermes_chat_turns_total{outcome="failed"}`, and 401/429 bursts (credential guessing).
+
+## Topology: one instance per agent
+
+hermes-remote is designed to run as **one process next to one Hermes agent**. Run it on the agent's machine (or in a container beside it) and scale by adding agents, not replicas:
+
+* **State is local by design.** Chat history, users and run ownership live in SQLite files under `~/.hermes-remote/`; rate-limit buckets, the event stream and in-flight turn tracking live in memory. Two replicas would each see half the sessions, enforce half the rate limit, and not know about each other's turns.
+* **The agent is the bottleneck anyway.** Every chat turn and run is served by the single agent process behind it, so extra hermes-remote replicas would add no throughput.
+* **To serve more users,** run more agents (for example one per team or tenant, possibly with a Hermes profile each), each with its own hermes-remote, and route to them by hostname at your proxy. Token exchange keys and signing keys are per instance.
+* **For availability,** run it under the service manager (`hermes-remote service install`) or `restart: unless-stopped` in Docker, back up `~/.hermes-remote/` (it is small), and watch `/v1/status` from your load balancer. A restart loses only in-flight turns; their messages are marked `error` on startup.

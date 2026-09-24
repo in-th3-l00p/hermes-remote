@@ -1,5 +1,15 @@
 # Changelog
 
+## 4.1.0 (unreleased)
+
+Product and website. Server and CLI 4.1.0.
+
+* **Metrics.** `GET /v1/metrics` (API keys with `status:read`) serves Prometheus metrics: requests and latency by route pattern and status, chat turns by outcome, turns in flight.
+* **Docker.** A `Dockerfile` (single-file bundle on a slim Bun image, non-root, `/data` volume, health check) and a `docker-compose.yml` for running beside an agent; CI builds and smoke-tests the image.
+* **Topology.** The operations guide documents one instance per agent and how to scale and stay available.
+* **New website.** The landing page shows the security model with a request inspector (pick a caller and a request, see where the server lets it through or sends it back, with the real status and body). A new design system across the site and the docs; the docs are regrouped by task and have search.
+* **Reference chat app rebuilt** on that design: mobile drawer, stop button, reaction counts, rename/archive/search, accessible thread, and a labelled demo mode. It is the live showcase at `/examples/chat/app/`; the other examples are written recipes, and the six separate example apps are gone.
+
 ## 4.0.0 (unreleased)
 
 Delivers what ARCHITECTURE.md promised. Server and CLI 4.0.0, client and React 2.0.0.

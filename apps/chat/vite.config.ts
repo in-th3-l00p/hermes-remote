@@ -1,14 +1,11 @@
-import path from "node:path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  // Served under /examples/chat/app/ on the site; `vite dev` uses /.
+  base: process.env["CHAT_BASE"] ?? "/",
+  plugins: [react()],
   resolve: {
     dedupe: ["react", "react-dom"],
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
   },
 });

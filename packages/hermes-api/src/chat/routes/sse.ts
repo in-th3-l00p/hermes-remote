@@ -14,6 +14,10 @@ export function turnInFlight(options: ChatOptions, sessionId: string): Response 
     : null;
 }
 
+function turnOutcome(options: ChatOptions, outcome: "completed" | "stopped" | "failed"): void {
+  options.metrics?.count("hermes_chat_turns_total", "Chat turns by outcome", { outcome });
+}
+
 export function streamTurn(
   options: ChatOptions,
   sessionId: string,
@@ -58,10 +62,13 @@ export function streamTurn(
             emit("delta", { id: assistant.id, text });
           }
           emit("done", store.finishMessage(sessionId, assistant.id, "done"));
+          turnOutcome(options, "completed");
         } catch (cause) {
           if (controller.signal.aborted) {
             emit("done", store.finishMessage(sessionId, assistant.id, "done"));
+            turnOutcome(options, "stopped");
           } else {
+            turnOutcome(options, "failed");
             store.finishMessage(sessionId, assistant.id, "error");
             emit("error", {
               id: assistant.id,

@@ -15,6 +15,7 @@ export interface DemoSessionMeta {
   userId: string | null;
   keyId: string | null;
   title: string | null;
+  archived: boolean;
   createdAt: string;
   updatedAt: string;
 }

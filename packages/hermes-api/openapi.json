@@ -656,6 +656,67 @@
         }
       }
     },
+    "/v1/metrics": {
+      "get": {
+        "operationId": "getV1Metrics",
+        "tags": [
+          "System"
+        ],
+        "summary": "Prometheus metrics",
+        "description": "API keys only. Scope: `status:read`.",
+        "x-hermes-scope": "status:read",
+        "x-hermes-audience": "key",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing scope or wrong principal type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/openapi.json": {
       "get": {
         "operationId": "getV1OpenapiJson",

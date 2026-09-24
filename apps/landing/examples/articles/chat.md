@@ -1,83 +1,47 @@
-# Chat architecture
+# The reference chat app
 
-The chat example is the smallest complete hermes-remote integration: one
-client, two hooks, and a streaming protocol. Everything on screen is driven by
-`useChat` and `useSessions` from `@intheloop-studio/hermes-remote-react`.
+This is the chat app in the repository's `apps/chat`, the same code you can run against your own server. On this site it runs on built-in demo data in your browser, which is why it shows a demo banner. Everything on screen comes from one `HermesClient` and the `useChat` hook.
 
-## The client
-
-The app creates a single anonymous `HermesClient`. Against a real deployment
-that is one line. Point `baseUrl` at your server:
+## One client, three ways to connect
 
 ```ts
-import { HermesClient } from "@intheloop-studio/hermes-remote-client";
+import { HermesClient } from "@intheloop-studio/hermes-remote-react";
 
-export const client = new HermesClient({ baseUrl: "https://agent.example.com" });
+export const client = new HermesClient({
+  baseUrl: import.meta.env.VITE_HERMES_API_URL,
+  // Signed-in users: hand the client a fresh token whenever it needs one.
+  tokenProvider: async () => (await supabase.auth.getSession()).data.session?.access_token ?? "",
+});
 ```
 
-The hosted example has no server behind it: it passes the client a custom
-`fetch` implementation that answers every request from built-in demo data,
-entirely in your browser. The client cannot tell the difference, which is the
-point: `fetch` is an injectable seam in `HermesClientOptions`.
+- **Signed in** (Supabase here, any provider in general): each person gets their own chats, and search works across them.
+- **Anonymous** (`hermes-remote serve --anonymous`): chats are addressed by id, so the app remembers the ids it created in `localStorage` and lists them with `client.listSessions(ids)`.
+- **Demo** (this page): the client is given a `fetch` that answers from sample data. The client can't tell the difference, because `fetch` is an ordinary option.
 
-Anonymous mode means the server assigns the visitor a per-IP principal.
-Sessions created here are addressable by id only, which is why the app keeps
-its session ids in `localStorage` and passes them to `useSessions`.
-
-## useChat drives the conversation
+## useChat runs the conversation
 
 ```tsx
 const chat = useChat({ client });
 
-await chat.send("hello");     // POST /v1/sessions/:id/messages → SSE stream
-await chat.edit(id, "fixed"); // PATCH …/messages/:id → truncate + regenerate
-await chat.react(id, "🔥");   // POST …/reactions
-await chat.stop();            // POST …/stop, keeps the partial reply
-await chat.open(otherId);     // load a previous session's history
-chat.reset();                 // next send creates a fresh session
+chat.send("Summarize the overnight logs", attachments); // streams the reply
+chat.edit(lastMessage.id, "Summarize only the errors"); // replace and regenerate
+chat.react(reply.id, "🔥");                             // toggle a reaction
+chat.stop();                                            // keep the partial reply
+chat.open(sessionId);                                   // load an earlier chat
+chat.reset();                                           // next send starts a new chat
 ```
 
-`useChat` holds the message list and a `streaming` flag. Internally it feeds
-every server-sent event through a pure reducer (`chat-events.ts` in the
-package): `user` events append the echoed message, `assistant` opens a
-placeholder, `delta` appends token text to it, `done` finalizes, `error` marks
-the message failed. Because the reducer is pure, the whole streaming lifecycle
-is unit-testable without a browser or a server.
+`chat.messages` fills in token by token while `chat.streaming` is true; the Send button becomes Stop for that time. The first send creates the session, so the app only needs to refresh its list afterwards.
 
-## The SSE protocol underneath
+## The chat list
 
-One turn is a single HTTP response with five event types:
+The sidebar uses the client's session methods directly: `listSessions`, `searchSessions` (owner-scoped, for signed-in users), `renameSession`, `archiveSession` and `deleteSession`. Archived chats leave the list but keep their history; `listSessions(undefined, { archived: true })` brings them back.
 
-| event | payload | UI effect |
-| ----- | ------- | --------- |
-| `user` | the persisted user message | render immediately |
-| `assistant` | `{ id }` | open a streaming bubble |
-| `delta` | `{ id, text }` | append to the bubble |
-| `done` | the final message | swap in the complete message |
-| `error` | `{ id, message }` | mark the bubble failed |
+## Details worth copying
 
-The cursor you see mid-reply is just `message.status === "streaming"`, no
-extra state.
+- **Attachments are checked in the browser** against the types the server accepts (PNG, JPEG, GIF, WebP), so a wrong file gets a clear message instead of a failed send.
+- **The thread is a live region** (`role="log"`, `aria-live="polite"`), so screen readers announce replies as they stream. Icon buttons have labels, and editing moves focus into the message box.
+- **On phones the chat list is a drawer**, opened from the top bar.
+- **Errors say what happened**, for example a reply that didn't finish, and what to do next.
 
-## Sessions for anonymous visitors
-
-`useSessions({ client, ids })` lists sessions. Signed-in users get their own
-sessions automatically; anonymous visitors must present ids, so the app
-remembers every session it creates:
-
-```ts
-const ids = JSON.parse(localStorage.getItem("sessions") ?? "[]") as string[];
-const sessions = useSessions({ client, ids });
-```
-
-The hook deliberately keys its refresh on `ids.join(",")` rather than the
-array identity, so you can pass a fresh array literal on every render without
-causing an effect loop.
-
-## What the server adds
-
-Each turn the server prepends a verified identity line for the agent (an
-anonymous visitor is introduced as exactly that), persists both sides of the
-conversation in SQLite, enforces message-size limits and per-principal rate
-limits, and proxies the model stream from the inference provider. The
-upstream API key never reaches this page.
+The source is small enough to read in one sitting: `src/App.tsx` for the flow, `src/components/` for the pieces.

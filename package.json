@@ -1,10 +1,9 @@
 {
-  "name": "hermes-web",
+  "name": "hermes-remote",
   "private": true,
   "workspaces": [
     "packages/*",
     "apps/*",
-    "apps/examples/*",
     "integration"
   ],
   "scripts": {
