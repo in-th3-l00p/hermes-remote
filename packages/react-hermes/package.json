@@ -1,6 +1,6 @@
 {
   "name": "@intheloop-studio/hermes-remote-react",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "description": "React hooks for Hermes Remote",
   "license": "MIT",
   "author": "Tisca Catalin",
@@ -34,7 +34,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@intheloop-studio/hermes-remote-client": "^1.2.0"
+    "@intheloop-studio/hermes-remote-client": "^2.0.0"
   },
   "peerDependencies": {
     "react": ">=18"

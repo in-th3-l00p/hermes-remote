@@ -1,6 +1,7 @@
 import { isValidCidr, type AuthProviderConfig, type KeyStore } from "@intheloop-studio/hermes-remote";
 import { flag, flagAll, parseArgs, type ParsedArgs } from "../args.ts";
 import { loadConfig, type ConfigFile } from "../config.ts";
+import { loadSigningSecret } from "../signing.ts";
 import {
   fail,
   ok,
@@ -112,6 +113,7 @@ export async function serveCommand(
   let running: { port: number };
   try {
     running = await ctx.serve({
+      signingSecret: await loadSigningSecret(ctx.homeDir),
       port,
       host,
       store: paths.store,

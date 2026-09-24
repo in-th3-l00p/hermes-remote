@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { HermesClient, useChat } from "@intheloop-studio/hermes-remote-react";
 import type {
   Attachment,
+  AttachmentType,
   ChatMessage,
   ChatSessionMeta,
 } from "@intheloop-studio/hermes-remote-react";
@@ -56,13 +57,24 @@ function rememberLocalSession(id: string): void {
   }
 }
 
+const ACCEPTED_TYPES: readonly AttachmentType[] = ["image/png", "image/jpeg", "image/gif", "image/webp"];
+
+function isAcceptedType(type: string): type is AttachmentType {
+  return (ACCEPTED_TYPES as readonly string[]).includes(type);
+}
+
 function readFileAsDataUrl(file: File): Promise<Attachment> {
   return new Promise((resolve, reject) => {
+    const type = file.type;
+    if (!isAcceptedType(type)) {
+      reject(new Error(`${file.name}: only PNG, JPEG, GIF and WebP images can be attached`));
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () =>
       resolve({
         name: file.name,
-        type: file.type,
+        type,
         dataUrl: String(reader.result),
       });
     reader.onerror = () => reject(new Error("could not read file"));
@@ -323,6 +335,7 @@ export function App() {
   );
   const [identity, setIdentity] = useState("anonymous");
   const [authError, setAuthError] = useState<string | null>(null);
+  const [attachError, setAttachError] = useState<string | null>(null);
   const authReady = authState === "signedIn";
 
   useEffect(() => {
@@ -419,7 +432,12 @@ export function App() {
     if (files === null) {
       return;
     }
-    const loaded = await Promise.all([...files].map(readFileAsDataUrl));
+    const results = await Promise.allSettled([...files].map(readFileAsDataUrl));
+    const loaded = results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+    const failed = results.flatMap((r) =>
+      r.status === "rejected" ? [r.reason instanceof Error ? r.reason.message : String(r.reason)] : [],
+    );
+    setAttachError(failed.length === 0 ? null : failed.join("; "));
     setAttachments((prev) => [...prev, ...loaded]);
   };
 
@@ -550,6 +568,11 @@ export function App() {
               }
             />
           ))}
+          {attachError !== null && (
+            <div className="px-4 pb-2">
+              <Badge variant="destructive">{attachError}</Badge>
+            </div>
+          )}
           {chat.error !== null && (
             <div className="flex justify-center">
               <Badge variant="destructive">{chat.error}</Badge>
@@ -609,7 +632,7 @@ export function App() {
             <input
               ref={fileRef}
               type="file"
-              accept="image/*"
+              accept={ACCEPTED_TYPES.join(",")}
               multiple
               hidden
               onChange={(e) => {

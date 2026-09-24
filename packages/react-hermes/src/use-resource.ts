@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useLatest } from "./client-ref.ts";
 
 export interface UseResource<T> {
   data: T | null;
@@ -14,13 +15,14 @@ export function useResource<T>(
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const fetcherRef = useLatest(fetcher);
 
-  // The fetcher is intentionally keyed by deps, not identity.
+  // Keyed by deps, not fetcher identity; the ref supplies the newest fetcher.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      setData(await fetcher());
+      setData(await fetcherRef.current());
       setError(null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -49,12 +51,14 @@ export function useAction<A extends unknown[], R>(
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<R | null>(null);
+  const fnRef = useLatest(fn);
 
+  // Stable across renders, but always calls the newest fn (no stale closure).
   const run = useCallback(
     async (...args: A): Promise<R | null> => {
       setPending(true);
       try {
-        const value = await fn(...args);
+        const value = await fnRef.current(...args);
         setResult(value);
         setError(null);
         return value;
@@ -65,8 +69,7 @@ export function useAction<A extends unknown[], R>(
         setPending(false);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [fnRef],
   );
 
   return { run, pending, error, result };

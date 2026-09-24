@@ -92,7 +92,9 @@ function AgentStatus({ client }: { client: HermesClient }) {
 
 ## Management hooks
 
-Every management surface has a hook for dashboard building: `useProfiles`, `useAgentStatus`, `useConfig`, `useMemory`, `useSoul`, `useSkills`, `useBundles`, `useJobsAdmin`, `useCheckpoints`, `useHooksInfo`, `useGateway`, `useKanban`, `useProjects`, `useToolsets`, `useMcp`, `usePlugins`, `useAgentSessions`, `useCommands`. Each takes `{ client }` and returns `{ data, loading, error, refresh }`. They are built on two exported generics you can reuse for anything else: `useResource(fetcher, deps)` and `useAction(fn)`.
+Every management surface has a hook for dashboard building: `useProfiles`, `useAgentStatus`, `useConfig`, `useMemory`, `useSoul`, `useSkills`, `useBundles`, `useJobsAdmin`, `useCheckpoints`, `useHooksInfo`, `useGateway`, `useKanban`, `useProjects`, `useToolsets`, `useMcp`, `usePlugins`, `useAgentSessions`, `useCommands`. Each takes `{ client }` and returns `{ data, loading, error, refresh }`. Also: `useHermesAuth` (who the server says you are), `useJourney`, `useSubagents`, `useSession({ client, sessionId })` (a session's messages), `useInsights({ client, days?, source? })` and `useSkillHub({ client, query, source? })` (searches only non-blank queries).
+
+Hooks key their effects on the client's `baseUrl`, not its object identity, and always call the newest client. Creating the client inline (`useChat({ client: new HermesClient(...) })`) no longer causes refetch loops, though memoizing it is still cheaper. They are built on two exported generics you can reuse for anything else: `useResource(fetcher, deps)` and `useAction(fn)`.
 
 Two richer hooks:
 

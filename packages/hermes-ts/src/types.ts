@@ -1,8 +1,10 @@
-export interface Attachment {
-  name: string;
-  type: string;
-  dataUrl: string;
-}
+import type { components } from "./openapi.ts";
+
+/** An inline image attachment; the server accepts PNG, JPEG, GIF and WebP. */
+export type Attachment = components["schemas"]["Attachment"];
+
+/** The attachment types the server accepts. */
+export type AttachmentType = Attachment["type"];
 
 export interface ChatMessage {
   id: string;
@@ -15,12 +17,20 @@ export interface ChatMessage {
   status: "streaming" | "done" | "error";
 }
 
+/** Who the server says the caller is (`GET /v1/auth/whoami`). */
+export type WhoAmI =
+  | { type: "api_key"; id: string; name: string; scopes: string[] }
+  | { type: "user"; id: string; email?: string }
+  | { type: "anonymous" };
+
 export interface ChatSessionMeta {
   id: string;
   userId: string | null;
   /** Id of the API key that created the session (servers from 3.2.1). */
   keyId?: string | null;
   title: string | null;
+  /** Hidden from the default listing (servers from 3.4). */
+  archived?: boolean;
   createdAt: string;
   updatedAt: string;
 }

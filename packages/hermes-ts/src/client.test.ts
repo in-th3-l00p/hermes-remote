@@ -90,10 +90,55 @@ describe("HermesClient", () => {
     expect(await client.listSessions()).toEqual([{ id: "s1" } as never]);
     expect(await client.listSessions([])).toEqual([{ id: "s1" } as never]);
     await client.listSessions(["a", "b"]);
-    expect(calls[2]?.url).toBe("http://x/v1/sessions?ids=a,b");
+    expect(new URL(calls[2]?.url ?? "").searchParams.get("ids")).toBe("a,b");
     await client.deleteSession("s1");
     expect(calls[3]?.init.method).toBe("DELETE");
     expect(calls[3]?.url).toBe("http://x/v1/sessions/s1");
+    await client.listSessions(undefined, { archived: true });
+    expect(calls[4]?.url).toBe("http://x/v1/sessions?archived=true");
+  });
+
+  test("whoami asks the server who the caller is", async () => {
+    const { calls, fetch } = mockFetch(() => Response.json({ type: "anonymous" }));
+    const client = new HermesClient({ baseUrl: "http://x", fetch });
+    expect(await client.whoami()).toEqual({ type: "anonymous" });
+    expect(calls[0]?.url).toBe("http://x/v1/auth/whoami");
+  });
+
+  test("renames, archives, forks, searches and exports sessions", async () => {
+    const { calls, fetch } = mockFetch((url) =>
+      url.includes("/export")
+        ? new Response("# T")
+        : url.includes("/search")
+          ? Response.json({ sessions: [{ id: "s2" }] })
+          : Response.json({ id: "s1" }),
+    );
+    const client = new HermesClient({ baseUrl: "http://x", fetch });
+    await client.renameSession("s1", "Plans");
+    expect([calls[0]?.init.method, calls[0]?.url, calls[0]?.init.body]).toEqual([
+      "PATCH",
+      "http://x/v1/sessions/s1",
+      JSON.stringify({ title: "Plans" }),
+    ]);
+    await client.archiveSession("s1");
+    expect(calls[1]?.init.body).toBe(JSON.stringify({ archived: true }));
+    await client.archiveSession("s1", false);
+    expect(calls[2]?.init.body).toBe(JSON.stringify({ archived: false }));
+    await client.forkSession("s1", "m1");
+    expect([calls[3]?.url, calls[3]?.init.body]).toEqual([
+      "http://x/v1/sessions/s1/fork",
+      JSON.stringify({ messageId: "m1" }),
+    ]);
+    await client.forkSession("s1");
+    expect(calls[4]?.init.body).toBe("{}");
+    expect(await client.searchSessions("launch plan", 5)).toEqual([{ id: "s2" } as never]);
+    expect(calls[5]?.url).toBe("http://x/v1/sessions/search?q=launch+plan&limit=5");
+    await client.searchSessions("x");
+    expect(calls[6]?.url).toBe("http://x/v1/sessions/search?q=x");
+    expect(await (await client.exportSession("s1", "markdown")).text()).toBe("# T");
+    expect(calls[7]?.url).toBe("http://x/v1/sessions/s1/export?format=markdown");
+    await client.exportSession("s1");
+    expect(calls[8]?.url).toBe("http://x/v1/sessions/s1/export");
   });
 
   test("sendMessage streams chat events", async () => {

@@ -14,6 +14,8 @@ export function whoamiBody(principal: Principal): unknown {
       type: "user",
       id: principal.userId,
       ...(principal.email === undefined ? {} : { email: principal.email }),
+      ...(principal.scopes === undefined ? {} : { scopes: principal.scopes }),
+      ...(principal.visibility === undefined ? {} : { visibility: principal.visibility }),
     };
   }
   return { type: "anonymous" };

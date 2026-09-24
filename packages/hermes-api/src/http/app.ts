@@ -24,6 +24,8 @@ import {
   profileMiddleware,
 } from "./middleware.ts";
 import { whoamiBody } from "./whoami.ts";
+import { buildOpenApi } from "../openapi/index.ts";
+import { registerUserRoutes, type UserStore, type UserTokenIssuer } from "../users/index.ts";
 
 export interface AuditEntry {
   at: string;
@@ -52,6 +54,11 @@ export interface AppOptions {
   upstream?: UpstreamAppOptions;
   /** Enables the profile, config, and agent-management routes. */
   management?: ManagementOptions;
+  /**
+   * Token exchange and user records: enables POST /v1/auth/token, the
+   * /v1/users routes, and authentication of the tokens they mint.
+   */
+  users?: { store: UserStore; issuer: UserTokenIssuer };
   /** Provider for end-user bearer tokens (Supabase, Clerk, generic JWT, or custom). */
   authProvider?: AuthProvider;
   /** Allow unauthenticated access to chat routes (demo / anonymous mode). */
@@ -99,6 +106,7 @@ export function createApp(options: AppOptions = {}): App {
   const now = options.now ?? (() => new Date());
   const events = options.events ?? new EventBus(now);
   const app = new Hono<ChatEnv>();
+  let routes: RouteInfo[] = [];
 
   const origins = options.corsOrigins ?? [];
   if (origins.length > 0) {
@@ -120,7 +128,13 @@ export function createApp(options: AppOptions = {}): App {
   app.use(
     authFailureLimiter(options.authFailureLimit ?? DEFAULT_AUTH_FAILURE_LIMIT),
   );
-  app.use(authMiddleware(options));
+  const { users: userOptions, ...authOptions } = options;
+  app.use(
+    authMiddleware({
+      ...authOptions,
+      ...(userOptions === undefined ? {} : { users: { ...userOptions, now } }),
+    }),
+  );
   if (options.rateLimit !== undefined) {
     app.use(principalRateLimiter(options.rateLimit));
   }
@@ -130,6 +144,19 @@ export function createApp(options: AppOptions = {}): App {
   }
 
   app.get("/v1/auth/whoami", (c) => c.json(whoamiBody(c.get("principal"))));
+  // Built on first request, when every route is registered.
+  let openapi: Record<string, unknown> | null = null;
+  app.get("/v1/openapi.json", (c) => {
+    openapi ??= buildOpenApi(routes, version);
+    return c.json(openapi);
+  });
+  if (options.users !== undefined) {
+    registerUserRoutes(app, {
+      ...options.users,
+      ...(options.chat === undefined ? {} : { chat: options.chat.store }),
+      now,
+    });
+  }
   registerEventRoutes(app, events, options.eventsHeartbeatMs ?? 15_000);
   if (options.management !== undefined) {
     registerProfileRoutes(app, options.management);
@@ -201,7 +228,7 @@ export function createApp(options: AppOptions = {}): App {
     return errorResponse(c, 500, "internal_error", "Internal server error");
   });
 
-  const routes = app.routes
+  routes = app.routes
     .filter((r) => r.method !== "ALL")
     .map((r) => ({ method: r.method, path: r.path }));
   return {

@@ -132,4 +132,24 @@ describe("conversation handle", () => {
     }
     expect(calls).toEqual(["POST /v1/sessions/s2/messages"]);
   });
+
+  test("send also takes the object form sendMessage uses", async () => {
+    const { client } = makeClient();
+    const seen: unknown[] = [];
+    client.sendMessage = (async function* (id: string, input: unknown) {
+      seen.push([id, input]);
+    }) as typeof client.sendMessage;
+    const conversation = client.conversation("s3");
+    const attachment = { name: "a.png", type: "image/png" as const, dataUrl: "data:image/png;base64,AA==" };
+    for await (const event of conversation.send({ content: "look", attachments: [attachment] })) {
+      void event;
+    }
+    for await (const event of conversation.send("plain")) {
+      void event;
+    }
+    expect(seen).toEqual([
+      ["s3", { content: "look", attachments: [attachment] }],
+      ["s3", { content: "plain" }],
+    ]);
+  });
 });

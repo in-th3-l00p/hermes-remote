@@ -2,6 +2,8 @@
 
 `@intheloop-studio/hermes-remote-client` is a zero-dependency, isomorphic client. It runs in browsers, Node 18+, and Bun, and ships full type declarations.
 
+The package also exports `paths`, `operations` and `components`: types generated from the server's OpenAPI document, for calling routes through `client.request()` with typed bodies and responses.
+
 ## Construction and auth
 
 ```ts
@@ -20,7 +22,9 @@ const browser = new HermesClient({
 const anonymous = new HermesClient({ baseUrl: "http://localhost:8643" });
 ```
 
-With a `tokenProvider`, a 401 makes the client fetch a fresh token and retry once, so expired JWTs heal transparently. Extra `headers` can be passed in the options; `withProfile(name)` returns a client with `X-Hermes-Profile` set on every call.
+With a `tokenProvider`, a 401 makes the client fetch a fresh token and retry once, so expired JWTs heal transparently. Extra `headers` can be passed in the options; `withProfile(name)` returns a client with `X-Hermes-Profile` set on every call. `client.whoami()` returns the principal the server resolved for these credentials.
+
+Idempotent requests (`GET`, `HEAD`, including opening event streams) are retried after a network error or a 502/503/504: 2 retries by default, with backoff starting at 250 ms. Tune it with `retry: { attempts, baseDelayMs }` or turn it off with `retry: false`. Sends, edits and other mutations are never retried automatically.
 
 ## Chat methods
 
@@ -28,7 +32,11 @@ With a `tokenProvider`, a 401 makes the client fetch a fresh token and retry onc
 | ------ | ------- |
 | `status()` | `{ ok, version }` |
 | `createSession()` | `ChatSession` |
-| `listSessions(ids?)` | `ChatSessionMeta[]` (pass ids for anonymous principals) |
+| `listSessions(ids?, { archived? })` | `ChatSessionMeta[]` (pass ids for anonymous principals) |
+| `renameSession(id, title)` / `archiveSession(id, archived?)` | `ChatSessionMeta` |
+| `forkSession(id, messageId?)` | `ChatSession` (the new copy) |
+| `searchSessions(query, limit?)` | `ChatSessionMeta[]` |
+| `exportSession(id, "json" \| "markdown")` | raw `Response` (a download) |
 | `deleteSession(id)` | void |
 | `listMessages(sessionId)` | `ChatMessage[]` |
 | `sendMessage(sessionId, { content, attachments? }, { signal? })` | `AsyncIterable<ChatEvent>` |
@@ -73,6 +81,8 @@ await conversation.messages();  // ChatMessage[]
 await conversation.stop();      // abort the in-flight turn
 await conversation.remove();    // delete the session
 ```
+
+`send` takes a plain string or the same `{ content, attachments }` object `client.sendMessage` takes.
 
 ## Discovery, runs, and jobs
 

@@ -7,7 +7,11 @@ The chat surface is the server's own product layer: sessions and messages persis
 | Route | Scope | Purpose |
 | ----- | ----- | ------- |
 | `POST /v1/sessions` | `sessions:write` | Create a session, owned by the caller |
-| `GET /v1/sessions?limit=&offset=` | `sessions:read` | List own sessions; anonymous callers (and keys with `sessions:read-all`) pass `?ids=a,b` |
+| `GET /v1/sessions?limit=&offset=&archived=` | `sessions:read` | List own sessions (archived ones with `archived=true`); anonymous callers (and keys with `sessions:read-all`) pass `?ids=a,b` |
+| `GET /v1/sessions/search?q=&limit=` | `sessions:search` | Case-insensitive search over your own session titles and messages; anonymous callers get an empty list |
+| `PATCH /v1/sessions/:id` | `sessions:write` | Body `{title?, archived?}`: rename (1 to 120 characters) and/or archive |
+| `POST /v1/sessions/:id/fork` | `sessions:write` | Body `{messageId?}`: copy history (up to and including that message) into a new session you own |
+| `GET /v1/sessions/:id/export?format=` | `sessions:read` | Download the session as JSON, or a Markdown transcript with `format=markdown` |
 | `DELETE /v1/sessions/:id` | `sessions:write` | Delete a session and its messages |
 | `GET /v1/sessions/:id/messages?limit=&offset=` | `sessions:read` | Message history with a `total` count |
 | `POST /v1/sessions/:id/messages` | `chat:invoke` | Send `{content, attachments?}`; streams SSE |

@@ -62,8 +62,12 @@ export { parseSse } from "./sse.ts";
 export type { SseEvent } from "./sse.ts";
 export type {
   Attachment,
+  AttachmentType,
   ChatEvent,
   ChatMessage,
   ChatSession,
   ChatSessionMeta,
+  WhoAmI,
 } from "./types.ts";
+/** Types generated from the server's OpenAPI document. */
+export type { components, operations, paths } from "./openapi.ts";

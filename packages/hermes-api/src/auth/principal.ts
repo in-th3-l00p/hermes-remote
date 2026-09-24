@@ -1,6 +1,7 @@
 import { ipInCidr } from "../limits/index.ts";
 import type { AuthProvider } from "./providers/index.ts";
 import type { ApiKeyRecord } from "./keys.ts";
+import { UserTokenIssuer, type AgentVisibility, type UserStore } from "../users/index.ts";
 
 export interface KeyVerifier {
   verifyToken(token: string): Promise<ApiKeyRecord | null>;
@@ -8,7 +9,17 @@ export interface KeyVerifier {
 
 export type Principal =
   | { type: "api_key"; record: ApiKeyRecord }
-  | { type: "user"; userId: string; email?: string; guest?: true }
+  | {
+      type: "user";
+      userId: string;
+      email?: string;
+      guest?: true;
+      /** Set for tokens minted by token exchange: exactly these scopes. */
+      scopes?: string[];
+      /** Set for exchanged users: what the agent may learn about them. */
+      visibility?: AgentVisibility;
+      profile?: Record<string, unknown>;
+    }
   | { type: "anonymous"; ip?: string };
 
 export interface AuthDenial {
@@ -21,6 +32,8 @@ export interface AuthenticateOptions {
   store?: KeyVerifier;
   authProvider?: AuthProvider;
   anonymous?: boolean;
+  /** Enables tokens minted by POST /v1/auth/token. */
+  users?: { store: UserStore; issuer: UserTokenIssuer; now: () => Date };
 }
 
 export function principalKey(principal: Principal): string {
@@ -69,6 +82,22 @@ export async function authenticate(
       return denial(401, "unauthorized", "API key not allowed from this address");
     }
     return { type: "api_key", record };
+  }
+  if (options.users !== undefined && UserTokenIssuer.isOwnToken(token)) {
+    const { store, issuer } = options.users;
+    const claims = issuer.verify(token, options.users.now());
+    const user = claims === null ? null : store.get(claims.sub);
+    // Disabling a user bumps its generation, so older tokens stop here.
+    if (claims === null || user === null || user.disabled || user.generation !== claims.gen) {
+      return denial(401, "unauthorized", "Invalid, expired or revoked user token");
+    }
+    return {
+      type: "user",
+      userId: user.id,
+      scopes: claims.scp,
+      visibility: user.agentVisibility,
+      profile: user.profile,
+    };
   }
   if (options.authProvider !== undefined) {
     const user = await options.authProvider.verify(token);

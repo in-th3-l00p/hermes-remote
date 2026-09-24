@@ -1,3 +1,5 @@
+import { Prompt, Query, Task, Url } from "../../openapi/schemas.ts";
+import { readBody } from "../../openapi/validate.ts";
 import { checkPublicUrl } from "../net-guard.ts";
 import type { Context, Hono } from "hono";
 import { principalKey } from "../../auth/index.ts";
@@ -19,12 +21,6 @@ async function audioApiEnabled(options: UpstreamRouteOptions): Promise<unknown> 
   return options.upstream.discovery.capabilities().catch(() => null);
 }
 
-/** Tool inputs share the chat message cap: they are prompts to a paid model. */
-const MAX_TOOL_INPUT = 8_000;
-
-function toolText(value: unknown): value is string {
-  return typeof value === "string" && value.trim() !== "" && value.length <= MAX_TOOL_INPUT;
-}
 
 export function registerMediaRoutes(
   app: Hono<ChatEnv>,
@@ -124,15 +120,11 @@ export function registerMediaRoutes(
     if (denied !== null) {
       return denied;
     }
-    const body = (await c.req.json().catch(() => null)) as {
-      prompt?: unknown;
-      model?: unknown;
-    } | null;
-    if (!toolText(body?.prompt)) {
-      return error(400, "invalid_request", `prompt (string, up to ${MAX_TOOL_INPUT} characters) is required`);
+    const body = await readBody(c, Prompt);
+    if (body instanceof Response) {
+      return body;
     }
-    const model =
-      typeof body.model === "string" ? ` Use the ${body.model} model.` : "";
+    const model = body.model === undefined ? "" : ` Use the ${body.model} model.`;
     return toolRun(
       c,
       "image_gen",
@@ -145,11 +137,9 @@ export function registerMediaRoutes(
     if (denied !== null) {
       return denied;
     }
-    const body = (await c.req.json().catch(() => null)) as {
-      query?: unknown;
-    } | null;
-    if (!toolText(body?.query)) {
-      return error(400, "invalid_request", `query (string, up to ${MAX_TOOL_INPUT} characters) is required`);
+    const body = await readBody(c, Query);
+    if (body instanceof Response) {
+      return body;
     }
     return toolRun(c, "web_search", `Search the web for: ${body.query}.`);
   });
@@ -159,11 +149,9 @@ export function registerMediaRoutes(
     if (denied !== null) {
       return denied;
     }
-    const body = (await c.req.json().catch(() => null)) as {
-      url?: unknown;
-    } | null;
-    if (typeof body?.url !== "string") {
-      return error(400, "invalid_request", "url (http/https string) is required");
+    const body = await readBody(c, Url);
+    if (body instanceof Response) {
+      return body;
     }
     // The agent fetches this URL from the host, so it must not reach the
     // host's own network; only the normalized href goes into the prompt.
@@ -180,11 +168,9 @@ export function registerMediaRoutes(
     if (denied !== null) {
       return denied;
     }
-    const body = (await c.req.json().catch(() => null)) as {
-      task?: unknown;
-    } | null;
-    if (!toolText(body?.task)) {
-      return error(400, "invalid_request", `task (string, up to ${MAX_TOOL_INPUT} characters) is required`);
+    const body = await readBody(c, Task);
+    if (body instanceof Response) {
+      return body;
     }
     try {
       const input = `Using the browser automation toolset, complete this task and report the outcome: ${body.task}`;

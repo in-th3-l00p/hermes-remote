@@ -1,10 +1,10 @@
+import { ProfileCreate, ProfileInstall, ProfilePatch } from "../openapi/schemas.ts";
 import type { Hono } from "hono";
 import { error, json, type ChatEnv } from "../chat/routes/shared.ts";
 import { profileArgs } from "./registry.ts";
 import {
   cliResponse,
   currentProfile,
-  invalidParam,
   requireKeyScope,
   runCli,
   withUploadedArchive,
@@ -38,12 +38,11 @@ export function registerProfileRoutes(
     if (denied !== null) {
       return denied;
     }
-    const body = (await c.req.json().catch(() => null)) as { name?: unknown } | null;
-    const name = body?.name;
-    if (typeof name !== "string" || name === "" || invalidParam(name)) {
+    const parsed = ProfileCreate.safeParse(await c.req.json().catch(() => undefined));
+    if (!parsed.success) {
       return error(400, "invalid_request", "name (string) is required");
     }
-    return runCli(c, cli, ["profile", "create", name]);
+    return runCli(c, cli, ["profile", "create", parsed.data.name]);
   });
 
   app.delete(`/v1/profiles/${NAME}`, (c) => {
@@ -56,15 +55,13 @@ export function registerProfileRoutes(
     if (denied !== null) {
       return denied;
     }
-    const body = (await c.req.json().catch(() => null)) as {
-      rename?: unknown;
-      description?: unknown;
-    } | null;
+    const parsed = ProfilePatch.safeParse(await c.req.json().catch(() => undefined));
+    const body = parsed.success ? parsed.data : null;
     const name = c.req.param("name");
-    if (typeof body?.rename === "string" && !invalidParam(body.rename)) {
+    if (body?.rename !== undefined) {
       return runCli(c, cli, ["profile", "rename", name, body.rename]);
     }
-    if (typeof body?.description === "string" && !invalidParam(body.description)) {
+    if (body?.description !== undefined) {
       return runCli(c, cli, ["profile", "describe", name, body.description]);
     }
     return error(400, "invalid_request", "rename or description is required");
@@ -94,10 +91,11 @@ export function registerProfileRoutes(
     if (denied !== null) {
       return denied;
     }
-    const body = (await c.req.json().catch(() => null)) as { source?: unknown } | null;
-    if (typeof body?.source !== "string" || invalidParam(body.source)) {
+    const parsed = ProfileInstall.safeParse(await c.req.json().catch(() => undefined));
+    if (!parsed.success) {
       return error(400, "invalid_request", "source (string) is required");
     }
+    const body = parsed.data;
     return runCli(c, cli, [
       "profile",
       "install",

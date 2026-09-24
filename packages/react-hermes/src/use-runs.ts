@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { clientKey, useLatest } from "./client-ref.ts";
 import type { RunRef, SseEvent } from "@intheloop-studio/hermes-remote-client";
 
 export interface RunsClientLike {
@@ -21,7 +22,8 @@ export interface UseRuns {
 }
 
 export function useRuns(options: UseRunsOptions): UseRuns {
-  const { client } = options;
+  const clientRef = useLatest(options.client);
+  const key = clientKey(options.client);
   const [runs, setRuns] = useState<RunRef[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,22 +31,23 @@ export function useRuns(options: UseRunsOptions): UseRuns {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      setRuns(await client.runs.list());
+      setRuns(await clientRef.current.runs.list());
       setError(null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
       setLoading(false);
     }
-  }, [client]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
 
   const create = useCallback(
     async (body: Record<string, unknown>) => {
-      const created = await client.runs.create(body);
+      const created = await clientRef.current.runs.create(body);
       await refresh();
       return created;
     },
-    [client, refresh],
+    [clientRef, refresh],
   );
 
   useEffect(() => {
@@ -72,7 +75,9 @@ export interface UseRunEvents {
 }
 
 export function useRunEvents(options: UseRunEventsOptions): UseRunEvents {
-  const { client, runId } = options;
+  const { runId } = options;
+  const clientRef = useLatest(options.client);
+  const key = clientKey(options.client);
   const [events, setEvents] = useState<SseEvent[]>([]);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +92,7 @@ export function useRunEvents(options: UseRunEventsOptions): UseRunEvents {
     const controller = new AbortController();
     void (async () => {
       try {
-        for await (const event of client.runs.events(runId, controller.signal)) {
+        for await (const event of clientRef.current.runs.events(runId, controller.signal)) {
           setEvents((prev) => [...prev, event]);
         }
         setDone(true);
@@ -100,7 +105,8 @@ export function useRunEvents(options: UseRunEventsOptions): UseRunEvents {
     return () => {
       controller.abort();
     };
-  }, [client, runId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, runId]);
 
   return { events, done, error };
 }

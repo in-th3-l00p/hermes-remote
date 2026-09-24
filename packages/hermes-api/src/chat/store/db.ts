@@ -14,6 +14,7 @@ export interface SessionRow {
   user_id: string | null;
   key_id: string | null;
   title: string | null;
+  archived: number;
   created_at: string;
   updated_at: string;
 }
@@ -48,6 +49,7 @@ export function toMeta(row: SessionRow): ChatSessionMeta {
     userId: row.user_id,
     keyId: row.key_id,
     title: row.title,
+    archived: row.archived === 1,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -68,6 +70,7 @@ export function openDatabase(path: string): Database {
       user_id TEXT,
       key_id TEXT,
       title TEXT,
+      archived INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -92,6 +95,9 @@ export function openDatabase(path: string): Database {
     .map((c) => c.name);
   if (!columns.includes("key_id")) {
     db.run("ALTER TABLE sessions ADD COLUMN key_id TEXT");
+  }
+  if (!columns.includes("archived")) {
+    db.run("ALTER TABLE sessions ADD COLUMN archived INTEGER NOT NULL DEFAULT 0");
   }
   return db;
 }

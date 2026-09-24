@@ -1,3 +1,4 @@
+import { Content, MemoryEntry, NamedContent } from "../openapi/schemas.ts";
 import type { Context, Hono } from "hono";
 import { BridgeDenied, FsBridge } from "../bridge/index.ts";
 import { error, json, type ChatEnv } from "../chat/routes/shared.ts";
@@ -28,11 +29,10 @@ function withBridge(
   };
 }
 
+/** `{ content }` bodies, parsed with the schema the OpenAPI document publishes. */
 async function bodyContent(c: Context<ChatEnv>): Promise<string | null> {
-  const body = (await c.req.json().catch(() => null)) as {
-    content?: unknown;
-  } | null;
-  return typeof body?.content === "string" ? body.content : null;
+  const parsed = Content.safeParse(await c.req.json().catch(() => undefined));
+  return parsed.success ? parsed.data.content : null;
 }
 
 function memoryBody(content: string, limit: number): unknown {
@@ -90,22 +90,17 @@ export function registerFsRoutes(
       if (denied !== null) {
         return denied;
       }
-      const body = (await c.req.json().catch(() => null)) as {
-        action?: unknown;
-        text?: unknown;
-        from?: unknown;
-      } | null;
-      const action = body?.action;
-      const text = typeof body?.text === "string" ? body.text : null;
-      if (text === null || (action !== "add" && action !== "replace" && action !== "remove")) {
+      const parsed = MemoryEntry.safeParse(await c.req.json().catch(() => undefined));
+      if (!parsed.success) {
         return error(400, "invalid_request", "action (add|replace|remove) and text are required");
       }
+      const { action, text, from } = parsed.data;
       const current = (await fs.read("memories/MEMORY.md")) ?? "";
       const lines = current === "" ? [] : current.split("\n");
       if (action === "add") {
         lines.push(text);
       } else if (action === "replace") {
-        const index = lines.indexOf(typeof body?.from === "string" ? body.from : "");
+        const index = lines.indexOf(from ?? "");
         if (index === -1) {
           return error(404, "entry_not_found", "No matching memory entry");
         }
@@ -159,17 +154,11 @@ export function registerFsRoutes(
       if (denied !== null) {
         return denied;
       }
-      const body = (await c.req.json().catch(() => null)) as {
-        name?: unknown;
-        content?: unknown;
-      } | null;
-      if (
-        typeof body?.name !== "string" ||
-        !/^[A-Za-z0-9_-]+$/.test(body.name) ||
-        typeof body.content !== "string"
-      ) {
+      const parsed = NamedContent.safeParse(await c.req.json().catch(() => undefined));
+      if (!parsed.success) {
         return error(400, "invalid_request", "name and content are required");
       }
+      const body = parsed.data;
       const path = `skills/${body.name}/SKILL.md`;
       if ((await fs.read(path)) !== null) {
         return error(409, "skill_exists", "Skill already exists");
@@ -381,4 +370,45 @@ export function registerFsRoutes(
       });
     }),
   );
+
+  app.get(
+    `/v1/subagents/:id{[A-Za-z0-9_.-]+}`,
+    withBridge(options, async (c, fs) => {
+      const denied = guard(c, "subagents:read");
+      if (denied !== null) {
+        return denied;
+      }
+      const id = (c.req.param("id") ?? "").replace(/\.jsonl$/, "");
+      const text = await fs.scoped("cache/delegation/live").read(`${id}.jsonl`);
+      if (text === null) {
+        return error(404, "subagent_not_found", "Unknown subagent transcript");
+      }
+      // One JSON event per line; lines that don't parse are kept as text.
+      const events = text
+        .split("\n")
+        .filter((line) => line.trim() !== "")
+        .map((line) => {
+          try {
+            return JSON.parse(line) as unknown;
+          } catch {
+            return { text: line };
+          }
+        });
+      return json(200, { id, events });
+    }),
+  );
+
+  for (const action of ["steer", "stop"]) {
+    app.post(`/v1/subagents/:id{[A-Za-z0-9_.-]+}/${action}`, (c) => {
+      const denied = guard(c, "subagents:control");
+      if (denied !== null) {
+        return denied;
+      }
+      return error(
+        501,
+        "not_supported",
+        `Subagents are ${action === "stop" ? "stopped" : "steered"} from their parent session (/agents); the hermes CLI has no command for it`,
+      );
+    });
+  }
 }

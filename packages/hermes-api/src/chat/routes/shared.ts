@@ -57,7 +57,10 @@ export function requireScope(principal: Principal, scope: string): Response | nu
   const allowed =
     principal.type === "api_key"
       ? principal.record.scopes.includes(scope)
-      : isEndUserScope(scope);
+      : isEndUserScope(scope) &&
+        (principal.type !== "user" ||
+          principal.scopes === undefined ||
+          principal.scopes.includes(scope));
   if (!allowed) {
     return error(403, "missing_scope", `This route requires the ${scope} scope`);
   }

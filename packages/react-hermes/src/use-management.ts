@@ -1,3 +1,4 @@
+import { clientKey } from "./client-ref.ts";
 import { useResource, type UseResource } from "./use-resource.ts";
 
 function makeHook<C, T>(
@@ -5,7 +6,7 @@ function makeHook<C, T>(
   fetcher: (client: C) => Promise<T>,
 ): (options: { client: C }) => UseResource<T> {
   return function useManagedResource(options: { client: C }): UseResource<T> {
-    return useResource(() => fetcher(options.client), [key, options.client]);
+    return useResource(() => fetcher(options.client), [key, clientKey(options.client)]);
   };
 }
 
@@ -120,4 +121,21 @@ export const useCommands = makeHook(
 export const useJobsAdmin = makeHook(
   "jobs",
   (client: { jobs: { list(): Promise<unknown> } }) => client.jobs.list(),
+);
+
+export const useHermesAuth = makeHook(
+  "whoami",
+  (client: { whoami(): Promise<unknown> }) => client.whoami(),
+);
+
+export const useJourney = makeHook(
+  "journey",
+  (client: { memory: { journey(): Promise<CliResultLike> } }) =>
+    client.memory.journey(),
+);
+
+export const useSubagents = makeHook(
+  "subagents",
+  (client: { subagents: { list(): Promise<{ transcripts: string[] }> } }) =>
+    client.subagents.list(),
 );

@@ -83,7 +83,7 @@ API keys only, and `keys create`/`keys grant` require the `--dangerous` flag for
 
 | Scope | Grants |
 | ----- | ------ |
-| `auth:users` | Reserved for token exchange and user management |
+| `auth:users` | [Token exchange](/auth/token-exchange) and user management (`/v1/auth/token`, `/v1/users`); requires `--dangerous` |
 
 ## Granting well
 

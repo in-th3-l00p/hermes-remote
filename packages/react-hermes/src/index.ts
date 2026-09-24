@@ -10,8 +10,10 @@ export {
   useCommands,
   useConfig,
   useGateway,
+  useHermesAuth,
   useHooksInfo,
   useJobsAdmin,
+  useJourney,
   useKanban,
   useMcp,
   useMemory,
@@ -20,9 +22,16 @@ export {
   useProjects,
   useSkills,
   useSoul,
+  useSubagents,
   useToolsets,
 } from "./use-management.ts";
 export type { CliResultLike } from "./use-management.ts";
+export { useInsights, useSession, useSkillHub } from "./use-queries.ts";
+export type {
+  InsightsClientLike,
+  SessionClientLike,
+  SkillHubClientLike,
+} from "./use-queries.ts";
 export { useGoal } from "./use-goal.ts";
 export type { GoalClientLike, UseGoal } from "./use-goal.ts";
 export { useEvents } from "./use-events.ts";
@@ -49,8 +58,11 @@ export type { ChatClientLike, UseChat, UseChatOptions } from "./use-chat.ts";
 export { HermesApiError, HermesClient } from "@intheloop-studio/hermes-remote-client";
 export type {
   Attachment,
+  AttachmentType,
   ChatEvent,
   ChatMessage,
   ChatSession,
+  ChatSessionMeta,
+  WhoAmI,
 } from "@intheloop-studio/hermes-remote-client";
 export type { HermesClientOptions, TokenProvider } from "@intheloop-studio/hermes-remote-client";

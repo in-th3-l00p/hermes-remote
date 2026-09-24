@@ -80,3 +80,13 @@ export {
   isUserGrantableScope,
 } from "./scopes/index.ts";
 export type { Scope } from "./scopes/index.ts";
+export {
+  TOKEN_ISSUER,
+  UserStore,
+  UserTokenIssuer,
+  VISIBILITIES,
+  newSigningSecret,
+} from "./users/index.ts";
+export type { AgentVisibility, User, UserIdentity, UserTokenClaims } from "./users/index.ts";
+export { buildOpenApi, canonicalOpenApi, ROUTE_DOCS } from "./openapi/index.ts";
+export type { Audience, RouteDoc } from "./openapi/index.ts";

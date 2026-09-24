@@ -66,3 +66,5 @@ Skill bundles are YAML files in `skill-bundles/`.
 | `GET /v1/jobs/:id/output` | `crons:read` | List files in `cron/output/<id>/` |
 | `GET /v1/jobs/:id/output/:file` | `crons:read` | Read one output file |
 | `GET /v1/subagents` | `subagents:read` | List live delegation transcripts (`cache/delegation/live/`) |
+| `GET /v1/subagents/:id` | `subagents:read` | One transcript as `{ id, events }`, one parsed JSON event per line (lines that aren't JSON come back as `{ text }`) |
+| `POST /v1/subagents/:id/steer` / `/stop` | `subagents:control` | 501: subagents are steered and stopped from their parent session (`/agents`); the hermes CLI has no command for it |

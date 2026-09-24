@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { clientKey, useLatest } from "./client-ref.ts";
 
 export interface AgentInfoClientLike {
   discovery: {
@@ -22,7 +23,8 @@ export interface UseAgentInfo {
 }
 
 export function useAgentInfo(options: UseAgentInfoOptions): UseAgentInfo {
-  const { client } = options;
+  const clientRef = useLatest(options.client);
+  const key = clientKey(options.client);
   const [health, setHealth] = useState<unknown>(null);
   const [capabilities, setCapabilities] = useState<unknown>(null);
   const [models, setModels] = useState<unknown>(null);
@@ -33,9 +35,9 @@ export function useAgentInfo(options: UseAgentInfoOptions): UseAgentInfo {
     setLoading(true);
     try {
       const [healthResult, capabilitiesResult, modelsResult] = await Promise.all([
-        client.discovery.health(),
-        client.discovery.capabilities(),
-        client.discovery.models(),
+        clientRef.current.discovery.health(),
+        clientRef.current.discovery.capabilities(),
+        clientRef.current.discovery.models(),
       ]);
       setHealth(healthResult);
       setCapabilities(capabilitiesResult);
@@ -46,7 +48,8 @@ export function useAgentInfo(options: UseAgentInfoOptions): UseAgentInfo {
     } finally {
       setLoading(false);
     }
-  }, [client]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
 
   useEffect(() => {
     void refresh();

@@ -4,6 +4,9 @@ import { KeyStore } from "@intheloop-studio/hermes-remote";
 import { initCommand } from "./commands/init.ts";
 import { keysCommand } from "./commands/keys.ts";
 import { logsCommand } from "./commands/logs.ts";
+import { auditCommand } from "./commands/audit.ts";
+import { doctorCommand } from "./commands/doctor.ts";
+import { usersCommand } from "./commands/users.ts";
 import { serveCommand } from "./commands/serve.ts";
 import { serviceCommand } from "./commands/service.ts";
 import { USAGE, fail, type CliContext, type CliResult } from "./context.ts";
@@ -61,6 +64,18 @@ export async function runCli(
   }
   if (command === "logs") {
     return logsCommand(args.slice(1), logPath);
+  }
+  if (command === "audit") {
+    return auditCommand(args.slice(1), auditPath);
+  }
+  if (command === "doctor") {
+    return doctorCommand(ctx, store);
+  }
+  if (command === "users") {
+    return usersCommand(args.slice(1), {
+      usersDb: join(ctx.homeDir, "users.db"),
+      chatDb: join(ctx.homeDir, "chat.db"),
+    });
   }
   return fail(`unknown command: ${command}\n\n${USAGE}`);
 }
