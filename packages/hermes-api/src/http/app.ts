@@ -1,3 +1,4 @@
+import { VERSION } from "../version.ts";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import type { AuthProvider, KeyVerifier } from "../auth/index.ts";
@@ -83,7 +84,7 @@ const DEFAULT_AUTH_FAILURE_LIMIT: RateLimitOptions = {
 };
 
 export function createApp(options: AppOptions = {}): App {
-  const version = options.version ?? "1.0.0";
+  const version = options.version ?? VERSION;
   const limits: Limits = { ...DEFAULT_LIMITS, ...options.limits };
   const now = options.now ?? (() => new Date());
   const events = options.events ?? new EventBus(now);

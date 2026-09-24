@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createHmac } from "node:crypto";
-import { createApp, ChatStore, JwtAuthProvider, type KeyVerifier } from "../index.ts";
+import { VERSION, createApp, ChatStore, JwtAuthProvider, type KeyVerifier } from "../index.ts";
 import type { ApiKeyRecord } from "../auth/index.ts";
 import type { AgentBackend } from "../chat/index.ts";
 
@@ -55,7 +55,7 @@ describe("createApp", () => {
     const app = createApp();
     expect(await (await app.fetch(get("/v1/status"))).json()).toEqual({
       ok: true,
-      version: "1.0.0",
+      version: VERSION,
     });
     expect((await app.fetch(get("/nope"))).status).toBe(401);
     const open = createApp({ anonymous: true });

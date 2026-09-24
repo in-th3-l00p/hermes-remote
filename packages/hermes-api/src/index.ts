@@ -1,4 +1,5 @@
 export { createApp } from "./http/index.ts";
+export { VERSION } from "./version.ts";
 export type {
   App,
   AppOptions,
