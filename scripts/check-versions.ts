@@ -25,6 +25,24 @@ export function versionProblems(manifests: Manifest[]): string[] {
   return problems;
 }
 
+/**
+ * The changelog needs a heading for the current version, and every version
+ * heading names its version: a bare "Unreleased" hides which release it is.
+ */
+export function changelogProblems(changelog: string, version: string): string[] {
+  const headings = changelog.split("\n").filter((line) => line.startsWith("## "));
+  const problems: string[] = [];
+  if (!headings.some((h) => h.startsWith(`## ${version} `) || h === `## ${version}`)) {
+    problems.push(`CHANGELOG.md has no heading for ${version}`);
+  }
+  for (const h of headings) {
+    if (!/^## \d+\.\d+\.\d+/.test(h)) {
+      problems.push(`CHANGELOG.md heading without a version: ${h}`);
+    }
+  }
+  return problems;
+}
+
 export const PUBLISHED = ["hermes-api", "cli", "hermes-ts", "react-hermes"];
 
 if (import.meta.main) {
@@ -33,12 +51,15 @@ if (import.meta.main) {
     (dir) =>
       JSON.parse(readFileSync(join(root, "packages", dir, "package.json"), "utf8")) as Manifest,
   );
-  const problems = versionProblems(manifests);
+  const problems = [
+    ...versionProblems(manifests),
+    ...changelogProblems(readFileSync(join(root, "CHANGELOG.md"), "utf8"), manifests[0]!.version),
+  ];
   for (const p of problems) {
     console.error(p);
   }
   if (problems.length > 0) {
     process.exit(1);
   }
-  console.log("package versions in sync");
+  console.log("package versions and changelog in sync");
 }

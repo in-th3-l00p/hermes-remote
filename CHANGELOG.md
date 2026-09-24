@@ -1,5 +1,7 @@
 # Changelog
 
+Release history: 3.2.0 (client and React 1.2.0) is the first version published to npm under the `@intheloop-studio/hermes-remote*` names, on 2026-08-31. 2.0.0 to 3.1.0 were development versions that were not published to npm or tagged; only `v0.1.0` and `v1.0.0` tags exist from before the tag-driven release workflow. From 3.2.1 on, every release is a `v*` tag that the release workflow publishes.
+
 ## 4.1.0 (unreleased)
 
 Product and website. Server and CLI 4.1.0.
@@ -53,12 +55,12 @@ Security release; upgrading is strongly recommended. Details will be published a
 * **Tests.** A generated authorization-matrix test covers every route for every principal type.
 * **Client 1.2.1.** `profiles.importArchive` and `backups.importArchive` upload bytes (`Blob`, `ArrayBuffer` or `Uint8Array`); `ChatSessionMeta` gains `keyId`.
 
-## Unreleased
+### Website
 
 * The live examples are now fully static demo apps. A new browser-safe package (`packages/examples-demo`, `@intheloop-studio/hermes-remote-examples-demo`) exports `createDemoFetch()`, an in-memory fake of the hermes-remote HTTP routes the six example apps call: seeded chat sessions, runs in several states with SSE event feeds, profiles (default/work/research), config, memory and soul files, jobs, discovery data, and an event firehose. Chat streams over the real SSE protocol with canned, prompt-keyed replies, and state is mutable per page load. Each example app wires the fake in through the client's `fetch` option; the served sandbox backend (`packages/examples-backend`), the Vercel Function at `/api/hermes/*`, the Groq integration, and the public sandbox key are all removed. The landing deployment is static files only.
 * Live examples platform: six example React apps (chat, auth, configuration, runs, profiles, command-center) under `apps/examples/*`, each hosted at `/examples/<name>/app/` with an architecture article at `/examples/<name>/`; `/examples/` is a grid index.
 
-## Unreleased (3.2.0)
+## 3.2.0 (2026-08-31)
 
 * **Full agent coverage.** hermes-remote now exposes the agent's entire feature surface through three bridges: the existing HTTP proxy, a new CLI bridge (`HermesCliBridge` — allowlisted argv templates over the `hermes` binary, audited, with timeouts and a concurrency cap), and a new FS bridge (`FsBridge` — allowlisted profile-home paths; `.env`/`auth.json`/key material unreadable by construction).
 * **Profiles**: `ProfileRegistry` + `/v1/profiles*` (list/show/create/delete/rename/describe/export/import/install/update); every route accepts `X-Hermes-Profile`; API keys can be minted with `--profile` and are pinned server-side.
@@ -69,7 +71,7 @@ Security release; upgrading is strongly recommended. Details will be published a
 * Client (1.2.0): complete namespace coverage (`profiles`, `config`, `providers`, `agent`, `memory`, `soul`, `skills`, `bundles`, `checkpoints`, `approvals`, `hooks`, `webhooks`, `gateway`, `messaging`, `pairing`, `kanban`, `projects`, `toolsets`, `mcp`, `plugins`, `backups`, `subagents`, `agentSessions`, `commands`, `goals`, `media`, `web`, `browser`, `events`, `passthrough`) and `client.withProfile(name)`.
 * React (1.2.0): `useResource`/`useAction` generics, one hook per management surface, `useGoal` (loop state + mutations), `useEvents` (live SSE subscription).
 
-## 3.1.0
+## 3.1.0 (not published)
 
 * Server: the upstream agent now sits behind an `Upstream` interface family (`chat`, `discovery`, `runs`, `jobs`) with two implementations — `HermesUpstream` (live gateway) and `DemoUpstream` (offline fakes, used in demo mode and tests). `AppOptions.upstream` enables the new routes.
 * New routes, all proxied from the upstream with hermes-remote auth on top: `GET /v1/health` (own status + upstream readiness), `GET /v1/capabilities` (hermes-remote features + upstream set), `GET /v1/models`, `GET /v1/models/options`, `GET /v1/skills`, `GET /v1/toolsets`; runs (`POST/GET /v1/runs`, `GET /v1/runs/:id`, SSE `GET /v1/runs/:id/events`, `POST .../stop|steer|approval`) under `chat:invoke` with per-principal ownership (`RunStore` in chat.db) and identity injection for user-started runs; jobs (`/v1/jobs*`) API-key-only under `crons:read`/`crons:write`. Upstream failures map to 502 `upstream_error`.
@@ -77,7 +79,7 @@ Security release; upgrading is strongly recommended. Details will be published a
 * React (1.1.0): `useAgentInfo`, `useRuns`, and `useRunEvents` hooks.
 * Integration suite: gated live checks for health, capabilities, and models.
 
-## 3.0.0
+## 3.0.0 (not published)
 
 * **Breaking:** user authentication is now a providers module. `UserTokenVerifier`/`SupabaseUser` and the `userVerifier` option are replaced by `AuthProvider`/`VerifiedUser` and `authProvider`; `SupabaseJwksVerifier`, `hs256Verifier`, and `verifySupabaseJwt` are replaced by `JwtAuthProvider` (same zero-dependency JWKS/HS256 verification, plus optional `issuer`/`audience` pinning). `is_anonymous` on the verified identity is now `isAnonymous`.
 * New SDK-backed providers, selected via config: `SupabaseAuthProvider` (official `@supabase/supabase-js`, `auth.getClaims`) and `ClerkAuthProvider` (official `@clerk/backend`, `verifyToken` with `secretKey` or networkless `jwtKey`, `audience`, `authorizedParties`). Both SDKs are optional peer dependencies loaded only when the provider is enabled; a missing SDK fails with an error naming the package. `createAuthProvider(config)` builds any provider from a plain config object.
@@ -85,7 +87,7 @@ Security release; upgrading is strongly recommended. Details will be published a
 * CLI: `config.json` gains an `auth` section (`{"auth": {"provider": "supabase" | "clerk" | "jwt", ...}}`). Legacy `--supabase-url`/`--supabase-jwt-secret` flags, env vars, and config fields keep working, mapped onto the `jwt` provider; `CLERK_SECRET_KEY` alone enables the Clerk provider.
 * Docs: new Authentication section (overview, Supabase, Clerk, custom providers) and an end-to-end Clerk tutorial.
 
-## 2.0.0
+## 2.0.0 (not published)
 
 * **Breaking:** the management CLI moved out of `@intheloop-studio/hermes-remote` into its own package, `@intheloop-studio/hermes-remote-cli` (`packages/cli`). The `hermes-remote` and `hermes-api` bins are now installed via `npm i -g @intheloop-studio/hermes-remote-cli`. The server package no longer ships bins and is a pure library; its exports are unchanged.
 * Internal restructure: every package is split into one module per concern (server: scopes/limits → auth → chat → http; cli: one file per command family) with no behavior change; code-structure rules added to CONTRIBUTING.md.
