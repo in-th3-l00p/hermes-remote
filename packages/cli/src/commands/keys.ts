@@ -3,6 +3,7 @@ import {
   isDangerousScope,
   isKnownScope,
   isUserGrantableScope,
+  isValidCidr,
   type ApiKeyRecord,
   type KeyStore,
 } from "@intheloop-studio/hermes-remote";
@@ -61,6 +62,10 @@ export async function keysCommand(
       expiresAt = new Date(now.getTime() + ms);
     }
     const cidrs = flagAll(parsed, "cidr");
+    const badCidr = cidrs.find((cidr) => !isValidCidr(cidr));
+    if (badCidr !== undefined) {
+      return fail(`invalid --cidr value: ${badCidr} (use e.g. 10.0.0.0/8 or 2001:db8::/32)`);
+    }
     const profile = flag(parsed, "profile");
     const { record, token } = await store.create({
       name,

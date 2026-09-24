@@ -21,6 +21,18 @@ describe("serve", () => {
     expect(serveCalls[1]?.host).toBe("10.0.0.5");
   });
 
+  test("trusted proxies come from --trust-proxy or config and are validated", async () => {
+    const { ctx, serveCalls } = await makeCtx();
+    await runCli(["serve", "--port", "0", "--trust-proxy", "127.0.0.1,10.0.0.0/8"], ctx);
+    expect(serveCalls[0]?.trustProxy).toEqual(["127.0.0.1", "10.0.0.0/8"]);
+    await Bun.write(`${ctx.homeDir}/config.json`, JSON.stringify({ trustProxy: ["::1"] }));
+    await runCli(["serve", "--port", "0"], ctx);
+    expect(serveCalls[1]?.trustProxy).toEqual(["::1"]);
+    const bad = await runCli(["serve", "--port", "0", "--trust-proxy", "nope"], ctx);
+    expect(bad.exitCode).toBe(1);
+    expect(bad.output).toContain("invalid trust-proxy value: nope");
+  });
+
   test("passes anonymous, cors, and upstream flags", async () => {
     const { ctx, serveCalls } = await makeCtx();
     await runCli(

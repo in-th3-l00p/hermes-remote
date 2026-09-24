@@ -187,4 +187,16 @@ describe("keys rotate and cidr", () => {
     expect(rotated.output).toContain("previous secret no longer works");
     expect((await runCli(["keys", "rotate", "ffffff"], ctx)).exitCode).toBe(1);
   });
+
+  test("invalid CIDRs are refused at creation; IPv6 blocks are accepted", async () => {
+    const { ctx } = await makeCtx();
+    const bad = await runCli(
+      ["keys", "create", "--name", "x", "--scope", "chat:invoke", "--cidr", "10.0.0.0/33"],
+      ctx,
+    );
+    expect(bad.exitCode).toBe(1);
+    expect(bad.output).toContain("invalid --cidr value: 10.0.0.0/33");
+    const id = await createKey(ctx, ["--cidr", "2001:db8::/32"]);
+    expect((await runCli(["keys", "show", id], ctx)).output).toContain("2001:db8::/32");
+  });
 });

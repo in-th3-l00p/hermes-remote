@@ -7,7 +7,7 @@ import { bodyLimit } from "hono/body-limit";
 import type { AuthProvider, KeyVerifier } from "../auth/index.ts";
 import { chatRoutes, type ChatEnv, type ChatOptions } from "../chat/index.ts";
 import { RunStore, upstreamRoutes, type Upstream } from "../upstream/index.ts";
-import { DEFAULT_LIMITS, type Limits, type RateLimitOptions } from "../limits/index.ts";
+import { DEFAULT_LIMITS, clientIp, type Limits, type RateLimitOptions } from "../limits/index.ts";
 import { registerProfileRoutes } from "../profiles/index.ts";
 import { registerFsRoutes, registerMgmtRoutes } from "../mgmt/index.ts";
 import { registerCommandRoutes } from "../mgmt/commands.ts";
@@ -56,6 +56,11 @@ export interface AppOptions {
   anonymous?: boolean;
   /** Origins allowed for browser calls; enables CORS handling. */
   corsOrigins?: string[];
+  /**
+   * CIDRs of reverse proxies whose X-Forwarded-For is trusted. Without it the
+   * socket peer is the client, which is what CIDR pinning and per-IP limits see.
+   */
+  trustProxy?: string[];
   limits?: Partial<Limits>;
   rateLimit?: RateLimitOptions;
   /** Fixed window applied to failed auth attempts per client ip; always on. */
@@ -198,7 +203,14 @@ export function createApp(options: AppOptions = {}): App {
     .filter((r) => r.method !== "ALL")
     .map((r) => ({ method: r.method, path: r.path }));
   return {
-    fetch: (request, clientIp) => app.fetch(request, { clientIp }),
+    fetch: (request, socketIp) =>
+      app.fetch(request, {
+        clientIp: clientIp(
+          request.headers.get("x-forwarded-for"),
+          socketIp,
+          options.trustProxy ?? [],
+        ),
+      }),
     routes,
   };
 }

@@ -281,6 +281,24 @@ describe("createApp", () => {
     expect(seen[3]).toContain("a guest signed in anonymously (stable user id: guest-7)");
   });
 
+  test("CIDR pins see the real client behind a trusted proxy", async () => {
+    const pinned: KeyVerifier = {
+      verifyToken: async () => ({ ...record, cidrs: ["10.0.0.0/8"] }),
+    };
+    const viaProxy = (xff: string) =>
+      new Request("http://x/v1/auth/whoami", {
+        headers: { authorization: "Bearer hk_good", "x-forwarded-for": xff },
+      });
+    const proxied = createApp({ store: pinned, trustProxy: ["127.0.0.1"] });
+    expect((await proxied.fetch(viaProxy("10.1.2.3"), "::ffff:127.0.0.1")).status).toBe(200);
+    expect((await proxied.fetch(viaProxy("10.1.2.3, 8.8.8.8"), "127.0.0.1")).status).toBe(401);
+    // Without trustProxy the header is ignored and the socket peer counts.
+    const direct = createApp({ store: pinned });
+    expect((await direct.fetch(viaProxy("10.1.2.3"), "127.0.0.1")).status).toBe(401);
+    // IPv4 clients reported as IPv4-mapped IPv6 still match IPv4 pins.
+    expect((await direct.fetch(get("/v1/auth/whoami", "hk_good"), "::ffff:10.9.9.9")).status).toBe(200);
+  });
+
   test("CIDR-restricted keys only work from allowed addresses", async () => {
     const restricted: KeyVerifier = {
       verifyToken: async () => ({ ...record, cidrs: ["10.0.0.0/8"] }),

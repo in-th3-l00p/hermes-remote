@@ -45,6 +45,7 @@ const ctx: CliContext = {
       auditPath: request.auditPath,
       anonymous: request.anonymous,
       corsOrigins: request.corsOrigins,
+      trustProxy: request.trustProxy,
       ...(request.rateLimit === null ? {} : { rateLimit: request.rateLimit }),
       ...(authProvider === null ? {} : { authProvider }),
       upstream: { upstream, runStore: new RunStore(join(homeDir, "chat.db")) },

@@ -6,6 +6,8 @@ export interface ConfigFile {
   /** Interface to listen on (default 127.0.0.1). */
   host?: string;
   cors?: string[];
+  /** CIDRs of reverse proxies whose X-Forwarded-For is trusted. */
+  trustProxy?: string[];
   anonymous?: boolean;
   upstreamUrl?: string;
   upstreamKey?: string;

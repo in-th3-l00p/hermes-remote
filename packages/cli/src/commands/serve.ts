@@ -1,4 +1,4 @@
-import type { AuthProviderConfig, KeyStore } from "@intheloop-studio/hermes-remote";
+import { isValidCidr, type AuthProviderConfig, type KeyStore } from "@intheloop-studio/hermes-remote";
 import { flag, flagAll, parseArgs, type ParsedArgs } from "../args.ts";
 import { loadConfig, type ConfigFile } from "../config.ts";
 import {
@@ -102,6 +102,12 @@ export async function serveCommand(
     };
   }
   const corsFlags = flagAll(parsed, "cors");
+  const trustFlags = flagAll(parsed, "trust-proxy");
+  const trustProxy = trustFlags.length > 0 ? trustFlags : (config.trustProxy ?? []);
+  const badProxy = trustProxy.find((cidr) => !isValidCidr(cidr));
+  if (badProxy !== undefined) {
+    return fail(`invalid trust-proxy value: ${badProxy}`);
+  }
   const rateLimitFlag = flag(parsed, "rate-limit");
   let running: { port: number };
   try {
@@ -114,6 +120,7 @@ export async function serveCommand(
       anonymous:
         flag(parsed, "anonymous") === "true" || config.anonymous === true,
       corsOrigins: corsFlags.length > 0 ? corsFlags : (config.cors ?? []),
+      trustProxy,
       auth: resolveAuth(parsed, ctx.env, config),
       hermesBinary: config.hermesBinary ?? "hermes",
       profileHomes: config.profileHomes ?? {},
