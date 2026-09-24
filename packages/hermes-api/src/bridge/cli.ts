@@ -3,6 +3,8 @@ export interface CliResultData {
   exitCode: number;
   stdout: string;
   stderr: string;
+  /** Set when the binary could not be started at all (missing, not executable). */
+  unavailable?: true;
 }
 
 export interface CliBridge {
@@ -75,6 +77,14 @@ export class HermesCliBridge implements CliBridge {
         options.timeoutMs ?? this.timeoutMs,
       );
       return { ok: result.exitCode === 0, ...result };
+    } catch (cause) {
+      return {
+        ok: false,
+        exitCode: 127,
+        stdout: "",
+        stderr: `could not start ${this.binary}: ${(cause as Error).message}`,
+        unavailable: true,
+      };
     } finally {
       this.active -= 1;
       this.waiting.shift()?.();

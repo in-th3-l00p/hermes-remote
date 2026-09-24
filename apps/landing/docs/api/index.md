@@ -24,7 +24,7 @@ Failures are JSON with stable codes:
 { "error": { "code": "missing_scope", "message": "This route requires the chat:invoke scope" } }
 ```
 
-Common codes: `unauthorized` (401), `missing_scope` and `api_key_required` and `profile_forbidden` (403), `not_found`, `session_not_found`, `profile_not_found` (404), `payload_too_large` (413), `rate_limited` (429, with `retry-after`), `invalid_request` and `invalid_message` (400), `upstream_error` and `cli_error` (502), `not_supported` (501).
+Common codes: `unauthorized` (401), `missing_scope` and `api_key_required` and `profile_forbidden` (403), `not_found`, `session_not_found`, `profile_not_found` (404), `payload_too_large` (413), `rate_limited` (429, with `retry-after`), `invalid_request` and `invalid_message` (400), `upstream_error` (502, including an unreachable agent) and `cli_error` (502), `not_supported` (501), `cli_unavailable` (503, the `hermes` binary could not be started), `internal_error` (500). Every error, including unexpected ones, uses this envelope; stack traces never reach the client.
 
 ## Profiles
 

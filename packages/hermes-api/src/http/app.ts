@@ -1,5 +1,8 @@
 import { VERSION } from "../version.ts";
 import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
+import { BridgeDenied } from "../bridge/index.ts";
+import { HermesUpstreamError } from "../chat/index.ts";
 import { bodyLimit } from "hono/body-limit";
 import type { AuthProvider, KeyVerifier } from "../auth/index.ts";
 import { chatRoutes, type ChatEnv, type ChatOptions } from "../chat/index.ts";
@@ -163,6 +166,29 @@ export function createApp(options: AppOptions = {}): App {
     app.route("/", chatRoutes(options.chat, limits));
   }
   app.notFound((c) => errorResponse(c, 404, "not_found", "Unknown route"));
+  // Last resort: every failure leaves as the JSON error envelope.
+  app.onError((err, c) => {
+    if (err instanceof HTTPException) {
+      return err.getResponse();
+    }
+    if (err instanceof HermesUpstreamError) {
+      return c.json(
+        {
+          error: {
+            code: "upstream_error",
+            message: err.message,
+            upstreamStatus: err.status,
+          },
+        },
+        502,
+      );
+    }
+    if (err instanceof BridgeDenied) {
+      return errorResponse(c, 400, "path_denied", err.reason);
+    }
+    console.error("hermes-remote: unhandled error", err);
+    return errorResponse(c, 500, "internal_error", "Internal server error");
+  });
 
   const routes = app.routes
     .filter((r) => r.method !== "ALL")

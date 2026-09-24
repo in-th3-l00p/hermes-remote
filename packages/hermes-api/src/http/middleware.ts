@@ -12,7 +12,7 @@ import type { ChatEnv } from "../chat/index.ts";
 import type { ManagementOptions } from "../mgmt/shared.ts";
 import type { AuditEntry } from "./app.ts";
 
-type ErrorStatus = 401 | 403 | 404 | 413 | 429 | 503;
+type ErrorStatus = 400 | 401 | 403 | 404 | 413 | 429 | 500 | 503;
 
 export function errorResponse(
   c: Context<ChatEnv>,

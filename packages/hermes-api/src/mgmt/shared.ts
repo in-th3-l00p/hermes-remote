@@ -29,6 +29,17 @@ export function cliResponse(result: CliResultData): Response {
   if (result.ok) {
     return Response.json({ ok: true, raw: result.stdout });
   }
+  if (result.unavailable === true) {
+    return Response.json(
+      {
+        error: {
+          code: "cli_unavailable",
+          message: "The hermes CLI could not be started; check hermesBinary",
+        },
+      },
+      { status: 503 },
+    );
+  }
   const message = (result.stderr.trim() || result.stdout.trim()).slice(-2000);
   return Response.json(
     { error: { code: "cli_error", message, exitCode: result.exitCode } },
