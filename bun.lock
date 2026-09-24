@@ -65,7 +65,7 @@
     },
     "packages/cli": {
       "name": "@intheloop-studio/hermes-remote-cli",
-      "version": "4.0.0",
+      "version": "4.1.0",
       "bin": {
         "hermes-remote": "./src/cli.ts",
         "hermes-api": "./src/cli.ts",
@@ -80,7 +80,7 @@
     },
     "packages/hermes-api": {
       "name": "@intheloop-studio/hermes-remote",
-      "version": "4.0.0",
+      "version": "4.1.0",
       "dependencies": {
         "hono": "^4.13.5",
         "hono-rate-limiter": "^0.5.3",
