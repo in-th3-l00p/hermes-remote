@@ -428,7 +428,7 @@ describe("createApp", () => {
     const unknown = await app.fetch(
       new Request("http://x/v1/status", { headers: { origin: "http://evil.test" } }),
     );
-    expect(unknown.headers.get("access-control-allow-origin")).toBe("http://a.test");
+    expect(unknown.headers.get("access-control-allow-origin")).toBeNull();
     const preflight = await app.fetch(
       new Request("http://x/v1/sessions", {
         method: "OPTIONS",
@@ -440,17 +440,32 @@ describe("createApp", () => {
 
   test("CORS preflight and response headers", async () => {
     const app = createApp({ corsOrigins: ["http://localhost:5173"] });
+    const origin = { origin: "http://localhost:5173" };
     const preflight = await app.fetch(
-      new Request("http://x/v1/status", { method: "OPTIONS" }),
+      new Request("http://x/v1/config/model", {
+        method: "OPTIONS",
+        headers: {
+          ...origin,
+          "access-control-request-method": "PUT",
+          "access-control-request-headers": "authorization,content-type,x-hermes-profile",
+        },
+      }),
     );
     expect(preflight.status).toBe(204);
     expect(preflight.headers.get("access-control-allow-origin")).toBe(
       "http://localhost:5173",
     );
-    const res = await app.fetch(get("/v1/status"));
+    expect(preflight.headers.get("access-control-allow-methods")).toContain("PUT");
+    expect(preflight.headers.get("access-control-allow-headers")).toContain(
+      "x-hermes-profile",
+    );
+    const res = await app.fetch(
+      new Request("http://x/v1/status", { headers: origin }),
+    );
     expect(res.headers.get("access-control-allow-origin")).toBe(
       "http://localhost:5173",
     );
+    expect(res.headers.get("access-control-expose-headers")).toContain("retry-after");
     const noCors = createApp();
     const plain = await noCors.fetch(get("/v1/status"));
     expect(plain.headers.get("access-control-allow-origin")).toBeNull();

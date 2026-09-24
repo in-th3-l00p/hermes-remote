@@ -30,7 +30,7 @@ A complete example:
 | --- | ------- | ------- |
 | `port` | `8643` | HTTP port |
 | `host` | `127.0.0.1` | Interface to listen on. Loopback by default; set `0.0.0.0` only behind a firewall or reverse proxy. |
-| `cors` | `[]` | Origins allowed for browser calls. Empty disables CORS handling. |
+| `cors` | `[]` | Origins allowed for browser calls. Empty disables CORS handling. Listed origins may use every method (including `PUT`) and the `authorization`, `content-type` and `x-hermes-profile` headers; unlisted origins get no `Access-Control-Allow-Origin` header. |
 | `anonymous` | `false` | Allow unauthenticated chat. Demos only. |
 | `upstreamUrl` | none | The Hermes agent's API server. Without it, the demo agent answers. |
 | `upstreamKey` | none | The agent's `API_SERVER_KEY`. Required when `upstreamUrl` is set. Never appears in responses or logs. |

@@ -23,11 +23,17 @@ export function errorResponse(
   return c.json({ error: { code, message } }, status);
 }
 
+/** Methods and headers every client call uses, so no preflight is refused. */
+export const CORS_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"];
+export const CORS_HEADERS = ["authorization", "content-type", "x-hermes-profile"];
+
 export function corsMiddleware(origins: string[]): MiddlewareHandler<ChatEnv> {
   return cors({
-    origin: (origin) => (origins.includes(origin) ? origin : origins[0]),
-    allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allowHeaders: ["authorization", "content-type"],
+    // Unlisted origins get no allow-origin header at all.
+    origin: (origin) => (origins.includes(origin) ? origin : null),
+    allowMethods: CORS_METHODS,
+    allowHeaders: CORS_HEADERS,
+    exposeHeaders: ["retry-after", "ratelimit-limit", "ratelimit-remaining", "ratelimit-reset"],
   });
 }
 
