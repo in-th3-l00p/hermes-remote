@@ -202,7 +202,7 @@ describe("management catalog", () => {
     expect((await app.fetch(badJson("/v1/toolsets/cli"))).status).toBe(400);
   });
 
-  test("tier-two surfaces reject user and anonymous principals", async () => {
+  test("management surfaces reject user and anonymous principals", async () => {
     const fake = new FakeCliBridge({
       "profile list": { stdout: PROFILE_TABLE },
       status: { stdout: "fine" },
@@ -213,8 +213,15 @@ describe("management catalog", () => {
     expect(((await kanban.json()) as { error: { code: string } }).error.code).toBe(
       "api_key_required",
     );
-    const status = await app.fetch(new Request("http://x/v1/agent/status"));
-    expect(status.status).toBe(200);
+    for (const path of ["/v1/agent/status", "/v1/agent/security-audit"]) {
+      const res = await app.fetch(new Request(`http://x${path}`));
+      expect(res.status).toBe(403);
+    }
+    const prune = await app.fetch(
+      new Request("http://x/v1/checkpoints/prune", { method: "POST" }),
+    );
+    expect(prune.status).toBe(403);
+    expect(fake.calls).toEqual([]);
   });
 
   test("toolsets switch between enable and disable", async () => {
@@ -263,6 +270,41 @@ describe("management catalog", () => {
       }),
     );
     expect(invalid.status).toBe(400);
+  });
+
+  test("backup import takes an uploaded archive, never a server path", async () => {
+    const fake = new FakeCliBridge({
+      "profile list": { stdout: PROFILE_TABLE },
+      import: { stdout: "restored" },
+    });
+    const app = makeApp(fake, keyStore(["backups:manage"]));
+    const send = (body: string | Uint8Array, type: string) =>
+      app.fetch(
+        new Request("http://x/v1/backups/import", {
+          method: "POST",
+          headers: { authorization: "Bearer hk_good", "content-type": type },
+          body,
+        }),
+      );
+    const legacy = await send(JSON.stringify({ path: "/etc/passwd" }), "application/json");
+    expect(legacy.status).toBe(400);
+    const restored = await send(new Uint8Array([1, 2, 3]), "application/octet-stream");
+    expect(await restored.json()).toEqual({ ok: true, raw: "restored" });
+    const argv = fake.calls.at(-1) ?? [];
+    expect(argv[0]).toBe("import");
+    expect(argv[1]).not.toBe("/etc/passwd");
+    const denied = makeApp(fake, keyStore(["status:read"]));
+    expect(
+      (
+        await denied.fetch(
+          new Request("http://x/v1/backups/import", {
+            method: "POST",
+            headers: { authorization: "Bearer hk_good" },
+            body: new Uint8Array([1]),
+          }),
+        )
+      ).status,
+    ).toBe(403);
   });
 
   test("backups stream the archive or map failures", async () => {

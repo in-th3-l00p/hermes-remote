@@ -7,7 +7,7 @@ The chat surface is the server's own product layer: sessions and messages persis
 | Route | Scope | Purpose |
 | ----- | ----- | ------- |
 | `POST /v1/sessions` | `sessions:write` | Create a session, owned by the caller |
-| `GET /v1/sessions?limit=&offset=` | `sessions:read` | List own sessions; anonymous callers pass `?ids=a,b` |
+| `GET /v1/sessions?limit=&offset=` | `sessions:read` | List own sessions; anonymous callers (and keys with `sessions:read-all`) pass `?ids=a,b` |
 | `DELETE /v1/sessions/:id` | `sessions:write` | Delete a session and its messages |
 | `GET /v1/sessions/:id/messages?limit=&offset=` | `sessions:read` | Message history with a `total` count |
 | `POST /v1/sessions/:id/messages` | `chat:invoke` | Send `{content, attachments?}`; streams SSE |
@@ -15,7 +15,7 @@ The chat surface is the server's own product layer: sessions and messages persis
 | `POST /v1/sessions/:id/messages/:mid/reactions` | `sessions:write` | Toggle `{emoji}` on a message |
 | `POST /v1/sessions/:id/stop` | `chat:invoke` | Abort the in-flight turn, keep the partial reply |
 
-Users see only sessions they own; a foreign session id gets 404, not 403. API keys own the sessions they create. Anonymous sessions are capability URLs: whoever knows the id can use it.
+Users see only sessions they own; a foreign session id gets 404, not 403. API keys own the sessions they create (the session's `keyId`); reaching another principal's session needs `sessions:read-all` to read it or `sessions:write-all` to post to, edit, stop or delete it. Anonymous sessions are capability URLs: whoever knows the id can use it, and anonymous callers can never reach a session owned by a user or a key.
 
 ## A full exchange
 

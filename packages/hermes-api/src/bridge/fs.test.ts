@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtemp } from "node:fs/promises";
+import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { BridgeDenied, FsBridge } from "./fs.ts";
@@ -58,5 +58,43 @@ describe("FsBridge", () => {
       expect(() => bridge.resolve(path)).toThrow(BridgeDenied);
     }
     expect(bridge.resolve("memories/MEMORY.md")).toContain("MEMORY.md");
+  });
+
+  test("rejects NUL bytes", async () => {
+    const bridge = await makeBridge();
+    expect(() => bridge.resolve("notes.md\0.txt")).toThrow(BridgeDenied);
+  });
+
+  test("symlinks cannot escape the root or reach credentials", async () => {
+    const outside = await mkdtemp(join(tmpdir(), "hermes-fs-outside-"));
+    await writeFile(join(outside, "secret.txt"), "secret");
+    const bridge = await makeBridge();
+    const root = bridge.resolve("");
+    await writeFile(join(root, ".env"), "KEY=1");
+    await mkdir(join(root, "skills", "demo"), { recursive: true });
+    await symlink(join(outside, "secret.txt"), join(root, "skills", "demo", "out.txt"));
+    await symlink(outside, join(root, "skills", "demo", "outdir"));
+    await symlink(join(root, ".env"), join(root, "skills", "demo", "env.txt"));
+    expect(bridge.read("skills/demo/out.txt")).rejects.toBeInstanceOf(BridgeDenied);
+    expect(bridge.write("skills/demo/outdir/new.txt", "x")).rejects.toBeInstanceOf(
+      BridgeDenied,
+    );
+    expect(bridge.read("skills/demo/env.txt")).rejects.toBeInstanceOf(BridgeDenied);
+  });
+
+  test("scoped bridges are confined to their subdirectory", async () => {
+    const bridge = await makeBridge();
+    const root = bridge.resolve("");
+    await mkdir(join(root, "skills", "demo"), { recursive: true });
+    await mkdir(join(root, "skills", "other"), { recursive: true });
+    await writeFile(join(root, "config.yaml"), "model: x");
+    await symlink(join(root, "config.yaml"), join(root, "skills", "demo", "cfg"));
+    const skill = bridge.scoped("skills/demo");
+    await skill.write("references/a.md", "a");
+    expect(await bridge.read("skills/demo/references/a.md")).toBe("a");
+    for (const path of ["../../config.yaml", "../other/SKILL.md", "cfg"]) {
+      expect(() => skill.resolve(path)).toThrow(BridgeDenied);
+    }
+    expect(() => bridge.scoped("../elsewhere")).toThrow(BridgeDenied);
   });
 });

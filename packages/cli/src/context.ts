@@ -7,6 +7,7 @@ export interface CliResult {
 
 export interface ServeRequest {
   port: number;
+  host: string;
   store: KeyStore;
   logPath: string;
   auditPath: string;
@@ -35,7 +36,8 @@ export const USAGE = `hermes-remote <command>
 
 Commands:
   init [--port ...] [--cors ...] [--upstream ...]   write ~/.hermes-remote/config.json
-  serve [--port 8643] [--anonymous]                 run the API server
+  serve [--port 8643] [--host 127.0.0.1] [--anonymous]
+                                                    run the API server
        [--cors <origin,...>] [--upstream <url>] [--upstream-key <key>]
        [--model <m>] [--supabase-url <url>] [--supabase-jwt-secret <s>]
        [--rate-limit <n>] [--rate-window <seconds>]

@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, test } from "bun:test";
 import { FakeCliBridge } from "../bridge/index.ts";
 import { createApp, type KeyVerifier } from "../index.ts";
@@ -114,11 +115,11 @@ describe("profile middleware", () => {
       "profile list": { stdout: PROFILE_TABLE },
       "-p indra profile show indra": { stdout: "shown" },
     });
-    const app = managedApp({ fake });
+    const app = managedApp({ fake, store: keyStore(["status:read"]) });
     expect(
-      (await app.fetch(get("/v1/profiles/indra", undefined, "ghost"))).status,
+      (await app.fetch(get("/v1/profiles/indra", "hk_good", "ghost"))).status,
     ).toBe(404);
-    const res = await app.fetch(get("/v1/profiles/indra", undefined, "indra"));
+    const res = await app.fetch(get("/v1/profiles/indra", "hk_good", "indra"));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true, raw: "shown" });
   });
@@ -153,8 +154,8 @@ describe("profile routes", () => {
       "profile list": { stdout: PROFILE_TABLE },
       "profile show default": { stdout: "details" },
     });
-    const app = managedApp({ fake });
-    const list = await app.fetch(get("/v1/profiles"));
+    const app = managedApp({ fake, store: keyStore(["status:read"]) });
+    const list = await app.fetch(get("/v1/profiles", "hk_good"));
     expect(list.status).toBe(200);
     const body = (await list.json()) as { profiles: { name: string }[] };
     expect(body.profiles.map((p) => p.name)).toEqual([
@@ -163,8 +164,19 @@ describe("profile routes", () => {
       "indra",
     ]);
     expect(
-      await (await app.fetch(get("/v1/profiles/default"))).json(),
+      await (await app.fetch(get("/v1/profiles/default", "hk_good"))).json(),
     ).toEqual({ ok: true, raw: "details" });
+  });
+
+  test("user and anonymous principals cannot list profiles or select one", async () => {
+    const fake = new FakeCliBridge({ "profile list": { stdout: PROFILE_TABLE } });
+    const app = managedApp({ fake });
+    expect((await app.fetch(get("/v1/profiles"))).status).toBe(403);
+    const pinned = await app.fetch(get("/v1/sessions", undefined, "indra"));
+    expect(pinned.status).toBe(403);
+    expect(
+      ((await pinned.json()) as { error: { code: string } }).error.code,
+    ).toBe("profile_forbidden");
   });
 
   test("mutations require an api key with profiles:manage", async () => {
@@ -322,20 +334,49 @@ describe("profile routes", () => {
     expect(
       (await post("/v1/profiles/creative/install", { source: "-bad" })).status,
     ).toBe(400);
-    expect((await post("/v1/profiles/creative/import", {})).status).toBe(400);
     expect(
-      (await post("/v1/profiles/creative/import", { path: "-bad" })).status,
+      (await post("/v1/profiles/creative/import", { path: "/etc/passwd" })).status,
     ).toBe(400);
-    const imported = await post("/v1/profiles/creative/import", {
-      path: "/backups/creative.tar",
+    const upload = (path: string, bytes: Uint8Array) =>
+      app.fetch(
+        new Request(`http://x${path}`, {
+          method: "POST",
+          headers: {
+            authorization: "Bearer hk_good",
+            "content-type": "application/octet-stream",
+          },
+          body: bytes,
+        }),
+      );
+    expect(
+      (await upload("/v1/profiles/creative/import", new Uint8Array())).status,
+    ).toBe(400);
+    const seen: { bytes: Uint8Array | null } = { bytes: null };
+    fake.on("profile import", () => {
+      seen.bytes = new Uint8Array(readFileSync(fake.calls.at(-1)?.[2] ?? ""));
+      return { stdout: "imported" };
     });
+    const archive = new Uint8Array([0x1f, 0x8b, 0x08, 0xff, 0x00]);
+    const imported = await upload("/v1/profiles/creative/import", archive);
     expect(imported.status).toBe(200);
     expect(await imported.json()).toEqual({ ok: true, raw: "imported" });
-    expect(fake.calls.at(-1)).toEqual([
-      "profile",
-      "import",
-      "/backups/creative.tar",
-    ]);
+    expect(seen.bytes).toEqual(archive);
+    const tempPath = fake.calls.at(-1)?.[2] ?? "";
+    expect(fake.calls.at(-1)?.slice(0, 2)).toEqual(["profile", "import"]);
+    expect(existsSync(tempPath)).toBe(false);
+  });
+
+  test("profile names can never become CLI flags", async () => {
+    const fake = new FakeCliBridge({ "profile list": { stdout: PROFILE_TABLE } });
+    const app = managedApp({
+      fake,
+      store: keyStore(["status:read", "profiles:manage"]),
+    });
+    for (const name of ["--help", "-p", "--force"]) {
+      const res = await app.fetch(get(`/v1/profiles/${name}`, "hk_good"));
+      expect(res.status).toBe(404);
+    }
+    expect(fake.calls.filter((argv) => argv.includes("show"))).toEqual([]);
   });
 
   test("cli failures map to 502", async () => {
@@ -343,8 +384,8 @@ describe("profile routes", () => {
       "profile list": { stdout: PROFILE_TABLE },
       "profile show default": { exitCode: 1, stderr: "broken" },
     });
-    const app = managedApp({ fake });
-    const res = await app.fetch(get("/v1/profiles/default"));
+    const app = managedApp({ fake, store: keyStore(["status:read"]) });
+    const res = await app.fetch(get("/v1/profiles/default", "hk_good"));
     expect(res.status).toBe(502);
     expect(await res.json()).toEqual({
       error: { code: "cli_error", message: "broken", exitCode: 1 },

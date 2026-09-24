@@ -9,7 +9,7 @@ describe("init and config file", () => {
     const { ctx, serveCalls } = await makeCtx();
     const result = await runCli(
       [
-        "init", "--port", "9999", "--cors", "http://a.test,http://b.test",
+        "init", "--port", "9999", "--host", "0.0.0.0", "--cors", "http://a.test,http://b.test",
         "--anonymous", "--upstream", "http://up", "--upstream-key", "uk",
         "--model", "m", "--supabase-url", "https://sb",
         "--supabase-jwt-secret", "sec", "--rate-limit", "30", "--rate-window", "10",
@@ -21,6 +21,7 @@ describe("init and config file", () => {
     await runCli(["serve"], ctx);
     expect(serveCalls[0]).toMatchObject({
       port: 9999,
+      host: "0.0.0.0",
       anonymous: true,
       corsOrigins: ["http://a.test", "http://b.test"],
       auth: {

@@ -1,6 +1,5 @@
 import type { Context, Hono } from "hono";
-import { error, requireScope, type ChatEnv } from "../chat/routes/shared.ts";
-import { isUserGrantableScope } from "../scopes/index.ts";
+import { error, type ChatEnv } from "../chat/routes/shared.ts";
 import { profileArgs } from "../profiles/registry.ts";
 import { MGMT_ROUTES, type CliRouteSpec } from "./catalog.ts";
 import {
@@ -8,6 +7,7 @@ import {
   currentProfile,
   invalidParam,
   requireKeyScope,
+  withUploadedArchive,
   type ManagementOptions,
 } from "./shared.ts";
 
@@ -63,10 +63,7 @@ export function buildArgv(
 
 function cliHandler(spec: CliRouteSpec, options: ManagementOptions) {
   return async (c: Context<ChatEnv>): Promise<Response> => {
-    const guard = isUserGrantableScope(spec.scope)
-      ? requireScope
-      : requireKeyScope;
-    const denied = guard(c.get("principal"), spec.scope);
+    const denied = requireKeyScope(c.get("principal"), spec.scope);
     if (denied !== null) {
       return denied;
     }
@@ -115,6 +112,20 @@ export function registerMgmtRoutes(
         body.enabled ? "enable" : "disable",
         body.name,
       ]),
+    );
+  });
+
+  app.post("/v1/backups/import", async (c) => {
+    const denied = requireKeyScope(c.get("principal"), "backups:manage");
+    return (
+      denied ??
+      withUploadedArchive(c, async (path) =>
+        cliResponse(
+          await options.cli.run([...profileArgs(currentProfile(c)), "import", path], {
+            timeoutMs: 300_000,
+          }),
+        ),
+      )
     );
   });
 

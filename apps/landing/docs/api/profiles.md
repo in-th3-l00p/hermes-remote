@@ -17,7 +17,7 @@ CLI-backed and filesystem-backed routes resolve the profile before running, so o
 | `PATCH /v1/profiles/:name` | `profiles:manage` | Body `{"rename": "..."}` or `{"description": "..."}` |
 | `DELETE /v1/profiles/:name` | `profiles:manage` | Delete |
 | `POST /v1/profiles/:name/export` | `profiles:manage` | Export archive; the response body is the binary archive |
-| `POST /v1/profiles/:name/import` | `profiles:manage` | Import, body `{"path": "<server-local path>"}` |
+| `POST /v1/profiles/:name/import` | `profiles:manage` | Import an archive uploaded as the request body (`application/octet-stream`); the server writes it to a private temp file and removes it afterwards |
 | `POST /v1/profiles/:name/install` | `profiles:manage` | Install from a source, body `{"source": "..."}` |
 | `POST /v1/profiles/:name/update` | `profiles:manage` | Update |
 

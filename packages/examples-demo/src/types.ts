@@ -13,6 +13,7 @@ export interface DemoMessage {
 export interface DemoSessionMeta {
   id: string;
   userId: string | null;
+  keyId: string | null;
   title: string | null;
   createdAt: string;
   updatedAt: string;

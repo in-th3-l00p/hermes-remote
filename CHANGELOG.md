@@ -1,5 +1,18 @@
 # Changelog
 
+## 3.2.1 (unreleased)
+
+Security release; upgrading is strongly recommended. Details will be published as GitHub security advisories once the release is out.
+
+* **Authorization.** User tokens and anonymous principals now hold only the end-user scopes (`chat:invoke`, `sessions:read`, `sessions:write`, `sessions:search`, `status:read`, `skills:read`, `toolsets:read`). Management, file, profile and event routes are API-key only, and only API keys may select a profile with `X-Hermes-Profile`.
+* **Chat session ownership.** Sessions record the API key that created them. A key reaches its own sessions; other principals' sessions need `sessions:read-all` or `sessions:write-all`. **Behaviour change:** sessions created by keys before 3.2.1 have no recorded owner; reach them with a key holding the `-all` scopes.
+* **Filesystem bridge.** Paths are resolved through symlinks before containment and denylist checks, NUL bytes are rejected, and skill reference files are confined to their own skill directory.
+* **Upstream requests.** Run, session and job ids are validated and encoded before they are placed in a URL sent to the agent.
+* **Imports.** `POST /v1/profiles/:name/import` and `POST /v1/backups/import` take the archive as the request body (`application/octet-stream`). **Breaking:** the `{path}` JSON body is no longer accepted. Profile names in route paths can no longer start with `-`.
+* **Network.** The server binds `127.0.0.1` by default. **Behaviour change:** set `--host` (or `host` in `config.json`) to listen elsewhere.
+* **Tests.** A generated authorization-matrix test covers every route for every principal type.
+* **Client 1.2.1.** `profiles.importArchive` and `backups.importArchive` upload bytes (`Blob`, `ArrayBuffer` or `Uint8Array`); `ChatSessionMeta` gains `keyId`.
+
 ## Unreleased
 
 * The live examples are now fully static demo apps. A new browser-safe package (`packages/examples-demo`, `@intheloop-studio/hermes-remote-examples-demo`) exports `createDemoFetch()`, an in-memory fake of the hermes-remote HTTP routes the six example apps call: seeded chat sessions, runs in several states with SSE event feeds, profiles (default/work/research), config, memory and soul files, jobs, discovery data, and an event firehose. Chat streams over the real SSE protocol with canned, prompt-keyed replies, and state is mutable per page load. Each example app wires the fake in through the client's `fetch` option; the served sandbox backend (`packages/examples-backend`), the Vercel Function at `/api/hermes/*`, the Groq integration, and the public sandbox key are all removed. The landing deployment is static files only.

@@ -22,7 +22,7 @@ hermes-remote init \
   --rate-limit 120 --rate-window 60
 ```
 
-Accepted flags: `--port`, `--cors` (repeatable), `--anonymous`, `--upstream`, `--upstream-key`, `--model`, `--supabase-url`, `--supabase-jwt-secret`, `--rate-limit`, `--rate-window`. Running `init` again merges into the existing file. Keys that have no flag (`auth`, `hermesBinary`, `profileHomes`, `commandRelay`) are edited in the file directly; see [Configuration](/server/config).
+Accepted flags: `--port`, `--host`, `--cors` (repeatable), `--anonymous`, `--upstream`, `--upstream-key`, `--model`, `--supabase-url`, `--supabase-jwt-secret`, `--rate-limit`, `--rate-window`. Running `init` again merges into the existing file. Keys that have no flag (`auth`, `hermesBinary`, `profileHomes`, `commandRelay`) are edited in the file directly; see [Configuration](/server/config).
 
 ## serve
 
@@ -31,6 +31,7 @@ Runs the server. Every setting resolves with the same precedence: flag, then env
 | Flag | Env | Config key | Meaning |
 | ---- | --- | ---------- | ------- |
 | `--port` | | `port` | HTTP port, default 8643 |
+| `--host` | | `host` | Interface to listen on, default `127.0.0.1` (loopback only). Use `0.0.0.0` only when a firewall or reverse proxy guards the port. |
 | `--cors a,b` | | `cors` | Allowed browser origins |
 | `--upstream` | `HERMES_UPSTREAM_URL` | `upstreamUrl` | Hermes agent API server URL |
 | `--upstream-key` | `HERMES_UPSTREAM_KEY` | `upstreamKey` | The agent's `API_SERVER_KEY` |

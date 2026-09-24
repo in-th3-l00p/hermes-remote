@@ -164,7 +164,56 @@ describe("createApp", () => {
     const viaKey = await apiKeyAccess.fetch(
       get(`/v1/sessions/${session.id}/messages`, "hk_good"),
     );
-    expect(viaKey.status).toBe(200);
+    expect(viaKey.status).toBe(404);
+    const readAll: KeyVerifier = {
+      verifyToken: async () => ({
+        ...record,
+        id: "ops",
+        scopes: ["sessions:read", "sessions:read-all"],
+      }),
+    };
+    const viaReadAll = await createApp({ store: readAll, chat }).fetch(
+      get(`/v1/sessions/${session.id}/messages`, "hk_ops"),
+    );
+    expect(viaReadAll.status).toBe(200);
+    const deleteWithReadAll = await createApp({ store: readAll, chat }).fetch(
+      new Request(`http://x/v1/sessions/${session.id}`, {
+        method: "DELETE",
+        headers: { authorization: "Bearer hk_ops" },
+      }),
+    );
+    expect(deleteWithReadAll.status).toBe(403);
+  });
+
+  test("api keys own the sessions they create", async () => {
+    const chat = { store: new ChatStore(), agent: echoAgent };
+    const other: KeyVerifier = {
+      verifyToken: async () => ({ ...record, id: "other" }),
+    };
+    const app = createApp({ store, chat, anonymous: true });
+    const created = await app.fetch(
+      new Request("http://x/v1/sessions", {
+        method: "POST",
+        headers: { authorization: "Bearer hk_good" },
+      }),
+    );
+    const session = (await created.json()) as { id: string; keyId: string };
+    expect(session.keyId).toBe("abc123");
+    const listed = await app.fetch(get("/v1/sessions", "hk_good"));
+    expect(
+      ((await listed.json()) as { sessions: { id: string }[] }).sessions.map(
+        (s) => s.id,
+      ),
+    ).toEqual([session.id]);
+    const otherApp = createApp({ store: other, chat });
+    expect(
+      (await otherApp.fetch(get(`/v1/sessions/${session.id}/messages`, "hk_x"))).status,
+    ).toBe(404);
+    const otherList = await otherApp.fetch(get(`/v1/sessions?ids=${session.id}`, "hk_x"));
+    expect(((await otherList.json()) as { sessions: unknown[] }).sessions).toEqual([]);
+    expect(
+      (await app.fetch(get(`/v1/sessions/${session.id}/messages`))).status,
+    ).toBe(404);
   });
 
   test("the agent is told who it is speaking with", async () => {

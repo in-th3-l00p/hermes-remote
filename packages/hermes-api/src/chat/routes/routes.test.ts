@@ -210,7 +210,7 @@ describe("chat routes", () => {
   test("lists anonymous sessions by ids", async () => {
     const { app, store } = makeApp();
     const anonymous = store.createSession();
-    const owned = store.createSession("user-1");
+    const owned = store.createSession({ userId: "user-1" });
     const res = await app.fetch(
       new Request(
         `http://x/v1/sessions?ids=${anonymous.id},${owned.id},zzz,ffff`,
@@ -240,7 +240,7 @@ describe("chat routes", () => {
 
   test("anonymous principals cannot touch user-owned sessions", async () => {
     const { app, store } = makeApp();
-    const owned = store.createSession("user-1");
+    const owned = store.createSession({ userId: "user-1" });
     store.addMessage(owned.id, { role: "user", content: "secret" });
     const messageId = store.getSession(owned.id)?.messages[0]?.id as string;
     const requests = [

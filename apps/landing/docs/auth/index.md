@@ -5,8 +5,8 @@ Every request is authenticated into a principal before anything else happens. Th
 | Principal | Token | Granted |
 | --------- | ----- | ------- |
 | API key | `Bearer hk_<id>.<secret>` | Exactly the scopes minted on the key |
-| User | `Bearer <jwt>` from your auth provider | Tier 1 scopes, own sessions only |
-| Anonymous | none (only with `--anonymous`) | Tier 1, sessions addressed by id |
+| User | `Bearer <jwt>` from your auth provider | End-user scopes, own sessions only |
+| Anonymous | none (only with `--anonymous`) | End-user scopes, sessions addressed by id |
 
 API keys are managed by the CLI (`hermes-remote keys`) and never minted over HTTP; see [API keys and scopes](/server/scopes). User tokens are verified by an auth provider, the subject of this section.
 

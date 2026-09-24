@@ -66,8 +66,15 @@ export interface AppOptions {
   now?: () => Date;
 }
 
+export interface RouteInfo {
+  method: string;
+  path: string;
+}
+
 export interface App {
   fetch(request: Request, clientIp?: string): Response | Promise<Response>;
+  /** Every registered route handler (middleware excluded), in order. */
+  readonly routes: RouteInfo[];
 }
 
 const DEFAULT_AUTH_FAILURE_LIMIT: RateLimitOptions = {
@@ -156,7 +163,11 @@ export function createApp(options: AppOptions = {}): App {
   }
   app.notFound((c) => errorResponse(c, 404, "not_found", "Unknown route"));
 
+  const routes = app.routes
+    .filter((r) => r.method !== "ALL")
+    .map((r) => ({ method: r.method, path: r.path }));
   return {
     fetch: (request, clientIp) => app.fetch(request, { clientIp }),
+    routes,
   };
 }

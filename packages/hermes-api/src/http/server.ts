@@ -6,6 +6,8 @@ import { createApp, type AppOptions } from "./app.ts";
 
 export interface StartServerOptions extends AppOptions {
   port: number;
+  /** Interface to listen on. Defaults to loopback; "0.0.0.0" exposes it. */
+  hostname?: string;
   logPath: string;
   /** JSONL audit log destination; enables auditing when set. */
   auditPath?: string;
@@ -42,8 +44,10 @@ export async function startServer(
   const log = (line: string): void => {
     appendSafely(options.logPath, `${now().toISOString()} ${line}\n`);
   };
+  const hostname = options.hostname ?? "127.0.0.1";
   const server = Bun.serve({
     port: options.port,
+    hostname,
     // Closes the chunked-transfer bypass of the content-length check.
     maxRequestBodySize: options.limits?.maxBodyBytes ?? DEFAULT_LIMITS.maxBodyBytes,
     async fetch(request, bunServer) {
@@ -54,7 +58,7 @@ export async function startServer(
     },
   });
   const port = server.port ?? options.port;
-  log(`server started on port ${port}`);
+  log(`server started on ${hostname}:${port}`);
   return {
     port,
     stop() {

@@ -1,5 +1,5 @@
 import type { Hono } from "hono";
-import { error, json, requireScope, type ChatEnv } from "../chat/routes/shared.ts";
+import { error, json, type ChatEnv } from "../chat/routes/shared.ts";
 import { profileArgs } from "./registry.ts";
 import {
   cliResponse,
@@ -7,10 +7,12 @@ import {
   invalidParam,
   requireKeyScope,
   runCli,
+  withUploadedArchive,
   type ManagementOptions,
 } from "../mgmt/shared.ts";
 
-const NAME = ":name{[A-Za-z0-9_-]+}";
+// Names never start with "-", so a path segment can't become a CLI flag.
+const NAME = ":name{[A-Za-z0-9_][A-Za-z0-9_-]*}";
 
 export function registerProfileRoutes(
   app: Hono<ChatEnv>,
@@ -19,7 +21,7 @@ export function registerProfileRoutes(
   const { cli, profiles } = options;
 
   app.get("/v1/profiles", async (c) => {
-    const denied = requireScope(c.get("principal"), "status:read");
+    const denied = requireKeyScope(c.get("principal"), "status:read");
     if (denied !== null) {
       return denied;
     }
@@ -27,7 +29,7 @@ export function registerProfileRoutes(
   });
 
   app.get(`/v1/profiles/${NAME}`, (c) => {
-    const denied = requireScope(c.get("principal"), "status:read");
+    const denied = requireKeyScope(c.get("principal"), "status:read");
     return denied ?? runCli(c, cli, ["profile", "show", c.req.param("name")]);
   });
 
@@ -109,11 +111,9 @@ export function registerProfileRoutes(
     if (denied !== null) {
       return denied;
     }
-    const body = (await c.req.json().catch(() => null)) as { path?: unknown } | null;
-    if (typeof body?.path !== "string" || invalidParam(body.path)) {
-      return error(400, "invalid_request", "path (server-local string) is required");
-    }
-    return runCli(c, cli, ["profile", "import", body.path]);
+    return withUploadedArchive(c, (path) =>
+      runCli(c, cli, ["profile", "import", path], 300_000),
+    );
   });
 
   app.post(`/v1/profiles/${NAME}/update`, (c) => {

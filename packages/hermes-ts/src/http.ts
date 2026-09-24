@@ -24,6 +24,17 @@ export class HermesApiError extends Error {
   }
 }
 
+/** Raw bytes sent as `application/octet-stream` (archive uploads). */
+export type BinaryBody = Blob | ArrayBuffer | Uint8Array;
+
+function isBinary(body: unknown): body is BinaryBody {
+  return (
+    body instanceof Blob ||
+    body instanceof ArrayBuffer ||
+    body instanceof Uint8Array
+  );
+}
+
 export class HttpClient {
   readonly baseUrl: string;
   private readonly tokenProvider: TokenProvider | null;
@@ -57,13 +68,16 @@ export class HttpClient {
     if (this.tokenProvider !== null) {
       headers["authorization"] = `Bearer ${await this.tokenProvider()}`;
     }
+    const binary = isBinary(body);
     if (body !== undefined) {
-      headers["content-type"] = "application/json";
+      headers["content-type"] = binary ? "application/octet-stream" : "application/json";
     }
     const res = await this.fetchImpl(`${this.baseUrl}${path}`, {
       method,
       headers,
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      ...(body === undefined
+        ? {}
+        : { body: binary ? (body as NonNullable<RequestInit["body"]>) : JSON.stringify(body) }),
       ...(signal === undefined ? {} : { signal }),
     });
     if (res.status === 401 && this.refreshable && !retried) {

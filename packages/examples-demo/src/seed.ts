@@ -317,6 +317,7 @@ export function seedSessions(now: Date): DemoSession[] {
     return {
       id: seed.id,
       userId: null,
+      keyId: null,
       title: seed.title,
       createdAt: created,
       updatedAt: shift(now, seed.minutesAgo),

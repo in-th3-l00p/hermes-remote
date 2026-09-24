@@ -31,10 +31,6 @@ export function registerMediaRoutes(
     instruction: string,
   ): Promise<Response> {
     const principal = c.get("principal");
-    const denied = requireScope(principal, "chat:invoke");
-    if (denied !== null) {
-      return denied;
-    }
     try {
       const payload =
         principal.type === "api_key"
@@ -116,6 +112,10 @@ export function registerMediaRoutes(
   });
 
   app.post("/v1/media/images", async (c) => {
+    const denied = requireScope(c.get("principal"), "chat:invoke");
+    if (denied !== null) {
+      return denied;
+    }
     const body = (await c.req.json().catch(() => null)) as {
       prompt?: unknown;
       model?: unknown;
@@ -133,6 +133,10 @@ export function registerMediaRoutes(
   });
 
   app.post("/v1/web/search", async (c) => {
+    const denied = requireScope(c.get("principal"), "chat:invoke");
+    if (denied !== null) {
+      return denied;
+    }
     const body = (await c.req.json().catch(() => null)) as {
       query?: unknown;
     } | null;
@@ -143,6 +147,10 @@ export function registerMediaRoutes(
   });
 
   app.post("/v1/web/extract", async (c) => {
+    const denied = requireScope(c.get("principal"), "chat:invoke");
+    if (denied !== null) {
+      return denied;
+    }
     const body = (await c.req.json().catch(() => null)) as {
       url?: unknown;
     } | null;

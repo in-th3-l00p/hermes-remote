@@ -1,4 +1,4 @@
-import type { HttpClient } from "./http.ts";
+import type { BinaryBody, HttpClient } from "./http.ts";
 
 export interface ProfileInfo {
   name: string;
@@ -50,8 +50,9 @@ export class ProfilesResource {
     return this.http.raw("POST", `/v1/profiles/${name}/export`);
   }
 
-  importArchive(name: string, path: string): Promise<CliResult> {
-    return this.http.request("POST", `/v1/profiles/${name}/import`, { path });
+  /** Uploads a profile archive (as produced by `exportArchive`) and imports it. */
+  importArchive(name: string, archive: BinaryBody): Promise<CliResult> {
+    return this.http.request("POST", `/v1/profiles/${name}/import`, archive);
   }
 
   install(name: string, source: string): Promise<CliResult> {
@@ -609,8 +610,9 @@ export class BackupsResource {
     return this.http.raw("POST", "/v1/backups");
   }
 
-  importArchive(path: string): Promise<CliResult> {
-    return this.http.request("POST", "/v1/backups/import", { path });
+  /** Uploads a backup archive (as produced by `create`) and restores it. */
+  importArchive(archive: BinaryBody): Promise<CliResult> {
+    return this.http.request("POST", "/v1/backups/import", archive);
   }
 }
 

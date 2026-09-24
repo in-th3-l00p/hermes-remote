@@ -1,6 +1,6 @@
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, realpathSync } from "node:fs";
 import { readdir, stat, unlink } from "node:fs/promises";
-import { dirname, resolve as resolvePath, sep } from "node:path";
+import { basename, dirname, join, resolve as resolvePath, sep } from "node:path";
 
 export class BridgeDenied extends Error {
   constructor(readonly reason: string) {
@@ -13,7 +13,38 @@ const DENIED_BASENAMES = new Set([".env", "auth.json", "keys.json"]);
 const DENIED_SUFFIXES = [".pem", ".key"];
 const DENIED_SEGMENTS = new Set(["credentials"]);
 
-/** File access rooted in a profile home; credential files are unreachable. */
+function within(path: string, root: string): boolean {
+  return path === root || path.startsWith(root + sep);
+}
+
+function checkSegments(relative: string): void {
+  for (const segment of relative.split(sep)) {
+    const lower = segment.toLowerCase();
+    if (DENIED_BASENAMES.has(lower) || DENIED_SEGMENTS.has(lower)) {
+      throw new BridgeDenied(`access to ${segment} is not allowed`);
+    }
+    if (DENIED_SUFFIXES.some((suffix) => lower.endsWith(suffix))) {
+      throw new BridgeDenied(`access to ${segment} is not allowed`);
+    }
+  }
+}
+
+/** Resolves symlinks through the deepest existing ancestor of `path`. */
+function realPath(path: string): string {
+  let existing = path;
+  const rest: string[] = [];
+  while (!existsSync(existing)) {
+    rest.unshift(basename(existing));
+    existing = dirname(existing);
+  }
+  return join(realpathSync(existing), ...rest);
+}
+
+/**
+ * File access rooted in a directory (a profile home, or a subdirectory of
+ * one via `scoped`). Paths may not escape the root lexically or through
+ * symlinks, and credential files are unreachable.
+ */
 export class FsBridge {
   private readonly root: string;
   private readonly maxBytes: number;
@@ -24,21 +55,26 @@ export class FsBridge {
   }
 
   resolve(relPath: string): string {
+    if (relPath.includes("\0")) {
+      throw new BridgeDenied("path contains a NUL byte");
+    }
     const absolute = resolvePath(this.root, relPath);
-    if (absolute !== this.root && !absolute.startsWith(this.root + sep)) {
-      throw new BridgeDenied("path escapes the profile home");
+    if (!within(absolute, this.root)) {
+      throw new BridgeDenied("path escapes the allowed directory");
     }
-    const segments = absolute.slice(this.root.length).split(sep);
-    for (const segment of segments) {
-      const lower = segment.toLowerCase();
-      if (DENIED_BASENAMES.has(lower) || DENIED_SEGMENTS.has(lower)) {
-        throw new BridgeDenied(`access to ${segment} is not allowed`);
-      }
-      if (DENIED_SUFFIXES.some((suffix) => lower.endsWith(suffix))) {
-        throw new BridgeDenied(`access to ${segment} is not allowed`);
-      }
+    checkSegments(absolute.slice(this.root.length));
+    const realRoot = realPath(this.root);
+    const real = realPath(absolute);
+    if (!within(real, realRoot)) {
+      throw new BridgeDenied("path escapes the allowed directory");
     }
+    checkSegments(real.slice(realRoot.length));
     return absolute;
+  }
+
+  /** A bridge confined to a subdirectory of this one. */
+  scoped(relDir: string): FsBridge {
+    return new FsBridge({ root: this.resolve(relDir), maxBytes: this.maxBytes });
   }
 
   async read(relPath: string): Promise<string | null> {

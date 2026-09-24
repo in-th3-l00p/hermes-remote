@@ -3,6 +3,7 @@ export type {
   App,
   AppOptions,
   AuditEntry,
+  RouteInfo,
 } from "./http/index.ts";
 export type { KeyVerifier, Principal } from "./auth/index.ts";
 export { DEFAULT_LIMITS, ipInCidr } from "./limits/index.ts";

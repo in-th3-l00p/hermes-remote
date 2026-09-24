@@ -194,6 +194,30 @@ describe("skill file routes", () => {
       (await app.fetch(req("/v1/skills/notes/files/..%2F..%2F.env"))).status,
     ).toBe(400);
   });
+
+  test("skill files stay inside their own skill directory", async () => {
+    const { app, home } = await makeApp(["skills:read", "skills:write"]);
+    await mkdir(join(home, "skills", "notes"), { recursive: true });
+    await writeFile(join(home, "config.yaml"), "model: original\n");
+    for (const path of [
+      "..%2F..%2Fconfig.yaml",
+      "..%2Fother%2FSKILL.md",
+      "..%2F..%2Fhooks%2Fx%2Fhandler.py",
+      "a%00b",
+    ]) {
+      const read = await app.fetch(req(`/v1/skills/notes/files/${path}`));
+      expect(read.status).toBe(400);
+      const write = await app.fetch(
+        req(`/v1/skills/notes/files/${path}`, "PUT", { content: "changed" }),
+      );
+      expect(write.status).toBe(400);
+    }
+    expect(await Bun.file(join(home, "config.yaml")).text()).toBe("model: original\n");
+    const nested = await app.fetch(
+      req("/v1/skills/notes/files/references%2Fa.md", "PUT", { content: "ok" }),
+    );
+    expect(nested.status).toBe(200);
+  });
 });
 
 describe("bundles, cron output, subagents", () => {

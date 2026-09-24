@@ -5,8 +5,8 @@ Every request resolves to exactly one principal before any route logic runs:
 | Principal | Token | Gets |
 | --------- | ----- | ---- |
 | API key | `Bearer hk_<id>.<secret>` | Exactly the scopes minted on the key |
-| User | `Bearer <jwt>` verified by the auth provider | Tier 1 scopes, own resources only |
-| Anonymous | none (only with `--anonymous`) | Tier 1, sessions addressed by id |
+| User | `Bearer <jwt>` verified by the auth provider | End-user scopes, own resources only |
+| Anonymous | none (only with `--anonymous`) | End-user scopes, sessions addressed by id |
 
 Unauthenticated requests get 401 on every route, known or not, so the route map does not leak.
 
@@ -20,7 +20,7 @@ Scopes are a closed set in four tiers. Routes require them exactly; there is no 
 
 ### Tier 1: end-user surface
 
-The only scopes a user token or anonymous principal can hold. For users they always mean "own resources only".
+Tier 1 scopes can be minted on any key. User tokens and anonymous principals hold a fixed subset implicitly, the **end-user scopes**: `chat:invoke`, `sessions:read`, `sessions:write`, `sessions:search`, `status:read`, `skills:read` and `toolsets:read`. For users they always mean "own resources only", and on management routes (agent status, providers, checkpoints, skill files, profiles, events) they are refused regardless: those surfaces are API-key only. User tokens and anonymous principals also cannot select a profile with `X-Hermes-Profile` (403 `profile_forbidden`).
 
 | Scope | Grants |
 | ----- | ------ |
@@ -53,7 +53,7 @@ API keys only. The server refuses these on user tokens.
 | `soul:read` | SOUL.md and skin reads |
 | `insights:read` | Token and cost analytics |
 | `logs:read` | Agent and gateway logs |
-| `sessions:read-all` / `sessions:write-all` | The agent's own session store, across users |
+| `sessions:read-all` / `sessions:write-all` | The agent's own session store, and hermes-remote chat sessions owned by other users and keys |
 | `subagents:control` | Reserved for steering subagents |
 | `messaging:send` | One-shot delivery to messaging platforms |
 | `projects:manage` | Project registry |

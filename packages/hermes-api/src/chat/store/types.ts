@@ -18,6 +18,8 @@ export interface ChatMessage {
 export interface ChatSessionMeta {
   id: string;
   userId: string | null;
+  /** Id of the API key that created the session, when a key did. */
+  keyId: string | null;
   title: string | null;
   createdAt: string;
   updatedAt: string;

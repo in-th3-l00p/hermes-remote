@@ -10,7 +10,7 @@ Please report vulnerabilities privately through a [GitHub security advisory](htt
 
 * API key secrets are stored as argon2 hashes; keys are minted only by the host CLI, never over HTTP, and support expiry, rotation, revocation, and IPv4 CIDR pinning.
 * User tokens are verified against the identity provider's public JWKS (ES256); the server holds no signing secret.
-* Scopes are a closed catalog enforced per route; user tokens are limited to tier 1 and to sessions they own.
+* Scopes are a closed catalog enforced per route; user tokens and anonymous principals hold only the end-user scopes (chat, their own sessions, read-only discovery) and are refused on every management route.
 * Rate limits are per principal; every mutation and auth failure is written to an append only audit log with the acting principal.
 * The upstream agent key never appears in responses, logs, or client bundles, and the agent's identity context contains only verified claims.
 

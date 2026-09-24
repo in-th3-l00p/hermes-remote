@@ -67,7 +67,22 @@ const ALL = new Set<string>([
   ...AUTH_SCOPES,
 ]);
 
+/**
+ * Scopes held implicitly by user and anonymous principals: chat, their own
+ * sessions, and read-only discovery. Everything else needs an API key.
+ */
+export const END_USER_SCOPES = [
+  "chat:invoke",
+  "sessions:read",
+  "sessions:write",
+  "sessions:search",
+  "status:read",
+  "skills:read",
+  "toolsets:read",
+] as const;
+
 const DANGEROUS = new Set<string>(TIER3_SCOPES);
+const END_USER = new Set<string>(END_USER_SCOPES);
 const USER_GRANTABLE = new Set<string>(TIER1_SCOPES);
 
 export function isKnownScope(scope: string): scope is Scope {
@@ -80,4 +95,8 @@ export function isDangerousScope(scope: string): boolean {
 
 export function isUserGrantableScope(scope: string): boolean {
   return USER_GRANTABLE.has(scope);
+}
+
+export function isEndUserScope(scope: string): boolean {
+  return END_USER.has(scope);
 }

@@ -1,7 +1,6 @@
 import type { Context, Hono } from "hono";
 import { BridgeDenied, FsBridge } from "../bridge/index.ts";
-import { error, json, requireScope, type ChatEnv } from "../chat/routes/shared.ts";
-import { isUserGrantableScope } from "../scopes/index.ts";
+import { error, json, type ChatEnv } from "../chat/routes/shared.ts";
 import { currentProfile, requireKeyScope, type ManagementOptions } from "./shared.ts";
 
 const MEMORY_LIMIT = 2200;
@@ -9,8 +8,7 @@ const USER_LIMIT = 1375;
 const SKILL_NAME = ":name{[A-Za-z0-9_-]+}";
 
 function guard(c: Context<ChatEnv>, scope: string): Response | null {
-  const check = isUserGrantableScope(scope) ? requireScope : requireKeyScope;
-  return check(c.get("principal"), scope);
+  return requireKeyScope(c.get("principal"), scope);
 }
 
 function withBridge(
@@ -242,7 +240,9 @@ export function registerFsRoutes(
         return denied;
       }
       const path = skillFilePath(c);
-      const content = await fs.read(`skills/${c.req.param("name")}/${path}`);
+      const content = await fs
+        .scoped(`skills/${c.req.param("name")}`)
+        .read(path);
       if (content === null) {
         return error(404, "file_not_found", "Unknown skill file");
       }
@@ -262,7 +262,7 @@ export function registerFsRoutes(
         return error(400, "invalid_request", "content (string) is required");
       }
       const path = skillFilePath(c);
-      await fs.write(`skills/${c.req.param("name")}/${path}`, content);
+      await fs.scoped(`skills/${c.req.param("name")}`).write(path, content);
       return json(200, { path, content });
     }),
   );

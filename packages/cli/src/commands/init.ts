@@ -25,6 +25,7 @@ export async function initCommand(
     config.anonymous = true;
   }
   for (const [flagName, key] of [
+    ["host", "host"],
     ["upstream", "upstreamUrl"],
     ["upstream-key", "upstreamKey"],
     ["model", "upstreamModel"],

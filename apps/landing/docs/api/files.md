@@ -1,6 +1,6 @@
 # Files: memory, soul, skills, bundles
 
-These routes read and write documents in the agent's home directory (`~/.hermes` or the profile's home) through a filesystem bridge. Paths are allowlisted and traversal-safe, and credentials (`.env`, `auth.json`, key material) are unreadable by construction; an out-of-bounds path gets 400 `path_denied`.
+These routes read and write documents in the agent's home directory (`~/.hermes` or the profile's home) through a filesystem bridge. Paths are allowlisted and traversal-safe, and credentials (`.env`, `auth.json`, key material) are unreadable by construction; an out-of-bounds path gets 400 `path_denied`. Symlinks are resolved before the check, so a link can't point outside the home or at a credential file, and skill reference files (`/v1/skills/:name/files/*`) are confined to that skill's own directory.
 
 Like all management surfaces, these are API-key only. Reads use the `:read` scope of each area, writes the `:write` scope. All routes honor `X-Hermes-Profile`.
 
