@@ -93,4 +93,6 @@ curl -s -X POST "$BASE/v1/sessions/$SESSION/messages/$MESSAGE/reactions" \
 
 ## Identity injection
 
-Every turn prepends one system message built from the verified principal: the user id and email, the API key name, or "guest" with a stable id for anonymous callers. Nothing else ever goes in. Ask the agent "who am I?" and it answers from that context alone.
+Every turn prepends one system message built from the verified principal: the user id and email for users, "a guest signed in anonymously" with a stable id when the auth provider marks the token anonymous (for example Supabase anonymous sign-ins), the API key name for keys, or "an unauthenticated guest" in `--anonymous` mode (no id is shared, since the only identifier would be the client IP). Nothing else ever goes in. Ask the agent "who am I?" and it answers from that context alone.
+
+Claims are reduced to safe shapes before they are used: ids and key names keep a plain character set, and an email claim that isn't a plain address is left out rather than echoed, so a crafted claim can't read as an instruction.

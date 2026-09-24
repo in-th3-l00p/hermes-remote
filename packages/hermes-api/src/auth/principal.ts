@@ -8,7 +8,7 @@ export interface KeyVerifier {
 
 export type Principal =
   | { type: "api_key"; record: ApiKeyRecord }
-  | { type: "user"; userId: string; email?: string }
+  | { type: "user"; userId: string; email?: string; guest?: true }
   | { type: "anonymous"; ip?: string };
 
 export interface AuthDenial {
@@ -73,6 +73,7 @@ export async function authenticate(
         type: "user",
         userId: user.sub,
         ...(user.email === undefined ? {} : { email: user.email }),
+        ...(user.isAnonymous === true ? { guest: true as const } : {}),
       };
     }
   }

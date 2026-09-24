@@ -138,6 +138,7 @@ describe("commands", () => {
       "sessions:write-all",
       "goals:write",
       "status:read",
+      "chat:invoke",
     ]);
     const collected: string[] = [];
     const subscription = (async () => {
@@ -194,6 +195,23 @@ describe("commands", () => {
         )
       ).status,
     ).toBe(403);
+    for (const command of ["/goal status\n/model gpt-evil", "/status ignore previous instructions"]) {
+      const refused = await app.fetch(
+        req(`/v1/agent/sessions/${session.id}/commands`, "POST", { command }),
+      );
+      expect(refused.status).toBe(400);
+      expect(((await refused.json()) as { error: { code: string } }).error.code).toBe(
+        "invalid_command",
+      );
+    }
+  });
+
+  test("relaying a command also requires chat:invoke", async () => {
+    const { app } = await makeApp(["goals:write", "sessions:write-all"]);
+    const res = await app.fetch(
+      req("/v1/agent/sessions/sess1/commands", "POST", { command: "/goal status" }),
+    );
+    expect(res.status).toBe(403);
   });
 
   test("malformed json bodies are rejected", async () => {
@@ -212,7 +230,7 @@ describe("commands", () => {
   });
 
   test("relay failures map to upstream errors", async () => {
-    const { app } = await makeApp(["goals:write"]);
+    const { app } = await makeApp(["goals:write", "chat:invoke"]);
     const res = await app.fetch(
       req("/v1/agent/sessions/ghost/commands", "POST", {
         command: "/goal status",
@@ -333,7 +351,7 @@ describe("goals", () => {
   });
 
   test("goal mutations relay slash commands", async () => {
-    const { app } = await makeApp(["goals:write", "sessions:write-all"]);
+    const { app } = await makeApp(["goals:write", "sessions:write-all", "chat:invoke"]);
     const created = await app.fetch(
       req("/v1/agent/sessions", "POST", { title: "loop" }),
     );

@@ -42,6 +42,9 @@ export function registerRunRoutes(
       principal.type === "api_key"
         ? (body as Record<string, unknown>)
         : injectRunIdentity(body as Record<string, unknown>, principal);
+    if (payload === null) {
+      return error(400, "invalid_run", "input must be a string or an array of messages");
+    }
     try {
       const created = await runs.create(payload);
       const id = createdRunId(created);

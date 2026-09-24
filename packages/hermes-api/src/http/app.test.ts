@@ -271,14 +271,14 @@ describe("createApp", () => {
       const enc = (o: unknown) =>
         Buffer.from(JSON.stringify(o)).toString("base64url");
       const head = enc({ alg: "HS256", typ: "JWT" });
-      const body = enc({ sub: "guest-7", exp: Date.now() / 1000 + 600 });
+      const body = enc({ sub: "guest-7", is_anonymous: true, exp: Date.now() / 1000 + 600 });
       const sig = createHmac("sha256", SECRET)
         .update(`${head}.${body}`)
         .digest("base64url");
       return `${head}.${body}.${sig}`;
     })();
     await send(userApp, anonToken);
-    expect(seen[3]).toContain("anonymous guest (stable user id: guest-7)");
+    expect(seen[3]).toContain("a guest signed in anonymously (stable user id: guest-7)");
   });
 
   test("CIDR-restricted keys only work from allowed addresses", async () => {

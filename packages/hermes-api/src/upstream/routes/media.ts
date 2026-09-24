@@ -2,7 +2,7 @@ import { checkPublicUrl } from "../net-guard.ts";
 import type { Context, Hono } from "hono";
 import { principalKey } from "../../auth/index.ts";
 import { error, json, requireScope, type ChatEnv } from "../../chat/routes/shared.ts";
-import { injectRunIdentity } from "../identity.ts";
+import { identityPrefixed } from "../identity.ts";
 import { upstreamFailure, type UpstreamRouteOptions } from "./shared.ts";
 
 const sleep = (ms: number): Promise<void> =>
@@ -36,7 +36,7 @@ export function registerMediaRoutes(
       const payload =
         principal.type === "api_key"
           ? { input: toolInput(tool, instruction) }
-          : injectRunIdentity({ input: toolInput(tool, instruction) }, principal);
+          : { input: identityPrefixed(toolInput(tool, instruction), principal) };
       const created = (await options.upstream.runs.create(payload)) as {
         id?: string;
         run_id?: string;
@@ -184,7 +184,7 @@ export function registerMediaRoutes(
       const payload =
         principal.type === "api_key"
           ? { input }
-          : injectRunIdentity({ input }, principal);
+          : { input: identityPrefixed(input, principal) };
       const created = (await options.upstream.runs.create(payload)) as {
         id?: string;
         run_id?: string;

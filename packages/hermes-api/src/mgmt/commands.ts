@@ -23,6 +23,9 @@ export const COMMAND_SCOPES: Record<string, Scope> = {
   "/hatch": "chat:invoke",
 };
 
+/** Commands that take no arguments; trailing text would be a free prompt. */
+const NO_ARGUMENTS = new Set(["/status", "/context", "/journey", "/sessions", "/hatch"]);
+
 export interface RelayedEvent {
   event: string;
   data: unknown;
@@ -102,6 +105,16 @@ export async function runCommand(
       "Slash-command relay is disabled on this server",
     );
   }
+  // One command per request: a newline would smuggle in a second one.
+  if (/[\u0000-\u001f\u007f]/.test(command)) {
+    return error(400, "invalid_command", "Commands must be a single line of text");
+  }
+  // The upstream runs relayed commands as ordinary model turns, so relaying
+  // one is a chat turn on top of the command's own scope.
+  const denied = requireKeyScope(c.get("principal"), "chat:invoke");
+  if (denied !== null) {
+    return denied;
+  }
   try {
     const events = await relayCommand(options, sessionId, command);
     options.events?.publish("command", { sessionId, command: command.split(/\s+/)[0] });
@@ -137,6 +150,10 @@ export function registerCommandRoutes(
     const scope = commandScope(command);
     if (scope === null) {
       return error(400, "unknown_command", "Command is not in the allowlist");
+    }
+    const [head, ...args] = command.trim().split(/\s+/);
+    if (NO_ARGUMENTS.has(head ?? "") && args.length > 0) {
+      return error(400, "invalid_command", `${head} takes no arguments`);
     }
     const denied = requireKeyScope(c.get("principal"), scope);
     if (denied !== null) {

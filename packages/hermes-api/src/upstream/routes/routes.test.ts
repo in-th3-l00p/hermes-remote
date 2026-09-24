@@ -233,6 +233,21 @@ describe("run routes", () => {
     expect((await app.fetch(get("/v1/runs/unknown", "hk_good"))).status).toBe(404);
   });
 
+  test("user runs must carry an input the identity can be attached to", async () => {
+    const app = demoApp({
+      anonymous: false,
+      authProvider: new JwtAuthProvider({ hs256Secret: SECRET }),
+      upstream: { upstream: new DemoUpstream(), runStore: new RunStore() },
+    });
+    for (const body of [{}, { input: 5 }]) {
+      const res = await app.fetch(send("/v1/runs", body, "POST", userToken("u-1")));
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as { error: { code: string } }).error.code).toBe(
+        "invalid_run",
+      );
+    }
+  });
+
   test("api key runs pass through without identity injection", async () => {
     const app = demoApp({ anonymous: false, store: keyStore(["chat:invoke"]) });
     const created = await app.fetch(

@@ -1,6 +1,6 @@
 # Runs
 
-Runs are long-running agent tasks, proxied to the upstream `POST /v1/runs` surface. hermes-remote adds ownership: each run is recorded against the principal that created it, users only ever see their own, and user-started runs get the same verified-identity context injected as chat turns. API keys see all runs.
+Runs are long-running agent tasks, proxied to the upstream `POST /v1/runs` surface. hermes-remote adds ownership: each run is recorded against the principal that created it, users only ever see their own, and user-started runs get the same verified-identity context injected as chat turns. For user and anonymous callers, `input` must be a string or an array of messages (anything else is 400 `invalid_run`), and `system` or `developer` messages in an array are dropped so only the server's identity turn sits at that level. API keys see all runs.
 
 All routes require `chat:invoke`.
 
