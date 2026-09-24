@@ -1,0 +1,21 @@
+# hermes-remote next to a Hermes agent running on the host.
+# Put API_SERVER_KEY (the agent's key) in a .env file next to this one,
+# create an API key, and start:
+#   docker compose run --rm hermes-remote keys create --name app --scope chat:invoke --scope sessions:read --scope sessions:write
+#   docker compose up -d
+services:
+  hermes-remote:
+    build: .
+    ports:
+      # Loopback only: put a TLS reverse proxy in front for remote access.
+      - "127.0.0.1:8643:8643"
+    environment:
+      HERMES_UPSTREAM_URL: http://host.docker.internal:8642
+      HERMES_UPSTREAM_KEY: ${API_SERVER_KEY:?set API_SERVER_KEY in .env}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - hermes-remote:/data
+    restart: unless-stopped
+volumes:
+  hermes-remote:

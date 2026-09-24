@@ -19,3 +19,15 @@ jobs:
       - run: bun run test:integration:local
       - run: bun scripts/check-snippets.ts
       - run: bun run --cwd apps/landing build:examples
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t hermes-remote:ci .
+      - name: smoke test the image
+        run: |
+          docker run -d --name hr -p 8643:8643 hermes-remote:ci
+          for i in $(seq 1 20); do curl -fs http://127.0.0.1:8643/v1/status && break; sleep 1; done
+          curl -fs http://127.0.0.1:8643/v1/status | grep '"ok":true'
+          docker exec hr bun /app/bin/hermes-remote.js doctor || true
+          docker rm -f hr

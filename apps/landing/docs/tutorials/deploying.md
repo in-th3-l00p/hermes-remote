@@ -44,6 +44,21 @@ Streaming responses must not be buffered: with nginx set `proxy_buffering off;` 
 
 For health checks, point the proxy or load balancer at `GET /v1/status`: it needs no token and returns `{ ok, version }`.
 
+## Or run it in Docker
+
+The repository ships a `Dockerfile` and a `docker-compose.yml` for running hermes-remote beside an agent on the host. All state (keys, chat history, users, signing key, logs) lives in the `/data` volume.
+
+```bash
+echo "API_SERVER_KEY=<the agent's key>" > .env
+docker compose run --rm hermes-remote keys create --name web \
+  --scope chat:invoke --scope sessions:read --scope sessions:write
+docker compose up -d
+```
+
+The compose file reaches the agent at `host.docker.internal:8642` and publishes the port on `127.0.0.1` only; put your TLS proxy in front as below. Inside the container the server binds `0.0.0.0`, which is what makes the published port reachable. Any CLI command works the same way (`docker compose exec hermes-remote bun /app/bin/hermes-remote.js doctor`). The image has a health check against `/v1/status`.
+
+The Supabase and Clerk SDKs are not bundled into the image. To use those auth providers, use the npm install instead, or extend the image with `bun add @supabase/supabase-js` or `bun add @clerk/backend`. The generic JWT provider and token exchange work as is.
+
 ## 4. Lock it down
 
 * Do not run `--anonymous` on anything public. Every caller should be an authenticated user or an API key.
