@@ -4,11 +4,21 @@ import { dirname } from "node:path";
 import { DEFAULT_LIMITS } from "../limits/index.ts";
 import { createApp, type AppOptions } from "./app.ts";
 
+/**
+ * The largest value Bun accepts: 256 is rejected with "Bun.serve expects
+ * idleTimeout to be 255 or less". That ceiling is below the length of a slow
+ * agent turn, which is why this is only a backstop for a peer that has really
+ * gone away — the SSE keepalive is what actually holds a long turn open.
+ */
+export const MAX_IDLE_TIMEOUT_SECONDS = 255;
+
 export interface StartServerOptions extends AppOptions {
   port: number;
   logPath: string;
   /** JSONL audit log destination; enables auditing when set. */
   auditPath?: string;
+  /** Seconds a connection may be idle before Bun closes it; max 255. */
+  idleTimeout?: number;
   now?: () => Date;
 }
 
@@ -46,6 +56,10 @@ export async function startServer(
     port: options.port,
     // Closes the chunked-transfer bypass of the content-length check.
     maxRequestBodySize: options.limits?.maxBodyBytes ?? DEFAULT_LIMITS.maxBodyBytes,
+    // Bun defaults this to 10 seconds, and an SSE response that has not yet
+    // written a byte is idle by that definition — which is exactly an agent
+    // turn waiting on a model.
+    idleTimeout: options.idleTimeout ?? MAX_IDLE_TIMEOUT_SECONDS,
     async fetch(request, bunServer) {
       const ip = bunServer.requestIP(request)?.address;
       const response = await app.fetch(request, ip);

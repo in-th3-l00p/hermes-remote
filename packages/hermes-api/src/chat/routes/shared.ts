@@ -7,6 +7,8 @@ export interface ChatOptions {
   agent: AgentBackend;
   /** In-flight turn abort controllers, keyed by session id. */
   turns?: Map<string, AbortController>;
+  /** Cadence of the SSE keepalive written while a turn is in flight. */
+  keepaliveMs?: number;
 }
 
 /** Hono environment shared by every authenticated route. */

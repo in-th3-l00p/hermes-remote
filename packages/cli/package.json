@@ -1,6 +1,6 @@
 {
   "name": "@intheloop-studio/hermes-remote-cli",
-  "version": "3.2.0",
+  "version": "3.2.1",
   "description": "Management CLI for Hermes Remote (serve, keys, config, service)",
   "license": "MIT",
   "author": "Tisca Catalin",
@@ -36,7 +36,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@intheloop-studio/hermes-remote": "^3.2.0"
+    "@intheloop-studio/hermes-remote": "^3.2.1"
   },
   "publishConfig": {
     "access": "public",

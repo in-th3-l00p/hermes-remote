@@ -16,6 +16,14 @@
 * Client (1.2.0): complete namespace coverage (`profiles`, `config`, `providers`, `agent`, `memory`, `soul`, `skills`, `bundles`, `checkpoints`, `approvals`, `hooks`, `webhooks`, `gateway`, `messaging`, `pairing`, `kanban`, `projects`, `toolsets`, `mcp`, `plugins`, `backups`, `subagents`, `agentSessions`, `commands`, `goals`, `media`, `web`, `browser`, `events`, `passthrough`) and `client.withProfile(name)`.
 * React (1.2.0): `useResource`/`useAction` generics, one hook per management surface, `useGoal` (loop state + mutations), `useEvents` (live SSE subscription).
 
+## 3.2.1
+
+* **Fix: a relayed turn slower than ten seconds is no longer cut off.** `startServer` called `Bun.serve` with no `idleTimeout`, so Bun applied its 10-second default — and an SSE response that has not written a byte is idle by that definition, which is exactly an agent turn waiting on a model. Measured against a turn whose first token arrives at 25s: as shipped in 3.2.0 the socket was closed at **12.0s** having delivered only the opening `user` and `assistant` frames; with this change the same turn **completes at 25.0s**.
+* `streamTurn` now writes its own SSE keepalive comment (`: keepalive`) for as long as a turn is in flight, at `ChatOptions.keepaliveMs` (default 10s). This, not the timeout, is what holds a long turn open: `Bun.serve` rejects any `idleTimeout` above 255 ("Bun.serve expects idleTimeout to be 255 or less"), which is still shorter than a slow agent turn. The keepalive is generated here rather than forwarded from the upstream, because `AgentBackend.stream` is an `AsyncIterable<string>` of assistant *text* — every string it yields is appended to the stored message, so a keepalive relayed through that seam would be shown to the reader as part of the agent's reply. Generating it locally also covers `DemoUpstream` and holds a turn of any length.
+* A turn that finishes inside the first keepalive interval writes no keepalive at all, so fast turns are byte-identical to 3.2.0.
+* `StartServerOptions.idleTimeout` is new, defaulting to the exported `MAX_IDLE_TIMEOUT_SECONDS` (255) — a backstop for a peer that has really gone away. `keepAlive`, `KEEPALIVE_FRAME` and `DEFAULT_KEEPALIVE_MS` are exported from the package root.
+* CLI 3.2.1 requires `@intheloop-studio/hermes-remote@^3.2.1`, so installing the CLI cannot pick up a server without the fix.
+
 ## 3.1.0
 
 * Server: the upstream agent now sits behind an `Upstream` interface family (`chat`, `discovery`, `runs`, `jobs`) with two implementations — `HermesUpstream` (live gateway) and `DemoUpstream` (offline fakes, used in demo mode and tests). `AppOptions.upstream` enables the new routes.

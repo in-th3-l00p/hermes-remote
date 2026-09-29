@@ -51,8 +51,13 @@ export type { HermesEvent } from "./events/index.ts";
 export { COMMAND_SCOPES } from "./mgmt/commands.ts";
 export { GoalStore, toGoalState } from "./mgmt/goals.ts";
 export type { GoalGate, GoalState } from "./mgmt/goals.ts";
-export { startServer } from "./http/index.ts";
+export { MAX_IDLE_TIMEOUT_SECONDS, startServer } from "./http/index.ts";
 export type { RunningServer, StartServerOptions } from "./http/index.ts";
+export {
+  DEFAULT_KEEPALIVE_MS,
+  KEEPALIVE_FRAME,
+  keepAlive,
+} from "./http/index.ts";
 export { ChatStore } from "./chat/index.ts";
 export type {
   Attachment,
